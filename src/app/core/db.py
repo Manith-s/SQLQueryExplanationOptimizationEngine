@@ -55,6 +55,10 @@ def get_conn() -> pg_connection:
                 _POOL.append(conn_local)
             else:
                 conn_local.close()
+    except Exception as e:
+        if conn_local:
+            conn_local.close()
+        raise e
 
 
 def run_sql(sql: str, params: Optional[Tuple] = None, timeout_ms: int = 10000) -> List[Tuple]:

@@ -19,3 +19,8 @@ SELECT (1 + (random()*4999)::int), (ARRAY['new','paid','shipped','cancelled'])[(
 FROM generate_series(1,50000) g;
 
 
+
+
+
+
+

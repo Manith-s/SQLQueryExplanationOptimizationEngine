@@ -55,11 +55,11 @@ class DummyLLMProvider(LLMProvider):
     def complete(self, prompt: str, system: Optional[str] = None) -> str:
         """
         Return a deterministic response based on prompt characteristics.
-        
+
         Args:
             prompt: The input prompt
             system: Optional system context (ignored in dummy provider)
-        
+
         Returns:
             A fixed response that roughly matches the expected format
         """
@@ -75,13 +75,30 @@ class DummyLLMProvider(LLMProvider):
                     return "\n".join(["Plan overview:"] + lines)
         except Exception:
             pass
-        # Deterministic simple fallbacks
+
+        # Deterministic simple fallbacks based on prompt characteristics
         words = len(prompt.split())
-        if words < 20:
+        prompt_lower = prompt.lower()
+
+        # Check if a long/detailed explanation is requested
+        is_detailed = any(marker in prompt_lower for marker in ["long", "detailed", "verbose", "comprehensive"])
+
+        if is_detailed or words > 100:
+            # Return a longer, more detailed explanation
+            return (
+                "This query uses a Common Table Expression (CTE) to first aggregate order counts per user "
+                "over the past 30 days, then joins this with the users table to filter and sort results. "
+                "The plan shows nested loop joins and sequential scans which may benefit from indexing. "
+                "Consider adding indexes on the foreign key columns used in joins (user_id), the filter "
+                "column (created_at), and the sort column (order_count) to improve performance. "
+                "The LIMIT 10 clause helps reduce result set size but won't prevent full table scans upstream."
+            )
+        elif words < 20:
             return "Simple plan with minimal cost; no major issues detected."
-        if words < 60:
+        elif words < 60:
             return "Mixed scans and joins observed; consider indexing join/filter columns for frequent queries."
-        return "Complex plan with multiple joins and sorts; adding appropriate indexes and pushing down filters may help."
+        else:
+            return "Complex plan with multiple joins and sorts; adding appropriate indexes and pushing down filters may help."
 
     def is_available(self) -> bool:  # compat for structure tests
         return True

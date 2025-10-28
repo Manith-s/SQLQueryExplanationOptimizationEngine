@@ -30,3 +30,8 @@ curl -s -X POST http://localhost:8000/api/v1/optimize \
 - `reason`: why the suggestion is proposed (filters, joins, ordering)
 - `impactPct`: estimated cost reduction percent (when what-if ran)
 - `planDiff`: compact summary of operator/cost/rows deltas
+
+
+
+
+

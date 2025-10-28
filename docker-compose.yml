@@ -25,17 +25,35 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env
+    environment:
+      - DB_URL=postgresql+psycopg2://postgres:password@db:5432/queryexpnopt
     depends_on:
       db:
         condition: service_healthy
     ports:
       - "8000:8000"
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --workers 4
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz').status==200 else 1)"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
       timeout: 3s
       retries: 30
+      start_period: 40s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    networks:
+      - qeo_network
+
+networks:
+  qeo_network:
+    driver: bridge
 
 volumes:
   postgres_data:

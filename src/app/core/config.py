@@ -32,6 +32,8 @@ class Settings:
     # API configuration
     API_HOST: str = os.getenv("API_HOST", "0.0.0.0")
     API_PORT: int = int(os.getenv("API_PORT", "8000"))
+    API_KEY: str = os.getenv("API_KEY", "dev-key-12345")
+    AUTH_ENABLED: bool = os.getenv("AUTH_ENABLED", "false").lower() == "true"
 
     # Development settings
     DEBUG: bool = os.getenv("DEBUG", "true").lower() == "true"

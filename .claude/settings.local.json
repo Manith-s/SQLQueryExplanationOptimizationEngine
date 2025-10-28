@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip show fastapi)",
+      "Bash(PYTHONPATH=src RUN_DB_TESTS=1 DB_URL=\"postgresql+psycopg2://postgres:password@localhost:5433/queryexpnopt\" python -m pytest tests/test_explain_integration.py::test_explain_formats_text_json -v --tb=short)",
+      "Bash(PYTHONPATH=src RUN_DB_TESTS=1 DB_URL=\"postgresql+psycopg2://postgres:password@localhost:5433/queryexpnopt\" python -m pytest tests/test_explain_integration.py -v --tb=short)",
+      "Bash(chmod +x start.sh qeo.py)",
+      "Bash(chmod +x scripts/start.sh)",
+      "Bash(test -f simple_server.py)",
+      "Bash(test -f src/app/static/index.html)",
+      "Bash(test -f docker-compose.yml)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

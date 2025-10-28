@@ -17,3 +17,8 @@
 ### DB connectivity
 - Ensure Postgres is running (Docker) and `DB_URL` is correct
 - Verify `curl http://localhost:8000/healthz`
+
+
+
+
+

@@ -55,13 +55,13 @@ def test_lint_endpoint_exists(client):
 
 
 def test_explain_endpoint_exists(client):
-    """Test that the explain endpoint exists and returns stub response."""
-    response = client.post("/api/v1/explain", json={"sql": "SELECT * FROM users"})
+    """Test that the explain endpoint exists and returns a response."""
+    response = client.post("/api/v1/explain", json={"sql": "SELECT * FROM orders LIMIT 1"})
     assert response.status_code == 200
-    
+
     data = response.json()
-    assert "message" in data
-    assert "stub" in data["message"]
+    assert "ok" in data
+    assert data["ok"] is True
 
 
 def test_optimize_endpoint_exists(client):

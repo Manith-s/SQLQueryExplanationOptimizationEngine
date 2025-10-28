@@ -2,8 +2,8 @@
   "cases": {
     "orders_topn": {
       "sql": "SELECT * FROM bench_qeo.orders WHERE user_id = 123 ORDER BY created_at DESC LIMIT 50",
-      "planning_time_ms": 2.173,
-      "execution_time_ms": 0.699,
+      "planning_time_ms": 1.722,
+      "execution_time_ms": 0.431,
       "node_count": 3,
       "warnings": [
         {
@@ -30,8 +30,8 @@
     },
     "users_exists": {
       "sql": "SELECT * FROM bench_qeo.orders WHERE user_id IN (SELECT id FROM bench_qeo.users) LIMIT 100",
-      "planning_time_ms": 0.813,
-      "execution_time_ms": 0.422,
+      "planning_time_ms": 0.707,
+      "execution_time_ms": 0.274,
       "node_count": 5,
       "warnings": [
         {

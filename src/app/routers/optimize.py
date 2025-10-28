@@ -5,8 +5,10 @@ Provides deterministic rewrite and index suggestions for a given SQL query.
 """
 
 from typing import List, Optional, Literal, Dict, Any
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field, conint
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.core import db, sql_analyzer, plan_heuristics
 from app.core.config import settings
@@ -16,11 +18,13 @@ from app.core import plan_diff
 
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 
 class OptimizeRequest(BaseModel):
     sql: str = Field(..., description="SQL to analyze")
     analyze: bool = Field(False, description="Use EXPLAIN ANALYZE if true")
+    what_if: bool = Field(True, description="Enable HypoPG what-if evaluation")
     timeout_ms: conint(ge=1, le=600000) = Field(10000, description="Statement timeout (ms)")
     advisors: List[Literal["rewrite", "index"]] = Field(
         default_factory=lambda: ["rewrite", "index"], description="Which advisors to run"
@@ -81,14 +85,15 @@ class OptimizeResponse(BaseModel):
         }
     }
 )
-async def optimize_sql(request: OptimizeRequest) -> OptimizeResponse:
+@limiter.limit("10/minute")
+async def optimize_sql(request: Request, req: OptimizeRequest) -> OptimizeResponse:
     try:
         # Apply defaults
-        if request.timeout_ms is None:
-            request.timeout_ms = settings.OPT_TIMEOUT_MS_DEFAULT
+        if req.timeout_ms is None:
+            req.timeout_ms = settings.OPT_TIMEOUT_MS_DEFAULT
 
         # Parse SQL statically
-        ast_info = sql_analyzer.parse_sql(request.sql)
+        ast_info = sql_analyzer.parse_sql(req.sql)
         if ast_info.get("type") != "SELECT":
             return OptimizeResponse(
                 ok=False,
@@ -104,9 +109,9 @@ async def optimize_sql(request: OptimizeRequest) -> OptimizeResponse:
         plan_metrics: Dict[str, Any] = {}
         plan_source = "none"
         try:
-            plan = db.run_explain(request.sql, analyze=request.analyze, timeout_ms=request.timeout_ms)
+            plan = db.run_explain(req.sql, analyze=req.analyze, timeout_ms=req.timeout_ms)
             plan_warnings, plan_metrics = plan_heuristics.analyze(plan)
-            plan_source = "explain_analyze" if request.analyze else "explain"
+            plan_source = "explain_analyze" if req.analyze else "explain"
         except Exception:
             # Soft-fail: still continue with rewrites
             plan = None
@@ -130,7 +135,7 @@ async def optimize_sql(request: OptimizeRequest) -> OptimizeResponse:
         }
 
         result = optimizer_analyze(
-            sql=request.sql,
+            sql=req.sql,
             ast_info=ast_info,
             plan=plan,
             schema=schema_info,
@@ -138,16 +143,16 @@ async def optimize_sql(request: OptimizeRequest) -> OptimizeResponse:
             options=options,
         )
 
-        server_top_k = min(int(request.top_k or settings.OPT_TOP_K), settings.OPT_TOP_K)
+        server_top_k = min(int(req.top_k or settings.OPT_TOP_K), settings.OPT_TOP_K)
         suggestions = result.get("suggestions", [])[: server_top_k]
         summary = result.get("summary", {})
 
         # Optional what-if (HypoPG) ranking/evaluation
         ranking = "heuristic"
         whatif_info: Dict[str, Any] = {"enabled": False, "available": False, "trials": 0, "filteredByPct": 0}
-        if settings.WHATIF_ENABLED:
+        if req.what_if and settings.WHATIF_ENABLED:
             try:
-                wi = whatif.evaluate(request.sql, suggestions, timeout_ms=request.timeout_ms)
+                wi = whatif.evaluate(req.sql, suggestions, timeout_ms=req.timeout_ms)
                 ranking = wi.get("ranking", ranking)
                 whatif_info = wi.get("whatIf", whatif_info)
                 suggestions = wi.get("suggestions", suggestions)
@@ -158,10 +163,10 @@ async def optimize_sql(request: OptimizeRequest) -> OptimizeResponse:
 
         # Optional Plan Diff for top index suggestion
         resp_plan_diff: Optional[Dict[str, Any]] = None
-        if request.diff and (whatif_info.get("enabled") and whatif_info.get("available")):
+        if req.diff and (whatif_info.get("enabled") and whatif_info.get("available")):
             try:
                 # Baseline costed plan
-                baseline = db.run_explain_costs(request.sql, timeout_ms=request.timeout_ms)
+                baseline = db.run_explain_costs(req.sql, timeout_ms=req.timeout_ms)
                 # Pick top index suggestion
                 top_index = next((s for s in suggestions if s.get("kind") == "index"), None)
                 if top_index:
@@ -175,7 +180,7 @@ async def optimize_sql(request: OptimizeRequest) -> OptimizeResponse:
                                 with conn.cursor() as cur:
                                     cur.execute("SELECT hypopg_reset()")
                                     cur.execute("SELECT * FROM hypopg_create_index(%s)", (f"CREATE INDEX ON {table} ({', '.join(cols)})",))
-                                    after = db.run_explain_costs(request.sql, timeout_ms=request.timeout_ms)
+                                    after = db.run_explain_costs(req.sql, timeout_ms=req.timeout_ms)
                                     cur.execute("SELECT hypopg_reset()")
                                     resp_plan_diff = plan_diff.diff_plans(baseline, after)
             except Exception:

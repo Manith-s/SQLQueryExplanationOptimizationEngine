@@ -84,3 +84,8 @@ def test_score_and_reason_present(monkeypatch):
     assert titles[0].startswith("Replace SELECT *") or titles[0].startswith("Align ORDER BY")
 
 
+
+
+
+
+

@@ -416,12 +416,10 @@ def analyze(
     rewrites = suggest_rewrites(ast_info, schema)
     idx = suggest_indexes(ast_info, schema, stats, options)
 
-    # Merge and deterministically order: rewrites before indexes by title/score
+    # Merge and deterministically order by title for stable output
     suggestions = rewrites + idx
-    # Stable ordering: ensure rewrites first, within groups sort by (-score, title ASC)
-    def _group_rank(s: Suggestion) -> int:
-        return 0 if s.kind == "rewrite" else 1
-    suggestions.sort(key=lambda s: (_group_rank(s), -float(getattr(s, 'score', 0.0) or 0.0), s.title))
+    # Stable ordering: sort alphabetically by title for deterministic output
+    suggestions.sort(key=lambda s: s.title)
 
     # Convert dataclass to plain dicts for API serialization stability
     out_suggestions: List[Dict[str, Any]] = []

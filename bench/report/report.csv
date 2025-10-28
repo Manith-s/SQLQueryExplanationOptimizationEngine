@@ -1,3 +1,3 @@
 case,planning_time_ms,execution_time_ms,node_count,error
-orders_topn,2.173,0.699,3,
-users_exists,0.813,0.422,5,
+orders_topn,1.722,0.431,3,
+users_exists,0.707,0.274,5,

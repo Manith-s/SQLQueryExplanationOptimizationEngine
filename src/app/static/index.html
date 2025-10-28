@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL Query Optimizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .input-section {
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            margin: 0;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex: 1;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .results {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .result-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-radius: 8px 8px 0 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .result-header h2 {
+            color: #333;
+            font-size: 1.3em;
+        }
+
+        .suggestions {
+            border: 2px solid #e0e0e0;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .suggestion {
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .suggestion:last-child {
+            border-bottom: none;
+        }
+
+        .suggestion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 15px;
+        }
+
+        .suggestion-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #333;
+            flex: 1;
+        }
+
+        .badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .badge-index {
+            background: #667eea;
+            color: white;
+        }
+
+        .badge-rewrite {
+            background: #28a745;
+            color: white;
+        }
+
+        .badge-high {
+            background: #dc3545;
+            color: white;
+        }
+
+        .badge-medium {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .badge-low {
+            background: #6c757d;
+            color: white;
+        }
+
+        .cost-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .metric {
+            text-align: center;
+        }
+
+        .metric-label {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .metric-value {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .metric-value.positive {
+            color: #28a745;
+        }
+
+        .sql-statement {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin: 10px 0;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .copy-btn:hover {
+            background: #5568d3;
+        }
+
+        .rationale {
+            color: #666;
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px 20px;
+            border-radius: 8px;
+            border-left: 4px solid #dc3545;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .summary h3 {
+            font-size: 1.3em;
+            margin-bottom: 10px;
+        }
+
+        .examples {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .examples h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .example {
+            background: white;
+            padding: 10px 15px;
+            margin: 10px 0;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .example:hover {
+            border-color: #667eea;
+            transform: translateX(5px);
+        }
+
+        .example-label {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .example-sql {
+            font-family: 'Courier New', monospace;
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>SQL Query Optimizer</h1>
+            <p>Analyze and optimize your PostgreSQL queries with AI-powered recommendations</p>
+        </header>
+
+        <div class="content">
+            <div class="input-section">
+                <label for="sqlInput">Enter Your SQL Query:</label>
+                <textarea id="sqlInput" rows="8" placeholder="SELECT * FROM orders WHERE user_id = 42 ORDER BY created_at DESC LIMIT 100"></textarea>
+            </div>
+
+            <div class="options">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="analyzeCheck" checked>
+                    <label for="analyzeCheck">Run EXPLAIN ANALYZE</label>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="whatIfCheck" checked>
+                    <label for="whatIfCheck">Enable What-If Analysis</label>
+                </div>
+                <div class="checkbox-group">
+                    <input type="number" id="topK" min="1" max="20" value="5" style="width: 60px; padding: 5px;">
+                    <label for="topK">Top K Suggestions</label>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button class="btn-primary" onclick="optimizeQuery()">Optimize Query</button>
+                <button class="btn-secondary" onclick="explainQuery()">Explain Plan</button>
+                <button class="btn-success" onclick="getSchema()">View Schema</button>
+            </div>
+
+            <div class="examples">
+                <h3>Example Queries (Click to Try):</h3>
+                <div class="example" onclick="loadExample('SELECT * FROM orders WHERE user_id = 42 ORDER BY created_at DESC LIMIT 100')">
+                    <div class="example-label">Basic Query with ORDER BY</div>
+                    <div class="example-sql">SELECT * FROM orders WHERE user_id = 42 ORDER BY created_at DESC LIMIT 100</div>
+                </div>
+                <div class="example" onclick="loadExample('SELECT id, user_id FROM orders WHERE user_id IN (1,2,3,4,5)')">
+                    <div class="example-label">Query with IN clause</div>
+                    <div class="example-sql">SELECT id, user_id FROM orders WHERE user_id IN (1,2,3,4,5)</div>
+                </div>
+                <div class="example" onclick="loadExample('SELECT COUNT(*) FROM orders WHERE created_at > \\'2024-01-01\\'')">
+                    <div class="example-label">Aggregate Query</div>
+                    <div class="example-sql">SELECT COUNT(*) FROM orders WHERE created_at > '2024-01-01'</div>
+                </div>
+                <div class="example" onclick="loadExample('SELECT * FROM users WHERE age BETWEEN 25 AND 35')">
+                    <div class="example-label">Range Query</div>
+                    <div class="example-sql">SELECT * FROM users WHERE age BETWEEN 25 AND 35</div>
+                </div>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Analyzing your query...</p>
+            </div>
+
+            <div class="error" id="error"></div>
+
+            <div class="results" id="results"></div>
+        </div>
+    </div>
+
+    <script>
+        function loadExample(sql) {
+            document.getElementById('sqlInput').value = sql;
+        }
+
+        function showLoading() {
+            document.getElementById('loading').classList.add('show');
+            document.getElementById('results').classList.remove('show');
+            document.getElementById('error').classList.remove('show');
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').classList.remove('show');
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+            hideLoading();
+        }
+
+        function showResults(html) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = html;
+            resultsDiv.classList.add('show');
+            hideLoading();
+        }
+
+        async function optimizeQuery() {
+            const sql = document.getElementById('sqlInput').value.trim();
+            if (!sql) {
+                showError('Please enter a SQL query');
+                return;
+            }
+
+            const analyze = document.getElementById('analyzeCheck').checked;
+            const whatIf = document.getElementById('whatIfCheck').checked;
+            const topK = parseInt(document.getElementById('topK').value);
+
+            showLoading();
+
+            try {
+                const response = await fetch('/api/v1/optimize', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({sql, analyze, what_if: whatIf, top_k: topK})
+                });
+
+                // Get response text first
+                const text = await response.text();
+
+                // Try to parse as JSON
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    // Not JSON, show the raw error
+                    showError('Server Error: ' + text.substring(0, 200));
+                    return;
+                }
+
+                if (!response.ok) {
+                    showError(data.detail || 'Error optimizing query');
+                    return;
+                }
+
+                renderOptimizeResults(data);
+            } catch (error) {
+                showError('Failed to connect to API: ' + error.message);
+            }
+        }
+
+        async function explainQuery() {
+            const sql = document.getElementById('sqlInput').value.trim();
+            if (!sql) {
+                showError('Please enter a SQL query');
+                return;
+            }
+
+            const analyze = document.getElementById('analyzeCheck').checked;
+
+            showLoading();
+
+            try {
+                const response = await fetch('/api/v1/explain', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({sql, analyze})
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showError(data.detail || 'Error explaining query');
+                    return;
+                }
+
+                renderExplainResults(data);
+            } catch (error) {
+                showError('Failed to connect to API: ' + error.message);
+            }
+        }
+
+        async function getSchema() {
+            showLoading();
+
+            try {
+                const response = await fetch('/api/v1/schema');
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showError(data.detail || 'Error fetching schema');
+                    return;
+                }
+
+                renderSchemaResults(data);
+            } catch (error) {
+                showError('Failed to connect to API: ' + error.message);
+            }
+        }
+
+        function renderOptimizeResults(data) {
+            let html = '';
+
+            if (data.summary) {
+                html += `<div class="summary">
+                    <h3>${data.summary.summary || 'Analysis Complete'}</h3>
+                    <p>Optimization Score: ${(data.summary.score * 100).toFixed(1)}%</p>
+                    <p>Ranking Method: ${data.ranking}</p>
+                </div>`;
+            }
+
+            if (data.suggestions && data.suggestions.length > 0) {
+                html += '<div class="result-header"><h2>Optimization Suggestions</h2></div>';
+                html += '<div class="suggestions">';
+
+                data.suggestions.forEach((sug, idx) => {
+                    html += `<div class="suggestion">
+                        <div class="suggestion-header">
+                            <div class="suggestion-title">${idx + 1}. ${sug.title}</div>
+                            <div>
+                                <span class="badge badge-${sug.kind}">${sug.kind.toUpperCase()}</span>
+                                <span class="badge badge-${sug.impact}">${sug.impact.toUpperCase()}</span>
+                            </div>
+                        </div>`;
+
+                    if (sug.estCostBefore && sug.estCostAfter) {
+                        const reduction = ((sug.estCostDelta / sug.estCostBefore) * 100).toFixed(1);
+                        html += `<div class="cost-metrics">
+                            <div class="metric">
+                                <div class="metric-label">Cost Before</div>
+                                <div class="metric-value">${sug.estCostBefore.toFixed(2)}</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-label">Cost After</div>
+                                <div class="metric-value">${sug.estCostAfter.toFixed(2)}</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-label">Reduction</div>
+                                <div class="metric-value positive">${reduction}%</div>
+                            </div>
+                        </div>`;
+                    }
+
+                    html += `<div class="rationale">${sug.rationale}</div>`;
+
+                    if (sug.statements && sug.statements.length > 0) {
+                        sug.statements.forEach(stmt => {
+                            html += `<div class="sql-statement">
+                                <button class="copy-btn" onclick="copyToClipboard('${stmt.replace(/'/g, "\\'")}')">Copy</button>
+                                ${stmt}
+                            </div>`;
+                        });
+                    }
+
+                    if (sug.alt_sql) {
+                        html += `<div class="sql-statement">
+                            <button class="copy-btn" onclick="copyToClipboard('${sug.alt_sql.replace(/'/g, "\\'")}')">Copy</button>
+                            ${sug.alt_sql}
+                        </div>`;
+                    }
+
+                    html += '</div>';
+                });
+
+                html += '</div>';
+            } else {
+                html += '<div class="summary"><h3>No optimization suggestions found</h3><p>Your query is already optimized!</p></div>';
+            }
+
+            showResults(html);
+        }
+
+        function renderExplainResults(data) {
+            let html = '<div class="result-header"><h2>Query Plan Analysis</h2></div>';
+            html += '<div class="suggestions">';
+
+            if (data.plan) {
+                html += `<div class="suggestion">
+                    <div class="suggestion-title">Execution Plan</div>
+                    <div class="sql-statement">${JSON.stringify(data.plan, null, 2)}</div>
+                </div>`;
+            }
+
+            if (data.warnings && data.warnings.length > 0) {
+                html += `<div class="suggestion">
+                    <div class="suggestion-title">Warnings</div>`;
+                data.warnings.forEach(w => {
+                    html += `<div class="rationale"><strong>${w.code}:</strong> ${w.detail}</div>`;
+                });
+                html += '</div>';
+            }
+
+            if (data.metrics) {
+                html += `<div class="suggestion">
+                    <div class="suggestion-title">Metrics</div>
+                    <div class="cost-metrics">
+                        ${data.metrics.planning_time_ms ? `<div class="metric">
+                            <div class="metric-label">Planning Time</div>
+                            <div class="metric-value">${data.metrics.planning_time_ms.toFixed(2)} ms</div>
+                        </div>` : ''}
+                        ${data.metrics.execution_time_ms ? `<div class="metric">
+                            <div class="metric-label">Execution Time</div>
+                            <div class="metric-value">${data.metrics.execution_time_ms.toFixed(2)} ms</div>
+                        </div>` : ''}
+                        ${data.metrics.node_count ? `<div class="metric">
+                            <div class="metric-label">Plan Nodes</div>
+                            <div class="metric-value">${data.metrics.node_count}</div>
+                        </div>` : ''}
+                    </div>
+                </div>`;
+            }
+
+            html += '</div>';
+            showResults(html);
+        }
+
+        function renderSchemaResults(data) {
+            let html = '<div class="result-header"><h2>Database Schema</h2></div>';
+            html += '<div class="suggestions">';
+
+            if (data.schema && data.schema.tables) {
+                data.schema.tables.forEach(table => {
+                    html += `<div class="suggestion">
+                        <div class="suggestion-title">${table.name}</div>
+                        <div class="rationale"><strong>Columns:</strong></div>
+                        <ul>`;
+                    table.columns.forEach(col => {
+                        html += `<li style="margin: 5px 0;">${col.name} (${col.data_type}) ${col.nullable ? 'NULL' : 'NOT NULL'} ${col.default ? '- Default: ' + col.default : ''}</li>`;
+                    });
+                    html += '</ul>';
+
+                    if (table.primary_key && table.primary_key.length > 0) {
+                        html += `<div class="rationale"><strong>Primary Key:</strong> ${table.primary_key.join(', ')}</div>`;
+                    }
+
+                    html += '</div>';
+                });
+            }
+
+            html += '</div>';
+            showResults(html);
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Copied to clipboard!');
+            });
+        }
+    </script>
+</body>
+</html>

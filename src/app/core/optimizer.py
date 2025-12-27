@@ -237,6 +237,179 @@ def suggest_rewrites(ast_info: Dict[str, Any], schema: Dict[str, Any]) -> List[S
             )
         )
 
+    # Subquery to JOIN transformation
+    filters = ast_info.get("filters") or []
+    for f in filters:
+        f_str = f or ""
+        # Detect correlated subquery in WHERE clause
+        if re.search(r'WHERE\s+[^=<>!]+\s*=\s*\(SELECT\s+\w+\s+FROM', f_str, re.IGNORECASE):
+            suggestions.append(
+                Suggestion(
+                    kind="rewrite",
+                    title="Consider converting correlated subquery to JOIN",
+                    rationale="JOINs are often more efficient than correlated subqueries and enable better query planning.",
+                    impact="high",
+                    confidence=0.75,
+                    statements=[],
+                    alt_sql="-- Convert: WHERE col = (SELECT ... FROM t2 WHERE t2.id = t1.id)\n-- To: JOIN t2 ON t2.id = t1.id WHERE col = t2.col",
+                )
+            )
+    
+    # DISTINCT with GROUP BY
+    columns = ast_info.get("columns") or []
+    has_distinct = any(c.get("distinct") for c in columns if isinstance(c, dict))
+    if has_distinct and ast_info.get("group_by"):
+        suggestions.append(
+            Suggestion(
+                kind="rewrite",
+                title="Remove redundant DISTINCT when using GROUP BY",
+                rationale="GROUP BY already ensures uniqueness, DISTINCT is redundant.",
+                impact="low",
+                confidence=0.9,
+                statements=[],
+                alt_sql="-- Remove DISTINCT keyword when GROUP BY is present",
+            )
+        )
+    
+    # LIKE patterns optimization
+    for f in filters:
+        f_str = f or ""
+        # Check for LIKE patterns that can use indexes
+        if re.search(r"LIKE\s+['\"]%[^%']+['\"]", f_str, re.IGNORECASE):
+            suggestions.append(
+                Suggestion(
+                    kind="rewrite",
+                    title="Consider using prefix index for LIKE pattern",
+                    rationale="LIKE 'prefix%' can use index scans, but LIKE '%suffix' cannot.",
+                    impact="medium",
+                    confidence=0.7,
+                    statements=[],
+                    alt_sql="-- For LIKE 'prefix%', ensure column has index. For '%suffix', consider reverse index or full-text search.",
+                )
+            )
+        # Check for inefficient LIKE patterns
+        if re.search(r"LIKE\s+['\"][^'\"]*%[^'\"]*%[^'\"]*['\"]", f_str, re.IGNORECASE):
+            suggestions.append(
+                Suggestion(
+                    kind="rewrite",
+                    title="Multiple wildcards in LIKE prevent index usage",
+                    rationale="LIKE patterns with multiple % or _ wildcards cannot use indexes efficiently.",
+                    impact="high",
+                    confidence=0.9,
+                    statements=[],
+                    alt_sql="-- Consider full-text search (tsvector) or pattern matching functions for complex patterns",
+                )
+            )
+    
+    # UNION vs UNION ALL
+    # Try to get original SQL from ast_info, fallback to empty string
+    raw_sql = ast_info.get("raw_sql") or ""
+    if not raw_sql:
+        # Reconstruct SQL from AST if available
+        raw_sql = str(ast_info.get("sql") or "")
+    sql_upper = raw_sql.upper()
+    if "UNION" in sql_upper and "UNION ALL" not in sql_upper:
+        suggestions.append(
+            Suggestion(
+                kind="rewrite",
+                title="Consider UNION ALL instead of UNION if duplicates are acceptable",
+                rationale="UNION removes duplicates which requires sorting. UNION ALL is faster if duplicates don't matter.",
+                impact="high",
+                confidence=0.8,
+                statements=[],
+                alt_sql="-- Replace UNION with UNION ALL if duplicate elimination is not needed",
+            )
+        )
+    
+    # COUNT(*) vs COUNT(column)
+    for col in columns:
+        col_str = str(col.get("name") or col)
+        if re.search(r'COUNT\s*\(\s*\w+\s*\)', col_str, re.IGNORECASE) and not re.search(r'COUNT\s*\(\s*\*\s*\)', col_str, re.IGNORECASE):
+            suggestions.append(
+                Suggestion(
+                    kind="rewrite",
+                    title="Consider COUNT(*) instead of COUNT(column)",
+                    rationale="COUNT(*) is typically faster than COUNT(column) as it doesn't need to check for NULLs.",
+                    impact="low",
+                    confidence=0.7,
+                    statements=[],
+                    alt_sql="-- Use COUNT(*) unless you specifically need to exclude NULL values",
+                )
+            )
+    
+    # ORDER BY without LIMIT on large result sets
+    if ast_info.get("order_by") and not ast_info.get("limit"):
+        suggestions.append(
+            Suggestion(
+                kind="rewrite",
+                title="Consider adding LIMIT when using ORDER BY",
+                rationale="ORDER BY without LIMIT can be expensive on large result sets. Add LIMIT if you only need top N rows.",
+                impact="medium",
+                confidence=0.6,
+                statements=[],
+                alt_sql="-- Add LIMIT clause to restrict result set size",
+            )
+        )
+    
+    # Multiple OR conditions that could be IN
+    for f in filters:
+        f_str = f or ""
+        # Detect pattern: col = val1 OR col = val2 OR col = val3
+        or_pattern = r'(\w+)\s*=\s*([^\s]+)\s+OR\s+\1\s*=\s*([^\s]+)\s+OR\s+\1\s*=\s*([^\s]+)'
+        if re.search(or_pattern, f_str, re.IGNORECASE):
+            suggestions.append(
+                Suggestion(
+                    kind="rewrite",
+                    title="Convert multiple OR conditions to IN clause",
+                    rationale="IN clause is more readable and can be optimized better by the query planner.",
+                    impact="low",
+                    confidence=0.8,
+                    statements=[],
+                    alt_sql="-- Convert: col = val1 OR col = val2 OR col = val3\n-- To: col IN (val1, val2, val3)",
+                )
+            )
+    
+    # NOT IN vs NOT EXISTS
+    for f in filters:
+        f_str = f or ""
+        if re.search(r'\bNOT\s+IN\s*\(', f_str, re.IGNORECASE):
+            suggestions.append(
+                Suggestion(
+                    kind="rewrite",
+                    title="Consider NOT EXISTS instead of NOT IN with subquery",
+                    rationale="NOT EXISTS handles NULLs better than NOT IN and can be more efficient.",
+                    impact="medium",
+                    confidence=0.75,
+                    statements=[],
+                    alt_sql="-- Convert: WHERE col NOT IN (SELECT ...)\n-- To: WHERE NOT EXISTS (SELECT 1 FROM ... WHERE ... = col)",
+                )
+            )
+    
+    # Implicit joins (comma-separated) to explicit JOINs
+    tables = ast_info.get("tables") or []
+    joins = ast_info.get("joins") or []
+    if len(tables) > 1 and len(joins) == 0:
+        # Check if filters contain join conditions
+        join_conditions = []
+        for f in filters:
+            f_str = f or ""
+            # Pattern: table1.col = table2.col
+            if re.search(r'\w+\.\w+\s*=\s*\w+\.\w+', f_str):
+                join_conditions.append(f_str)
+        
+        if join_conditions:
+            suggestions.append(
+                Suggestion(
+                    kind="rewrite",
+                    title="Convert implicit joins to explicit JOIN syntax",
+                    rationale="Explicit JOIN syntax is clearer and gives better control over join order.",
+                    impact="low",
+                    confidence=0.8,
+                    statements=[],
+                    alt_sql="-- Convert: FROM t1, t2 WHERE t1.id = t2.id\n-- To: FROM t1 JOIN t2 ON t1.id = t2.id",
+                )
+            )
+
     return suggestions
 
 

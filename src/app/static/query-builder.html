@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Query Builder - QEO</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 250px 1fr 350px;
+            grid-template-rows: 60px 1fr;
+            height: 100vh;
+            gap: 0;
+        }
+
+        .header {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 0 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 1.5em;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: white;
+            color: #667eea;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .sidebar {
+            background: white;
+            border-right: 1px solid #e0e0e0;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .sidebar h2 {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .table-list {
+            list-style: none;
+        }
+
+        .table-item {
+            padding: 12px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-radius: 6px;
+            cursor: move;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .table-item:hover {
+            border-color: #667eea;
+            background: #e7f3ff;
+        }
+
+        .table-item.dragging {
+            opacity: 0.5;
+        }
+
+        .table-name {
+            font-weight: 600;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .table-info {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .canvas {
+            background: #fafbfc;
+            padding: 20px;
+            overflow: auto;
+            position: relative;
+        }
+
+        .canvas h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .canvas-area {
+            min-height: 400px;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 20px;
+            background: white;
+            position: relative;
+        }
+
+        .canvas-area.drag-over {
+            border-color: #667eea;
+            background: #f0f7ff;
+        }
+
+        .canvas-empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .table-node {
+            position: absolute;
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            min-width: 200px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .table-node-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px;
+            border-radius: 6px 6px 0 0;
+            cursor: move;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-node-title {
+            font-weight: 600;
+        }
+
+        .node-close {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 20px;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+        }
+
+        .table-node-body {
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .column-item {
+            padding: 6px 10px;
+            border-radius: 4px;
+            margin: 2px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .column-item:hover {
+            background: #f0f0f0;
+        }
+
+        .column-item input[type="checkbox"] {
+            cursor: pointer;
+        }
+
+        .column-name {
+            flex: 1;
+            font-size: 0.9em;
+        }
+
+        .column-type {
+            font-size: 0.8em;
+            color: #666;
+        }
+
+        .properties {
+            background: white;
+            border-left: 1px solid #e0e0e0;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .properties h2 {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .property-section {
+            margin-bottom: 25px;
+        }
+
+        .property-section h3 {
+            font-size: 0.95em;
+            color: #666;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-list, .join-list, .sort-list {
+            list-style: none;
+        }
+
+        .filter-item, .join-item, .sort-item {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            border-left: 3px solid #667eea;
+        }
+
+        .filter-controls, .join-controls, .sort-controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .filter-controls select,
+        .filter-controls input,
+        .join-controls select,
+        .sort-controls select {
+            flex: 1;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .add-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .add-btn:hover {
+            background: #5568d3;
+        }
+
+        .remove-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        .sql-output {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-buttons button {
+            flex: 1;
+        }
+
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .loading.show {
+            display: flex;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>📊 Visual Query Builder</h1>
+            <div class="header-actions">
+                <button class="btn btn-primary" onclick="executeQuery()">▶ Execute Query</button>
+                <button class="btn btn-primary" onclick="saveQuery()">💾 Save</button>
+                <button class="btn btn-primary" onclick="loadHistory()">📜 History</button>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <h2>📋 Available Tables</h2>
+            <div id="tableSearch" style="margin-bottom: 10px;">
+                <input type="text" placeholder="Search tables..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" oninput="filterTables(this.value)">
+            </div>
+            <ul class="table-list" id="tableList">
+                <li class="alert alert-warning">Loading tables...</li>
+            </ul>
+        </div>
+
+        <div class="canvas">
+            <h2>🎨 Query Canvas</h2>
+            <div class="canvas-area" id="canvasArea">
+                <div class="canvas-empty">
+                    Drag tables here to start building your query
+                </div>
+            </div>
+        </div>
+
+        <div class="properties">
+            <h2>⚙️ Query Properties</h2>
+
+            <div class="property-section">
+                <h3>Selected Columns</h3>
+                <div id="selectedColumns" style="font-size: 0.9em; color: #666;">
+                    No columns selected
+                </div>
+            </div>
+
+            <div class="property-section">
+                <h3>Joins</h3>
+                <ul class="join-list" id="joinList"></ul>
+                <button class="add-btn" onclick="addJoin()">+ Add Join</button>
+            </div>
+
+            <div class="property-section">
+                <h3>Filters (WHERE)</h3>
+                <ul class="filter-list" id="filterList"></ul>
+                <button class="add-btn" onclick="addFilter()">+ Add Filter</button>
+            </div>
+
+            <div class="property-section">
+                <h3>Order By</h3>
+                <ul class="sort-list" id="sortList"></ul>
+                <button class="add-btn" onclick="addSort()">+ Add Sort</button>
+            </div>
+
+            <div class="property-section">
+                <h3>Limit</h3>
+                <input type="number" id="limitInput" placeholder="e.g., 100" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" onchange="generateSQL()">
+            </div>
+
+            <div class="property-section">
+                <h3>Generated SQL</h3>
+                <div class="sql-output" id="sqlOutput">SELECT * FROM table</div>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="copySQL()">📋 Copy</button>
+                    <button class="btn btn-primary" onclick="validateSQL()">✓ Validate</button>
+                </div>
+            </div>
+
+            <div id="validationResults"></div>
+        </div>
+    </div>
+
+    <script src="/static/query-builder.js"></script>
+</body>
+</html>

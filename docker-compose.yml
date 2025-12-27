@@ -18,6 +18,8 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./infra/init:/docker-entrypoint-initdb.d
       - ./infra/seed:/docker-entrypoint-initdb.d/seed
+    networks:
+      - qeo_network
 
   api:
     build:
@@ -32,7 +34,7 @@ services:
         condition: service_healthy
     ports:
       - "8000:8000"
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --workers 4
+    command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --workers 4
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s

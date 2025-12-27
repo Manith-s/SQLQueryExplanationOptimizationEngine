@@ -326,6 +326,83 @@ def fetch_schema(schema: str = "public", table: Optional[str] = None) -> Dict:
             return result
 
 
+def fetch_schema_metadata(schema_name: str = "public", include_system: bool = False) -> Dict[str, Any]:
+    """
+    Fetch comprehensive schema metadata including tables, columns, relationships, and statistics.
+
+    This is an extended version of fetch_schema that includes foreign key relationships
+    formatted for the catalog API and table statistics.
+
+    Args:
+        schema_name: Schema name to inspect
+        include_system: Whether to include system tables
+
+    Returns:
+        Dictionary with tables, relationships, and statistics
+    """
+    # Get basic schema info
+    schema_data = fetch_schema(schema=schema_name)
+
+    # Build relationships list from foreign keys
+    relationships = []
+    for table in schema_data.get("tables", []):
+        table_name = table["name"]
+        for fk in table.get("foreign_keys", []):
+            relationships.append({
+                "from_table": table_name,
+                "from_column": fk.get("column_name", ""),
+                "to_table": fk.get("foreign_table", ""),
+                "to_column": fk.get("foreign_column", ""),
+                "constraint_name": f"fk_{table_name}_{fk.get('foreign_table', '')}",
+                "type": "foreign_key"
+            })
+
+    # Get table statistics
+    table_names = [t["name"] for t in schema_data.get("tables", [])]
+    stats_data = {}
+    if table_names:
+        try:
+            with get_conn() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute("""
+                        SELECT
+                            c.relname as table_name,
+                            c.reltuples::bigint AS row_count,
+                            pg_size_pretty(pg_total_relation_size(c.oid)) AS total_size
+                        FROM pg_class c
+                        JOIN pg_namespace n ON n.oid = c.relnamespace
+                        WHERE n.nspname = %s
+                          AND c.relkind = 'r'
+                          AND c.relname = ANY(%s)
+                        ORDER BY c.relname
+                    """, (schema_name, table_names))
+
+                    for row in cur.fetchall():
+                        stats_data[row["table_name"]] = {
+                            "row_count": int(row.get("row_count") or 0),
+                            "total_size": row.get("total_size", "0 bytes")
+                        }
+        except Exception:
+            # Soft fail on stats errors
+            pass
+
+    # Add statistics to each table
+    for table in schema_data.get("tables", []):
+        table_stats = stats_data.get(table["name"], {})
+        table["statistics"] = table_stats
+
+    # Return formatted result
+    return {
+        "tables": schema_data.get("tables", []),
+        "relationships": relationships,
+        "statistics": {
+            "total_tables": len(schema_data.get("tables", [])),
+            "total_relationships": len(relationships),
+            "schema": schema_name
+        }
+    }
+
+
 def fetch_table_stats(tables: List[str], schema: str = "public", timeout_ms: int = 5000) -> Dict[str, Any]:
     """
     Fetch per-table stats for given tables: approximate row counts and existing indexes.

@@ -51,6 +51,7 @@ dependencies = [
   "sqlglot>=19.0.0",
   "pydantic>=2.5.0",
   "prometheus-client>=0.17.0",
+  "slowapi>=0.1.9",
 ]
 
 [project.scripts]

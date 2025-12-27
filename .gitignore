@@ -25,6 +25,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+src/*.egg-info/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -165,6 +166,7 @@ cython_debug/
 *.db
 *.sqlite
 *.sqlite3
+profiler.db
 
 # Docker
 .dockerignore
@@ -178,3 +180,18 @@ cython_debug/
 # OS
 .DS_Store
 Thumbs.db
+nul
+
+# Backup files
+*.backup
+*.bak
+*~
+
+# Microsoft Office
+*.docx
+*.xlsx
+*.pptx
+~$*
+
+# Benchmarking output
+bench/report/

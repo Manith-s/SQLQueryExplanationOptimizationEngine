@@ -118,9 +118,18 @@ async def optimize_sql(request: Request, req: OptimizeRequest) -> OptimizeRespon
             plan_source = "none"
 
         # Fetch schema and lightweight stats
-        schema_info = db.fetch_schema()
+        schema_info = {}
         stats = {}
         stats_used = False
+        try:
+            schema_info = db.fetch_schema()
+        except Exception as schema_err:
+            # If schema fetch fails, continue with empty schema (optimizer can still work)
+            schema_info = {}
+            # Log the error but don't fail the request
+            import logging
+            logging.warning(f"Schema fetch failed: {schema_err}")
+        
         try:
             stats = db.fetch_table_stats(tables)
             stats_used = True

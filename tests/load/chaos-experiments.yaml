@@ -1,0 +1,649 @@
+---
+# LitmusChaos Experiments for QEO System
+# Tests resilience under various failure conditions
+#
+# Prerequisites:
+#   kubectl apply -f https://litmuschaos.github.io/litmus/litmus-operator-v3.0.0.yaml
+#   kubectl apply -f https://hub.litmuschaos.io/api/chaos/master?file=charts/generic/experiments.yaml
+#
+# Usage:
+#   kubectl apply -f chaos-experiments.yaml
+#   kubectl get chaosengine -n qeo
+#   kubectl logs -f <chaos-runner-pod> -n qeo
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: qeo-chaos-sa
+  namespace: qeo
+  labels:
+    app: litmus
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: qeo-chaos-role
+  namespace: qeo
+  labels:
+    app: litmus
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "pods/exec", "events", "services"]
+    verbs: ["create", "delete", "get", "list", "patch", "update", "deletecollection"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["create", "delete", "get", "list", "deletecollection"]
+  - apiGroups: ["litmuschaos.io"]
+    resources: ["chaosengines", "chaosexperiments", "chaosresults"]
+    verbs: ["create", "delete", "get", "list", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: qeo-chaos-rolebinding
+  namespace: qeo
+  labels:
+    app: litmus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: qeo-chaos-role
+subjects:
+  - kind: ServiceAccount
+    name: qeo-chaos-sa
+    namespace: qeo
+
+---
+##############################################################################
+# Experiment 1: Pod Delete - Tests resilience to sudden pod failures
+##############################################################################
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosEngine
+metadata:
+  name: qeo-pod-delete
+  namespace: qeo
+spec:
+  appinfo:
+    appns: qeo
+    applabel: "app=qeo"
+    appkind: deployment
+
+  # Run in background, don't block
+  jobCleanUpPolicy: delete
+
+  engineState: active
+
+  chaosServiceAccount: qeo-chaos-sa
+
+  # Monitor for 5 minutes after chaos
+  monitoring: true
+
+  experiments:
+    - name: pod-delete
+      spec:
+        components:
+          env:
+            # Number of pods to delete
+            - name: TOTAL_CHAOS_DURATION
+              value: "60"
+
+            # Interval between deletions (seconds)
+            - name: CHAOS_INTERVAL
+              value: "10"
+
+            # Force delete (immediate)
+            - name: FORCE
+              value: "false"
+
+            # Number of replicas to delete
+            - name: PODS_AFFECTED_PERC
+              value: "50"
+
+            # Random or sequential
+            - name: SEQUENCE
+              value: "parallel"
+
+          # Verify deployment recovers
+          probe:
+            - name: check-deployment-health
+              type: cmdProbe
+              mode: Continuous
+              runProperties:
+                probeTimeout: 10
+                interval: 5
+                retry: 3
+              cmdProbe/inputs:
+                command: kubectl get deployment qeo-api -n qeo -o jsonpath='{.status.availableReplicas}'
+                comparator:
+                  type: int
+                  criteria: ">="
+                  value: "2"
+
+            - name: check-http-health
+              type: httpProbe
+              mode: Continuous
+              runProperties:
+                probeTimeout: 5
+                interval: 10
+                retry: 2
+              httpProbe/inputs:
+                url: http://qeo-api.qeo.svc.cluster.local:8000/health
+                method:
+                  get:
+                    criteria: ==
+                    responseCode: "200"
+
+---
+##############################################################################
+# Experiment 2: Network Latency - Simulates network degradation
+##############################################################################
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosEngine
+metadata:
+  name: qeo-network-latency
+  namespace: qeo
+spec:
+  appinfo:
+    appns: qeo
+    applabel: "app=qeo"
+    appkind: deployment
+
+  engineState: active
+  chaosServiceAccount: qeo-chaos-sa
+
+  experiments:
+    - name: pod-network-latency
+      spec:
+        components:
+          env:
+            # Total duration of chaos (seconds)
+            - name: TOTAL_CHAOS_DURATION
+              value: "120"
+
+            # Network latency in ms
+            - name: NETWORK_LATENCY
+              value: "2000"
+
+            # Jitter in ms
+            - name: JITTER
+              value: "200"
+
+            # Target container
+            - name: TARGET_CONTAINER
+              value: "qeo-api"
+
+            # Network interface
+            - name: NETWORK_INTERFACE
+              value: "eth0"
+
+            # Destination IPs (PostgreSQL)
+            - name: DESTINATION_IPS
+              value: "postgres.qeo.svc.cluster.local"
+
+          probe:
+            - name: check-api-latency
+              type: httpProbe
+              mode: Continuous
+              runProperties:
+                probeTimeout: 10
+                interval: 15
+                retry: 2
+              httpProbe/inputs:
+                url: http://qeo-api.qeo.svc.cluster.local:8000/health
+                method:
+                  get:
+                    criteria: ==
+                    responseCode: "200"
+
+            - name: check-circuit-breaker
+              type: k8sProbe
+              mode: Edge
+              runProperties:
+                probeTimeout: 5
+                interval: 10
+              k8sProbe/inputs:
+                group: ""
+                version: v1
+                resource: pods
+                namespace: qeo
+                labelSelector: app=qeo
+                operation: present
+
+---
+##############################################################################
+# Experiment 3: CPU Stress - Tests behavior under CPU pressure
+##############################################################################
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosEngine
+metadata:
+  name: qeo-cpu-stress
+  namespace: qeo
+spec:
+  appinfo:
+    appns: qeo
+    applabel: "app=qeo"
+    appkind: deployment
+
+  engineState: active
+  chaosServiceAccount: qeo-chaos-sa
+
+  experiments:
+    - name: pod-cpu-hog
+      spec:
+        components:
+          env:
+            # Duration of CPU stress (seconds)
+            - name: TOTAL_CHAOS_DURATION
+              value: "180"
+
+            # Number of CPU cores to consume
+            - name: CPU_CORES
+              value: "2"
+
+            # CPU load percentage
+            - name: CPU_LOAD
+              value: "100"
+
+            # Target container
+            - name: TARGET_CONTAINER
+              value: "qeo-api"
+
+            # Number of pods to affect
+            - name: PODS_AFFECTED_PERC
+              value: "30"
+
+          probe:
+            - name: check-api-responsiveness
+              type: httpProbe
+              mode: Continuous
+              runProperties:
+                probeTimeout: 15
+                interval: 20
+                retry: 3
+              httpProbe/inputs:
+                url: http://qeo-api.qeo.svc.cluster.local:8000/health
+                method:
+                  get:
+                    criteria: ==
+                    responseCode: "200"
+
+            - name: check-hpa-scaling
+              type: k8sProbe
+              mode: Continuous
+              runProperties:
+                probeTimeout: 10
+                interval: 30
+              k8sProbe/inputs:
+                group: autoscaling
+                version: v2
+                resource: horizontalpodautoscalers
+                namespace: qeo
+                fieldSelector: metadata.name=qeo-api-hpa
+                operation: present
+
+---
+##############################################################################
+# Experiment 4: Memory Stress - Tests behavior under memory pressure
+##############################################################################
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosEngine
+metadata:
+  name: qeo-memory-stress
+  namespace: qeo
+spec:
+  appinfo:
+    appns: qeo
+    applabel: "app=qeo"
+    appkind: deployment
+
+  engineState: active
+  chaosServiceAccount: qeo-chaos-sa
+
+  experiments:
+    - name: pod-memory-hog
+      spec:
+        components:
+          env:
+            # Duration of memory stress (seconds)
+            - name: TOTAL_CHAOS_DURATION
+              value: "180"
+
+            # Memory to consume (MB)
+            - name: MEMORY_CONSUMPTION
+              value: "500"
+
+            # Target container
+            - name: TARGET_CONTAINER
+              value: "qeo-api"
+
+            # Number of pods to affect
+            - name: PODS_AFFECTED_PERC
+              value: "30"
+
+          probe:
+            - name: check-oom-kills
+              type: cmdProbe
+              mode: Edge
+              runProperties:
+                probeTimeout: 10
+                interval: 15
+                retry: 1
+              cmdProbe/inputs:
+                command: kubectl get pods -n qeo -l app=qeo -o json | jq -r '.items[].status.containerStatuses[].restartCount' | awk '{sum+=$1} END {print sum}'
+                comparator:
+                  type: int
+                  criteria: "<"
+                  value: "5"
+
+            - name: check-memory-metrics
+              type: promProbe
+              mode: Continuous
+              runProperties:
+                probeTimeout: 10
+                interval: 20
+              promProbe/inputs:
+                endpoint: http://prometheus.monitoring.svc.cluster.local:9090
+                query: container_memory_working_set_bytes{pod=~"qeo-api.*"} / container_spec_memory_limit_bytes{pod=~"qeo-api.*"}
+                comparator:
+                  type: float
+                  criteria: "<"
+                  value: "0.95"
+
+---
+##############################################################################
+# Experiment 5: PostgreSQL Pod Delete - Tests database resilience
+##############################################################################
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosEngine
+metadata:
+  name: qeo-db-pod-delete
+  namespace: qeo
+spec:
+  appinfo:
+    appns: qeo
+    applabel: "app=postgres"
+    appkind: statefulset
+
+  engineState: active
+  chaosServiceAccount: qeo-chaos-sa
+
+  experiments:
+    - name: pod-delete
+      spec:
+        components:
+          env:
+            - name: TOTAL_CHAOS_DURATION
+              value: "60"
+
+            - name: CHAOS_INTERVAL
+              value: "30"
+
+            - name: FORCE
+              value: "false"
+
+          probe:
+            - name: check-db-connection
+              type: cmdProbe
+              mode: Continuous
+              runProperties:
+                probeTimeout: 15
+                interval: 10
+                retry: 5
+              cmdProbe/inputs:
+                command: kubectl exec -n qeo postgres-0 -- pg_isready -U postgres
+                comparator:
+                  type: string
+                  criteria: contains
+                  value: "accepting connections"
+
+            - name: check-api-db-health
+              type: httpProbe
+              mode: Continuous
+              runProperties:
+                probeTimeout: 10
+                interval: 15
+                retry: 3
+              httpProbe/inputs:
+                url: http://qeo-api.qeo.svc.cluster.local:8000/health
+                method:
+                  get:
+                    criteria: ==
+                    responseCode: "200"
+
+---
+##############################################################################
+# Experiment 6: Disk Fill - Tests disk pressure scenarios
+##############################################################################
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosEngine
+metadata:
+  name: qeo-disk-fill
+  namespace: qeo
+spec:
+  appinfo:
+    appns: qeo
+    applabel: "app=qeo"
+    appkind: deployment
+
+  engineState: active
+  chaosServiceAccount: qeo-chaos-sa
+
+  experiments:
+    - name: disk-fill
+      spec:
+        components:
+          env:
+            # Duration of disk fill (seconds)
+            - name: TOTAL_CHAOS_DURATION
+              value: "120"
+
+            # Size to fill (MB)
+            - name: FILL_PERCENTAGE
+              value: "80"
+
+            # Target container
+            - name: TARGET_CONTAINER
+              value: "qeo-api"
+
+            # Mount path to fill
+            - name: CONTAINER_PATH
+              value: "/tmp"
+
+          probe:
+            - name: check-disk-cleanup
+              type: cmdProbe
+              mode: OnChaos
+              runProperties:
+                probeTimeout: 10
+                interval: 15
+              cmdProbe/inputs:
+                command: kubectl exec -n qeo deployment/qeo-api -- df -h /tmp | tail -1 | awk '{print $5}' | sed 's/%//'
+                comparator:
+                  type: int
+                  criteria: "<"
+                  value: "90"
+
+---
+##############################################################################
+# Experiment 7: Network Partition - Simulates network split
+##############################################################################
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosEngine
+metadata:
+  name: qeo-network-partition
+  namespace: qeo
+spec:
+  appinfo:
+    appns: qeo
+    applabel: "app=qeo"
+    appkind: deployment
+
+  engineState: active
+  chaosServiceAccount: qeo-chaos-sa
+
+  experiments:
+    - name: pod-network-loss
+      spec:
+        components:
+          env:
+            # Duration of network loss (seconds)
+            - name: TOTAL_CHAOS_DURATION
+              value: "90"
+
+            # Packet loss percentage
+            - name: NETWORK_PACKET_LOSS_PERCENTAGE
+              value: "100"
+
+            # Target container
+            - name: TARGET_CONTAINER
+              value: "qeo-api"
+
+            # Destination IPs
+            - name: DESTINATION_IPS
+              value: "postgres.qeo.svc.cluster.local"
+
+          probe:
+            - name: check-circuit-breaker-open
+              type: promProbe
+              mode: Edge
+              runProperties:
+                probeTimeout: 10
+                interval: 15
+              promProbe/inputs:
+                endpoint: http://prometheus.monitoring.svc.cluster.local:9090
+                query: qeo_circuit_breaker_state{circuit="database"}
+                comparator:
+                  type: int
+                  criteria: "=="
+                  value: "2"  # OPEN state
+
+            - name: check-api-fallback
+              type: httpProbe
+              mode: Continuous
+              runProperties:
+                probeTimeout: 10
+                interval: 10
+                retry: 2
+              httpProbe/inputs:
+                url: http://qeo-api.qeo.svc.cluster.local:8000/health
+                method:
+                  get:
+                    criteria: ==
+                    responseCode: "200"
+
+---
+##############################################################################
+# Experiment 8: Container Kill - Tests rapid container restarts
+##############################################################################
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosEngine
+metadata:
+  name: qeo-container-kill
+  namespace: qeo
+spec:
+  appinfo:
+    appns: qeo
+    applabel: "app=qeo"
+    appkind: deployment
+
+  engineState: active
+  chaosServiceAccount: qeo-chaos-sa
+
+  experiments:
+    - name: container-kill
+      spec:
+        components:
+          env:
+            # Duration of chaos (seconds)
+            - name: TOTAL_CHAOS_DURATION
+              value: "60"
+
+            # Interval between kills (seconds)
+            - name: CHAOS_INTERVAL
+              value: "15"
+
+            # Target container
+            - name: TARGET_CONTAINER
+              value: "qeo-api"
+
+            # Signal to send (SIGKILL)
+            - name: SIGNAL
+              value: "SIGKILL"
+
+          probe:
+            - name: check-restart-count
+              type: k8sProbe
+              mode: Continuous
+              runProperties:
+                probeTimeout: 5
+                interval: 10
+              k8sProbe/inputs:
+                group: ""
+                version: v1
+                resource: pods
+                namespace: qeo
+                labelSelector: app=qeo
+                operation: present
+
+---
+##############################################################################
+# ChaosSchedule: Run experiments on a schedule
+##############################################################################
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosSchedule
+metadata:
+  name: qeo-chaos-schedule
+  namespace: qeo
+spec:
+  # Run pod-delete every day at 2 AM
+  schedule:
+    repeat:
+      timeRange:
+        startTime: "2024-01-01T02:00:00Z"
+        endTime: "2024-12-31T02:00:00Z"
+      properties:
+        minChaosInterval: 24h
+
+  engineTemplateSpec:
+    appinfo:
+      appns: qeo
+      applabel: "app=qeo"
+      appkind: deployment
+
+    engineState: active
+    chaosServiceAccount: qeo-chaos-sa
+
+    experiments:
+      - name: pod-delete
+        spec:
+          components:
+            env:
+              - name: TOTAL_CHAOS_DURATION
+                value: "30"
+              - name: CHAOS_INTERVAL
+                value: "10"
+              - name: PODS_AFFECTED_PERC
+                value: "30"
+
+---
+##############################################################################
+# ChaosResult Monitoring - Export results to Prometheus
+##############################################################################
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: chaos-exporter-config
+  namespace: qeo
+data:
+  config.yaml: |
+    # Chaos exporter configuration
+    metrics:
+      - name: total_chaos_duration
+        help: Total duration of chaos experiment
+        type: gauge
+      - name: chaos_result_verdict
+        help: Result of chaos experiment (0=fail, 1=pass)
+        type: gauge
+      - name: probe_success_percentage
+        help: Success percentage of probes
+        type: gauge

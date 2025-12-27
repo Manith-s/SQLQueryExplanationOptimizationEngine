@@ -88,6 +88,15 @@ class Settings:
         ).split(",") if s.strip()
     ]
 
+    # Query Profiler configuration
+    PROFILER_ENABLED: bool = os.getenv("PROFILER_ENABLED", "true").lower() == "true"
+    PROFILER_DB_PATH: str = os.getenv("PROFILER_DB_PATH", "profiler.db")
+    PROFILER_WINDOW_SIZE: int = int(os.getenv("PROFILER_WINDOW_SIZE", "100"))
+    PROFILER_MIN_SAMPLES: int = int(os.getenv("PROFILER_MIN_SAMPLES", "10"))
+    PROFILER_DEGRADATION_THRESHOLD_PCT: float = float(os.getenv("PROFILER_DEGRADATION_THRESHOLD_PCT", "20"))
+    PROFILER_CLEANUP_DAYS: int = int(os.getenv("PROFILER_CLEANUP_DAYS", "30"))
+    PROFILER_BACKGROUND_ANALYSIS_INTERVAL_S: int = int(os.getenv("PROFILER_BACKGROUND_ANALYSIS_INTERVAL_S", "3600"))
+
     # ---- Convenience helpers ----
     @property
     def db_url_sqlalchemy(self) -> str:

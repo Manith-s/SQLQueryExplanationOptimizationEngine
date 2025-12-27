@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Execution Plan Visualizer - QEO</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header h1 { font-size: 1.5em; margin-bottom: 10px; }
+
+        .controls {
+            background: white;
+            padding: 15px 30px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .controls textarea {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-family: monospace;
+            resize: vertical;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+
+        .main {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .visualization {
+            flex: 1;
+            background: white;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #planTree {
+            width: 100%;
+            height: 100%;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: white;
+            border-left: 1px solid #e0e0e0;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .sidebar h2 {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .metric {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            border-left: 3px solid #667eea;
+        }
+
+        .metric-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .metric-value {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node rect {
+            stroke: #333;
+            stroke-width: 2px;
+        }
+
+        .node text {
+            font: 12px sans-serif;
+            pointer-events: none;
+        }
+
+        .link {
+            fill: none;
+            stroke: #999;
+            stroke-width: 2px;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            max-width: 300px;
+            z-index: 1000;
+        }
+
+        .tooltip.show {
+            opacity: 1;
+        }
+
+        .bottleneck {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+        }
+
+        .bottleneck.high {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+        }
+
+        .zoom-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            z-index: 100;
+        }
+
+        .zoom-btn {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .zoom-btn:hover {
+            background: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌳 Execution Plan Visualizer</h1>
+        <p>Interactive visualization of PostgreSQL query execution plans</p>
+    </div>
+
+    <div class="controls">
+        <textarea id="sqlInput" rows="3" placeholder="Enter SQL query to visualize...">SELECT * FROM users WHERE id = 1</textarea>
+        <button class="btn btn-primary" onclick="visualizePlan()">Visualize Plan</button>
+        <label>
+            <input type="checkbox" id="analyzeCheck"> ANALYZE
+        </label>
+    </div>
+
+    <div class="main">
+        <div class="visualization">
+            <div class="zoom-controls">
+                <button class="zoom-btn" onclick="zoomIn()">+</button>
+                <button class="zoom-btn" onclick="zoomOut()">−</button>
+                <button class="zoom-btn" onclick="resetZoom()">⟲</button>
+            </div>
+            <svg id="planTree"></svg>
+            <div class="tooltip" id="tooltip"></div>
+        </div>
+
+        <div class="sidebar">
+            <h2>Plan Summary</h2>
+            <div id="summary"></div>
+
+            <h2 style="margin-top: 25px;">Bottlenecks</h2>
+            <div id="bottlenecks"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentPlan = null;
+        let svg, g, zoom;
+
+        // Initialize D3 visualization
+        function initVisualization() {
+            const width = document.querySelector('.visualization').clientWidth;
+            const height = document.querySelector('.visualization').clientHeight;
+
+            svg = d3.select('#planTree')
+                .attr('width', width)
+                .attr('height', height);
+
+            g = svg.append('g');
+
+            // Setup zoom behavior
+            zoom = d3.zoom()
+                .scaleExtent([0.1, 3])
+                .on('zoom', (event) => {
+                    g.attr('transform', event.transform);
+                });
+
+            svg.call(zoom);
+        }
+
+        // Visualize plan
+        async function visualizePlan() {
+            const sql = document.getElementById('sqlInput').value.trim();
+            if (!sql) return alert('Please enter a SQL query');
+
+            const analyze = document.getElementById('analyzeCheck').checked;
+
+            try {
+                const response = await fetch(`/api/v1/plan/visual?sql=${encodeURIComponent(sql)}&analyze=${analyze}`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Failed to get plan');
+                }
+
+                currentPlan = data;
+                renderTree(data.plan_tree);
+                renderSummary(data.summary);
+                renderBottlenecks(data.bottlenecks);
+
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Render tree visualization
+        function renderTree(root) {
+            g.selectAll('*').remove();
+
+            const treeLayout = d3.tree()
+                .size([600, 800])
+                .separation((a, b) => a.parent == b.parent ? 1 : 1.5);
+
+            const hierarchy = d3.hierarchy(root, d => d.children);
+            const treeData = treeLayout(hierarchy);
+
+            // Draw links
+            g.selectAll('.link')
+                .data(treeData.links())
+                .enter()
+                .append('path')
+                .attr('class', 'link')
+                .attr('d', d3.linkVertical()
+                    .x(d => d.y + 100)
+                    .y(d => d.x + 100)
+                );
+
+            // Draw nodes
+            const nodes = g.selectAll('.node')
+                .data(treeData.descendants())
+                .enter()
+                .append('g')
+                .attr('class', 'node')
+                .attr('transform', d => `translate(${d.y + 100},${d.x + 100})`)
+                .on('click', (event, d) => toggleNode(d))
+                .on('mouseover', (event, d) => showTooltip(event, d.data))
+                .on('mouseout', hideTooltip);
+
+            nodes.append('rect')
+                .attr('x', -60)
+                .attr('y', -20)
+                .attr('width', 120)
+                .attr('height', 40)
+                .attr('rx', 6)
+                .attr('fill', d => d.data.color || '#667eea');
+
+            nodes.append('text')
+                .attr('dy', -5)
+                .attr('text-anchor', 'middle')
+                .style('fill', 'white')
+                .style('font-weight', 'bold')
+                .text(d => d.data.icon + ' ' + d.data.name);
+
+            nodes.append('text')
+                .attr('dy', 10)
+                .attr('text-anchor', 'middle')
+                .style('fill', 'white')
+                .style('font-size', '10px')
+                .text(d => d.data.relation_name || '');
+
+            // Center the view
+            const bounds = g.node().getBBox();
+            const dx = bounds.x + bounds.width / 2;
+            const dy = bounds.y + bounds.height / 2;
+            const scale = 0.9 / Math.max(bounds.width / svg.attr('width'), bounds.height / svg.attr('height'));
+            const transform = d3.zoomIdentity
+                .translate(svg.attr('width') / 2, svg.attr('height') / 2)
+                .scale(scale)
+                .translate(-dx, -dy);
+            svg.call(zoom.transform, transform);
+        }
+
+        // Toggle node expand/collapse
+        function toggleNode(d) {
+            if (d.children) {
+                d._children = d.children;
+                d.children = null;
+            } else if (d._children) {
+                d.children = d._children;
+                d._children = null;
+            }
+            renderTree(currentPlan.plan_tree);
+        }
+
+        // Show tooltip
+        function showTooltip(event, data) {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.innerHTML = `
+                <strong>${data.icon} ${data.name}</strong><br>
+                ${data.relation_name ? `Table: ${data.relation_name}<br>` : ''}
+                Cost: ${data.cost.startup?.toFixed(2) || 'N/A'} - ${data.cost.total?.toFixed(2) || 'N/A'}<br>
+                Rows: ${data.rows.plan || 'N/A'}${data.rows.actual ? ` (actual: ${data.rows.actual})` : ''}
+            `;
+            tooltip.style.left = event.pageX + 15 + 'px';
+            tooltip.style.top = event.pageY + 15 + 'px';
+            tooltip.classList.add('show');
+        }
+
+        // Hide tooltip
+        function hideTooltip() {
+            document.getElementById('tooltip').classList.remove('show');
+        }
+
+        // Render summary
+        function renderSummary(summary) {
+            const html = `
+                <div class="metric">
+                    <div class="metric-label">Total Cost</div>
+                    <div class="metric-value">${summary.total_cost?.toFixed(2) || 'N/A'}</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Planning Time</div>
+                    <div class="metric-value">${summary.planning_time?.toFixed(2) || 'N/A'} ms</div>
+                </div>
+                ${summary.execution_time ? `
+                <div class="metric">
+                    <div class="metric-label">Execution Time</div>
+                    <div class="metric-value">${summary.execution_time.toFixed(2)} ms</div>
+                </div>` : ''}
+                <div class="metric">
+                    <div class="metric-label">Node Count</div>
+                    <div class="metric-value">${summary.node_count || 0}</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Max Depth</div>
+                    <div class="metric-value">${summary.max_depth || 0}</div>
+                </div>
+            `;
+            document.getElementById('summary').innerHTML = html;
+        }
+
+        // Render bottlenecks
+        function renderBottlenecks(bottlenecks) {
+            const container = document.getElementById('bottlenecks');
+            if (!bottlenecks || bottlenecks.length === 0) {
+                container.innerHTML = '<div class="metric">No bottlenecks detected</div>';
+                return;
+            }
+
+            const html = bottlenecks.map(b => `
+                <div class="metric bottleneck ${b.severity === 'high' ? 'high' : ''}">
+                    <div class="metric-label">${b.type.replace('_', ' ').toUpperCase()}</div>
+                    <div style="font-size: 0.9em; margin-top: 4px;">${b.description}</div>
+                </div>
+            `).join('');
+
+            container.innerHTML = html;
+        }
+
+        // Zoom controls
+        function zoomIn() {
+            svg.transition().call(zoom.scaleBy, 1.3);
+        }
+
+        function zoomOut() {
+            svg.transition().call(zoom.scaleBy, 0.7);
+        }
+
+        function resetZoom() {
+            svg.transition().call(zoom.transform, d3.zoomIdentity);
+        }
+
+        // Initialize on load
+        window.onload = () => {
+            initVisualization();
+        };
+
+        // Handle window resize
+        window.onresize = () => {
+            if (currentPlan) {
+                initVisualization();
+                renderTree(currentPlan.plan_tree);
+            }
+        };
+    </script>
+</body>
+</html>

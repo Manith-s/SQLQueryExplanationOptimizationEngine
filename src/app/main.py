@@ -17,7 +17,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from app.routers import health, lint, explain, optimize, schema
-from app.routers import workload
+from app.routers import workload, profile, catalog, index, cache, correct
 from app.core.metrics import init_metrics, observe_request, metrics_exposition
 from app.core.auth import verify_token
 
@@ -106,6 +106,27 @@ async def logging_middleware(request: Request, call_next):
 init_metrics()
 
 
+# Startup and shutdown events for profiler background tasks
+@app.on_event("startup")
+async def startup_event():
+    """Start background tasks on application startup."""
+    if settings.PROFILER_ENABLED:
+        from app.core.profiler_tasks import get_background_tasks
+        tasks = get_background_tasks()
+        await tasks.start()
+        print({"lvl": "info", "msg": "Profiler background tasks started"})
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Stop background tasks on application shutdown."""
+    if settings.PROFILER_ENABLED:
+        from app.core.profiler_tasks import get_background_tasks
+        tasks = get_background_tasks()
+        await tasks.stop()
+        print({"lvl": "info", "msg": "Profiler background tasks stopped"})
+
+
 @app.get("/metrics")
 async def metrics():
     if not settings.METRICS_ENABLED:
@@ -119,10 +140,24 @@ app.include_router(health.router, tags=["health"])
 
 # Apply authentication to all API routes (verify_token checks AUTH_ENABLED dynamically)
 app.include_router(lint.router, prefix="/api/v1", tags=["lint"], dependencies=[Depends(verify_token)])
+app.include_router(correct.router, prefix="/api/v1", tags=["correct"], dependencies=[Depends(verify_token)])
 app.include_router(explain.router, prefix="/api/v1", tags=["explain"], dependencies=[Depends(verify_token)])
 app.include_router(optimize.router, prefix="/api/v1", tags=["optimize"], dependencies=[Depends(verify_token)])
 app.include_router(schema.router, prefix="/api/v1", tags=["schema"], dependencies=[Depends(verify_token)])
 app.include_router(workload.router, prefix="/api/v1", tags=["workload"], dependencies=[Depends(verify_token)])
+
+# Profiler router (conditionally enabled)
+if settings.PROFILER_ENABLED:
+    app.include_router(profile.router, tags=["profiler"], dependencies=[Depends(verify_token)])
+
+# Catalog and query builder router
+app.include_router(catalog.router, tags=["catalog"], dependencies=[Depends(verify_token)])
+
+# Index management and self-healing router
+app.include_router(index.router, tags=["index-management"], dependencies=[Depends(verify_token)])
+
+# Cache management router
+app.include_router(cache.router, tags=["cache"], dependencies=[Depends(verify_token)])
 
 
 @app.get("/")
@@ -144,6 +179,61 @@ async def root():
         }
 
 
+@app.get("/profiler")
+async def profiler_ui():
+    """Serve the profiler dashboard UI."""
+    if not settings.PROFILER_ENABLED:
+        return Response(
+            content='{"detail": "Profiler is disabled"}',
+            status_code=503,
+            media_type="application/json"
+        )
+
+    static_dir = Path(__file__).parent / "static"
+    profiler_file = static_dir / "profiler.html"
+
+    if profiler_file.exists():
+        return FileResponse(profiler_file)
+    else:
+        return Response(
+            content='{"detail": "Profiler UI not found"}',
+            status_code=404,
+            media_type="application/json"
+        )
+
+
+@app.get("/query-builder")
+async def query_builder_ui():
+    """Serve the visual query builder UI."""
+    static_dir = Path(__file__).parent / "static"
+    builder_file = static_dir / "query-builder.html"
+
+    if builder_file.exists():
+        return FileResponse(builder_file)
+    else:
+        return Response(
+            content='{"detail": "Query Builder UI not found"}',
+            status_code=404,
+            media_type="application/json"
+        )
+
+
+@app.get("/plan-visualizer")
+async def plan_visualizer_ui():
+    """Serve the execution plan visualizer UI."""
+    static_dir = Path(__file__).parent / "static"
+    viz_file = static_dir / "plan-visualizer.html"
+
+    if viz_file.exists():
+        return FileResponse(viz_file)
+    else:
+        return Response(
+            content='{"detail": "Plan Visualizer UI not found"}',
+            status_code=404,
+            media_type="application/json"
+        )
+
+
 @app.get("/api")
 async def api_info():
     """API information endpoint."""
@@ -151,7 +241,13 @@ async def api_info():
         "name": "SQL Query Explanation & Optimization Engine",
         "version": "0.7.0",
         "status": "running",
-        "docs": "/docs"
+        "docs": "/docs",
+        "uis": {
+            "main": "/",
+            "query_builder": "/query-builder",
+            "plan_visualizer": "/plan-visualizer",
+            "profiler": "/profiler" if settings.PROFILER_ENABLED else None
+        }
     }
 
 

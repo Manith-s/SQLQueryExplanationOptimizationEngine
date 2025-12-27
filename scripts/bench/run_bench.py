@@ -11,9 +11,9 @@ This script is safe and read-only for product schemas; DDL is confined to
 
 from __future__ import annotations
 
-import os
 import csv
 import json
+import os
 from pathlib import Path
 from typing import Any, Dict
 

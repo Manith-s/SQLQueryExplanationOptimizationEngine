@@ -20,14 +20,12 @@ Usage:
     locust -f locustfile.py --worker --master-host=localhost
 """
 
-import json
 import random
 import time
-from typing import Any, Dict, List
+from typing import Dict, List
 
 from locust import HttpUser, TaskSet, between, events, tag, task
 from locust.runners import MasterRunner
-
 
 # Realistic test queries grouped by complexity
 SIMPLE_QUERIES = [

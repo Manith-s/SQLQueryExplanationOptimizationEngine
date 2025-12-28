@@ -1,11 +1,11 @@
-from typing import List, Optional, Dict, Any
 import hashlib
 import time
+from typing import Any, Dict, List, Optional
+
 from fastapi import APIRouter
 from pydantic import BaseModel, Field, conint
 
 from app.core.workload import analyze_workload
-
 
 router = APIRouter()
 

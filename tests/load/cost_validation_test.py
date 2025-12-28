@@ -10,11 +10,12 @@ Usage:
 
 import argparse
 import asyncio
-import aiohttp
-from datetime import datetime, timedelta
-from typing import Dict, List
 import json
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
+from datetime import datetime
+from typing import List
+
+import aiohttp
 
 
 @dataclass
@@ -144,7 +145,7 @@ class CostValidationTest:
     async def _validate_edge_caching_savings(self) -> CostMetric:
         """Validate edge caching savings."""
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession():
                 # Fetch cache stats (from edge or API)
                 # For simulation, we'll estimate based on cache hit rate
 

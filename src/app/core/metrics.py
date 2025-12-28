@@ -6,11 +6,16 @@ When METRICS_ENABLED=false, this module should not register collectors.
 from __future__ import annotations
 
 import time
-from typing import Any, Dict
-from prometheus_client import CollectorRegistry, CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
+
+from prometheus_client import (
+    CONTENT_TYPE_LATEST,
+    CollectorRegistry,
+    Counter,
+    Histogram,
+    generate_latest,
+)
 
 from app.core.config import settings
-
 
 _registry: CollectorRegistry | None = None
 _c_requests: Counter | None = None

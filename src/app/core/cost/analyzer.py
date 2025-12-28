@@ -16,14 +16,13 @@ Features:
 """
 
 import logging
-import os
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
-from prometheus_client import Counter, Gauge, Histogram
+from prometheus_client import Counter, Histogram
 
 logger = logging.getLogger(__name__)
 
@@ -290,7 +289,7 @@ class CostAnalyzer:
         try:
             from google.cloud import billing_v1
 
-            client = billing_v1.CloudBillingClient()
+            billing_v1.CloudBillingClient()
 
             # Implementation would query GCP Billing API
             # Placeholder for now
@@ -304,11 +303,11 @@ class CostAnalyzer:
     def _get_azure_cost_trends(self, days: int) -> List[CostTrend]:
         """Fetch cost trends from Azure Cost Management."""
         try:
-            from azure.mgmt.costmanagement import CostManagementClient
             from azure.identity import DefaultAzureCredential
+            from azure.mgmt.costmanagement import CostManagementClient
 
             credential = DefaultAzureCredential()
-            client = CostManagementClient(credential)
+            CostManagementClient(credential)
 
             # Implementation would query Azure Cost Management API
             # Placeholder for now
@@ -398,7 +397,7 @@ class CostAnalyzer:
 
         # Return representative queries
         result = []
-        for pattern, data in sorted_patterns:
+        for _pattern, data in sorted_patterns:
             # Use the most recent query for this pattern
             representative = data["queries"][-1]
             result.append(representative)

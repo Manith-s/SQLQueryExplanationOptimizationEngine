@@ -6,16 +6,16 @@ optimizations when degradation is detected. Includes rollback capabilities
 and comprehensive audit logging.
 """
 
-from typing import Any, Dict, List, Optional, Tuple
-from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta
-from enum import Enum
-import json
 import hashlib
+import json
+from dataclasses import dataclass
+from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
 
-from app.core.db import run_sql, get_conn, run_explain
-from app.core.index_manager import get_index_manager, IndexRecommendation
 from app.core.config import settings
+from app.core.db import get_conn
+from app.core.index_manager import IndexRecommendation, get_index_manager
 
 
 class ActionStatus(Enum):

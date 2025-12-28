@@ -9,10 +9,11 @@ Usage:
 
 import asyncio
 import time
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, List, Tuple
+
 import requests
-from dataclasses import dataclass
 
 # 15 edge locations to test
 EDGE_LOCATIONS = [
@@ -148,7 +149,7 @@ class EdgeWorkersValidator:
             latencies = []
 
             # Run 20 requests per location
-            for i in range(20):
+            for _i in range(20):
                 start = time.time()
                 try:
                     response = requests.get(
@@ -221,7 +222,7 @@ class EdgeWorkersValidator:
             if global_passed:
                 print(f"  ✓ Global: P50 {global_p50:.0f}ms, P95 {global_p95:.0f}ms, P99 {global_p99:.0f}ms")
             else:
-                print(f"  ✗ Global latency exceeded targets")
+                print("  ✗ Global latency exceeded targets")
 
     async def test_cache_functionality(self):
         """Test edge caching and cache hit rates."""
@@ -342,7 +343,7 @@ class EdgeWorkersValidator:
             success_count = 0
             rate_limited_count = 0
 
-            for i in range(110):
+            for _i in range(110):
                 response = requests.get(
                     f"{EDGE_URL}/health",
                     timeout=2,
@@ -372,7 +373,7 @@ class EdgeWorkersValidator:
             if passed:
                 print(f"  ✓ Rate limiting working: {rate_limited_count} requests blocked")
             else:
-                print(f"  ✗ Rate limiting not working properly")
+                print("  ✗ Rate limiting not working properly")
 
         except Exception as e:
             duration_ms = (time.time() - start) * 1000
@@ -438,7 +439,7 @@ class EdgeWorkersValidator:
             if passed:
                 print(f"  ✓ DDoS protection active: {blocked_requests} suspicious requests blocked")
             else:
-                print(f"  ✗ DDoS protection may not be working")
+                print("  ✗ DDoS protection may not be working")
 
         except Exception as e:
             duration_ms = (time.time() - start) * 1000
@@ -478,7 +479,7 @@ async def main():
             indent=2,
         )
 
-    print(f"\nResults saved to: validation_results_edge.json")
+    print("\nResults saved to: validation_results_edge.json")
 
     return 0 if success else 1
 

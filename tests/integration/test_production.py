@@ -7,9 +7,9 @@ These tests require:
 """
 
 import os
+
 import pytest
 from fastapi.testclient import TestClient
-
 
 # Skip all tests in this module if RUN_DB_TESTS is not set
 pytestmark = pytest.mark.skipif(
@@ -281,9 +281,9 @@ def test_production_config_loaded():
     """Production configuration should be loadable."""
     from app.core.production import (
         ProductionSettings,
-        get_security_headers,
         get_cors_config,
-        get_database_config
+        get_database_config,
+        get_security_headers,
     )
 
     # Check settings exist

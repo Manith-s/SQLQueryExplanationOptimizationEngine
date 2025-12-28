@@ -9,13 +9,18 @@ import asyncio
 import time
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    HTTPException,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from pydantic import BaseModel, Field
 
 from app.core.config import settings
 from app.core.db import run_explain
 from app.core.profiler import get_profiler
-
 
 router = APIRouter(prefix="/api/v1/profile", tags=["profiler"])
 
@@ -269,7 +274,7 @@ async def profile_query(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Profiling failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Profiling failed: {str(e)}") from e
 
 
 @router.post("/statistics", response_model=Dict[str, Any])
@@ -306,7 +311,7 @@ async def get_query_statistics(request: QueryStatisticsRequest):
         raise HTTPException(
             status_code=500,
             detail=f"Failed to retrieve statistics: {str(e)}"
-        )
+        ) from e
 
 
 @router.get("/summaries", response_model=QuerySummaryResponse)
@@ -337,7 +342,7 @@ async def get_query_summaries(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to retrieve summaries: {str(e)}"
-        )
+        ) from e
 
 
 @router.delete("/cleanup")
@@ -365,7 +370,7 @@ async def cleanup_old_data(days: int = 30):
         raise HTTPException(
             status_code=500,
             detail=f"Cleanup failed: {str(e)}"
-        )
+        ) from e
 
 
 @router.get("/analysis/recent")
@@ -395,7 +400,7 @@ async def get_recent_analysis(limit: int = 10):
         raise HTTPException(
             status_code=500,
             detail=f"Failed to retrieve analysis: {str(e)}"
-        )
+        ) from e
 
 
 @router.post("/analysis/manual/{query_hash}")
@@ -426,7 +431,7 @@ async def run_manual_analysis(query_hash: str):
         raise HTTPException(
             status_code=500,
             detail=f"Analysis failed: {str(e)}"
-        )
+        ) from e
 
 
 @router.websocket("/ws")

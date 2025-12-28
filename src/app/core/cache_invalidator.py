@@ -9,22 +9,20 @@ Implements:
 - Probabilistic invalidation for approximate queries
 """
 
-import asyncio
 import select
 import time
-from typing import Any, Dict, List, Set, Optional, Tuple
 from dataclasses import dataclass, field
 from datetime import datetime
-from collections import defaultdict
-from threading import Thread, Lock
 from enum import Enum
-import sqlglot
+from threading import Lock, Thread
+from typing import Any, Dict, List, Optional, Set
+
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
-from app.core.cache_manager import get_cache_manager, QueryFingerprinter
-from app.core.db import get_conn
+from app.core.cache_manager import QueryFingerprinter, get_cache_manager
 from app.core.config import settings
+from app.core.db import get_conn
 
 
 class InvalidationStrategy(Enum):
@@ -436,7 +434,7 @@ class CacheInvalidator:
                 return 0
 
             # Process all pending changes
-            for table, change in self.pending_invalidations.items():
+            for table, _change in self.pending_invalidations.items():
                 invalidated += self.cache_manager.invalidate(table=table)
 
             self.pending_invalidations.clear()

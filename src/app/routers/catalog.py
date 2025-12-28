@@ -10,11 +10,8 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from app.core.config import settings
-from app.core.db import run_sql, fetch_schema_metadata
-from app.core.query_history import get_query_history
+from app.core.db import fetch_schema_metadata, run_sql
 from app.core.sql_analyzer import parse_sql
-
 
 router = APIRouter(prefix="/api/v1", tags=["catalog"])
 
@@ -178,7 +175,7 @@ async def get_catalog(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch catalog: {str(e)}"
-        )
+        ) from e
 
 
 @router.post("/validate", response_model=ValidateResponse)
@@ -266,7 +263,7 @@ async def validate_query(request: ValidateRequest):
         raise HTTPException(
             status_code=500,
             detail=f"Validation failed: {str(e)}"
-        )
+        ) from e
 
 
 @router.post("/suggest", response_model=SuggestResponse)
@@ -400,7 +397,7 @@ async def suggest_query(request: SuggestRequest):
         raise HTTPException(
             status_code=500,
             detail=f"Suggestion failed: {str(e)}"
-        )
+        ) from e
 
 
 @router.get("/plan/visual", response_model=VisualPlanResponse)
@@ -458,7 +455,7 @@ async def get_visual_plan(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to generate visual plan: {str(e)}"
-        )
+        ) from e
 
 
 def _transform_plan_for_viz(node: Dict[str, Any], depth: int = 0) -> Dict[str, Any]:
@@ -534,7 +531,7 @@ def _identify_bottlenecks(node: Dict[str, Any], bottlenecks: List = None) -> Lis
 
     node_type = node.get("Node Type")
     total_cost = node.get("Total Cost", 0)
-    startup_cost = node.get("Startup Cost", 0)
+    node.get("Startup Cost", 0)
     actual_rows = node.get("Actual Rows")
     plan_rows = node.get("Plan Rows")
 

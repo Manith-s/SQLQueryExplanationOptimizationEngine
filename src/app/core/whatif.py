@@ -6,14 +6,14 @@ only to measure planner cost deltas, and resets state after trials.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Tuple
-import time
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any, Dict, List, Tuple
 
-from app.core.config import settings
 from app.core import db
-from app.core.metrics import observe_whatif_trial, count_whatif_filtered
+from app.core.config import settings
+from app.core.metrics import count_whatif_filtered, observe_whatif_trial
 
 
 def _parse_index_stmt(stmt: str) -> Tuple[str, List[str]]:

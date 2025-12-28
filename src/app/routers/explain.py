@@ -6,13 +6,13 @@ and natural language explanations.
 """
 
 import os
-from typing import Optional, Literal
 from functools import lru_cache
-from datetime import datetime, timedelta
+from typing import Literal, Optional
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field, conint
 
-from app.core import db, plan_heuristics, prompts, llm_adapter
+from app.core import db, llm_adapter, plan_heuristics, prompts
 from app.core.config import settings
 
 router = APIRouter()
@@ -21,7 +21,8 @@ router = APIRouter()
 if settings.APP_ENV != "production":
     explanation_cache = lru_cache(maxsize=100)(lambda *args: args[-1])
 else:
-    explanation_cache = lambda *args: args[-1]  # No-op cache
+    def explanation_cache(*args):
+        return args[-1]  # No-op cache
 
 class ExplainRequest(BaseModel):
     """Request model for EXPLAIN endpoint."""
@@ -83,13 +84,13 @@ class ExplainResponse(BaseModel):
 async def explain_query(req: ExplainRequest) -> ExplainResponse:
     """
     Analyze a SQL query's execution plan and optionally explain it in natural language.
-    
+
     Args:
         req: ExplainRequest with SQL query and options
-    
+
     Returns:
         ExplainResponse with plan, warnings, metrics, and optional explanation
-    
+
     Raises:
         HTTPException: If query analysis fails
     """
@@ -122,7 +123,7 @@ async def explain_query(req: ExplainRequest) -> ExplainResponse:
                     detail = str(ex)
                     if "timeout" in detail.lower():
                         detail = f"Timeout: {detail}"
-                    raise HTTPException(status_code=400, detail=detail)
+                    raise HTTPException(status_code=400, detail=detail) from ex
         # Analyze plan for warnings and metrics (soft)
         try:
             warnings, metrics = plan_heuristics.analyze(plan)
@@ -139,7 +140,7 @@ async def explain_query(req: ExplainRequest) -> ExplainResponse:
             metrics=metrics,
             message=base_message,
         )
-        
+
         # Generate explanation if requested
         if req.nl:
             try:
@@ -148,7 +149,7 @@ async def explain_query(req: ExplainRequest) -> ExplainResponse:
                     req.sql, req.analyze, req.audience,
                     req.style, req.length
                 )
-                
+
                 explanation = explanation_cache(
                     cache_key,
                     prompts.explain_template(
@@ -161,7 +162,7 @@ async def explain_query(req: ExplainRequest) -> ExplainResponse:
                         length=req.length
                     )
                 )
-                
+
                 # Get LLM provider and generate explanation
                 llm = llm_adapter.get_llm()
                 response.explanation = llm.complete(
@@ -179,14 +180,14 @@ async def explain_query(req: ExplainRequest) -> ExplainResponse:
                         response.explain_provider = os.getenv("LLM_PROVIDER", getattr(settings, "LLM_PROVIDER", "dummy"))
                 except Exception:
                     response.explain_provider = os.getenv("LLM_PROVIDER", getattr(settings, "LLM_PROVIDER", "dummy"))
-                
+
             except Exception as e:
                 # Don't fail the endpoint on LLM errors
                 response.message = f"Plan analysis succeeded but explanation failed: {str(e)}"
                 response.explanation = None
-        
+
         return response
-        
+
     except Exception as e:
         # Unexpected errors
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e

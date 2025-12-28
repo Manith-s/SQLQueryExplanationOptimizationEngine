@@ -3,6 +3,7 @@ Quick verification script to check if everything is set up correctly.
 Run this before starting the server: python verify.py
 """
 
+import subprocess
 import sys
 from pathlib import Path
 
@@ -82,7 +83,7 @@ for pkg in required_packages:
 
 # Check 6: Docker
 print("\n✓ Checking Docker...")
-import subprocess
+
 try:
     result = subprocess.run(["docker", "ps"], capture_output=True, timeout=5)
     if result.returncode == 0:

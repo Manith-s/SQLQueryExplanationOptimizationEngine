@@ -13,8 +13,8 @@ import logging
 import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
-import asyncio
+from typing import Dict, List, Optional
+
 import aiohttp
 
 logger = logging.getLogger(__name__)

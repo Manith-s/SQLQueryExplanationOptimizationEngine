@@ -7,13 +7,15 @@ Provides:
 - CORS configuration
 """
 
-import time
 import logging
+import time
 from typing import Callable
+
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
-from app.core.validation import sanitize_sql_for_logging, sanitize_error_message
+
+from app.core.validation import sanitize_error_message, sanitize_sql_for_logging
 
 logger = logging.getLogger(__name__)
 

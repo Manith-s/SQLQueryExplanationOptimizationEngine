@@ -11,12 +11,13 @@ WARNING: This test will temporarily disrupt service in test regions.
 """
 
 import asyncio
+import subprocess
 import time
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, List, Tuple
+
 import requests
-import subprocess
-from dataclasses import dataclass
 
 # Region configurations
 REGIONS = {
@@ -194,7 +195,7 @@ class FailoverValidator:
             if passed:
                 print(f"  ✓ Failure detected in {detection_time_ms:.0f}ms")
             else:
-                print(f"  ✗ Failure not detected or took too long")
+                print("  ✗ Failure not detected or took too long")
 
         except Exception as e:
             duration_ms = (time.time() - start) * 1000
@@ -241,7 +242,7 @@ class FailoverValidator:
                     message="Global API unhealthy before test",
                     duration_ms=0,
                 ))
-                print(f"  ✗ Global API unhealthy before test")
+                print("  ✗ Global API unhealthy before test")
                 return
 
             if not self.dry_run:
@@ -265,7 +266,7 @@ class FailoverValidator:
             recovered = False
             recovery_time = 0
 
-            for attempt in range(30):  # Try for up to 30 seconds
+            for _attempt in range(30):  # Try for up to 30 seconds
                 try:
                     response = requests.get(
                         GLOBAL_API_URL + "/health",
@@ -420,9 +421,9 @@ class FailoverValidator:
             ))
 
             if db_accessible:
-                print(f"  ✓ Database accessible (multi-region CockroachDB)")
+                print("  ✓ Database accessible (multi-region CockroachDB)")
             else:
-                print(f"  ✗ Database not accessible")
+                print("  ✗ Database not accessible")
 
         except Exception as e:
             duration_ms = (time.time() - start) * 1000
@@ -466,7 +467,7 @@ class FailoverValidator:
             if passed:
                 print(f"  ✓ GeoDNS resolving to {len(ips)} healthy region(s)")
             else:
-                print(f"  ✗ GeoDNS resolution failed")
+                print("  ✗ GeoDNS resolution failed")
 
         except Exception as e:
             duration_ms = (time.time() - start) * 1000
@@ -503,7 +504,7 @@ class FailoverValidator:
                     message="Failed to write test data",
                     duration_ms=0,
                 ))
-                print(f"  ✗ Failed to write test data")
+                print("  ✗ Failed to write test data")
                 return
 
             # Wait for replication
@@ -511,7 +512,7 @@ class FailoverValidator:
 
             # Try to read from different regions
             consistent = True
-            for region, config in REGIONS.items():
+            for _region, config in REGIONS.items():
                 try:
                     read_response = requests.post(
                         config["api_url"] + "/api/v1/lint",
@@ -537,9 +538,9 @@ class FailoverValidator:
             ))
 
             if consistent:
-                print(f"  ✓ Data consistent across all regions")
+                print("  ✓ Data consistent across all regions")
             else:
-                print(f"  ✗ Data inconsistency detected")
+                print("  ✗ Data inconsistency detected")
 
         except Exception as e:
             duration_ms = (time.time() - start) * 1000
@@ -560,7 +561,7 @@ class FailoverValidator:
             # Check all regions are healthy
             healthy_count = 0
 
-            for region, config in REGIONS.items():
+            for _region, config in REGIONS.items():
                 try:
                     response = requests.get(
                         config["api_url"] + "/health",
@@ -636,7 +637,7 @@ async def main():
             indent=2,
         )
 
-    print(f"\nResults saved to: validation_results_failover.json")
+    print("\nResults saved to: validation_results_failover.json")
 
     return 0 if success else 1
 

@@ -1,10 +1,11 @@
-from typing import List, Dict, Any, Tuple
-import re
 import hashlib
+import re
 from collections import defaultdict
-from app.core import sql_analyzer, db, plan_heuristics
-from app.core.optimizer import analyze as analyze_one
+from typing import Any, Dict, List
+
+from app.core import db, plan_heuristics, sql_analyzer
 from app.core.config import settings
+from app.core.optimizer import analyze as analyze_one
 
 
 def _normalize_sql_for_grouping(sql: str) -> str:
@@ -266,7 +267,7 @@ def _generate_workload_recommendations(
         })
 
     # Recommendation: N+1 pattern (many similar queries)
-    for pattern_hash, queries in query_groups.items():
+    for _pattern_hash, queries in query_groups.items():
         if len(queries) > 10:  # Potential N+1 query pattern
             recommendations.append({
                 "title": "Potential N+1 query pattern detected",

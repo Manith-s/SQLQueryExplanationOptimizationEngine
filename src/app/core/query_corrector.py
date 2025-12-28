@@ -8,15 +8,16 @@ Provides:
 - Query validation and repair
 """
 
-from typing import Dict, List, Optional, Tuple, Any
 import re
-from sqlglot import parse_one, exp, ParseError, TokenError
+from typing import Any, Dict, List, Optional, Tuple
+
+from sqlglot import ParseError, TokenError, parse_one
 from sqlglot.errors import ErrorLevel
 
 
 class QueryError:
     """Represents a query error with correction suggestions."""
-    
+
     def __init__(
         self,
         error_type: str,
@@ -34,7 +35,7 @@ class QueryError:
         self.corrected = corrected
         self.confidence = confidence
         self.explanation = explanation
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "error_type": self.error_type,
@@ -49,7 +50,7 @@ class QueryError:
 
 class QueryCorrector:
     """Main class for query correction and validation."""
-    
+
     # Common SQL keyword typos and corrections
     KEYWORD_TYPOS = {
         "selct": "SELECT",
@@ -73,9 +74,8 @@ class QueryCorrector:
         "distnct": "DISTINCT",
         "unioon": "UNION",
         "unoin": "UNION",
-        "unoin": "UNION",
     }
-    
+
     # Common function name typos
     FUNCTION_TYPOS = {
         "cout": "COUNT",
@@ -94,14 +94,14 @@ class QueryCorrector:
         "datte": "DATE",
         "datte_trunc": "DATE_TRUNC",
     }
-    
+
     def __init__(self):
         self.errors: List[QueryError] = []
-    
+
     def correct_query(self, sql: str) -> Dict[str, Any]:
         """
         Analyze and correct a SQL query.
-        
+
         Returns:
             Dict with:
             - corrected: Corrected SQL (if corrections found)
@@ -111,20 +111,18 @@ class QueryCorrector:
         """
         self.errors = []
         original_sql = sql
-        
+
         # Step 1: Try to parse the query
-        parse_error = None
         try:
             parse_one(sql, error_level=ErrorLevel.RAISE)
             is_valid = True
         except (ParseError, TokenError) as e:
             is_valid = False
-            parse_error = e
             self._analyze_parse_error(sql, e)
-        
+
         # Step 2: Check for common typos even if parse succeeds
         corrected_sql = self._fix_common_typos(sql)
-        
+
         # Step 3: Validate corrected query
         if corrected_sql != sql:
             try:
@@ -139,13 +137,13 @@ class QueryCorrector:
                 ))
             except (ParseError, TokenError):
                 pass  # Correction didn't help
-        
+
         # Step 4: Check for common mistakes
         self._check_common_mistakes(sql)
-        
+
         # Step 5: Check for missing clauses
         self._check_missing_clauses(sql)
-        
+
         return {
             "original": original_sql,
             "corrected": corrected_sql if corrected_sql != sql else None,
@@ -154,11 +152,11 @@ class QueryCorrector:
             "suggestions": self._generate_suggestions(),
             "can_auto_correct": any(e.corrected for e in self.errors if e.confidence > 0.7)
         }
-    
+
     def _analyze_parse_error(self, sql: str, error: Exception) -> None:
         """Analyze parse error and suggest fixes."""
         error_msg = str(error)
-        
+
         # Check for missing keyword patterns
         if "expecting" in error_msg.lower():
             # Try to extract what was expected
@@ -170,7 +168,7 @@ class QueryCorrector:
                     message=f"Expected keyword: {expected}",
                     explanation=f"The parser expected '{expected}' but found something else"
                 ))
-        
+
         # Check for syntax errors around specific keywords
         if "unexpected" in error_msg.lower():
             match = re.search(r"unexpected\s+['\"]?(\w+)", error_msg, re.IGNORECASE)
@@ -187,7 +185,7 @@ class QueryCorrector:
                         confidence=0.9,
                         explanation=f"'{unexpected}' appears to be a typo for '{corrected}'"
                     ))
-        
+
         # Check for unclosed quotes/parentheses
         if "unclosed" in error_msg.lower() or "unterminated" in error_msg.lower():
             self.errors.append(QueryError(
@@ -195,28 +193,28 @@ class QueryCorrector:
                 message="Unclosed quotes or parentheses detected",
                 explanation="Check for missing closing quotes (') or parentheses ())"
             ))
-    
+
     def _fix_common_typos(self, sql: str) -> str:
         """Fix common typos in SQL query."""
         corrected = sql
-        
+
         # Fix keyword typos (case-insensitive, whole word)
         for typo, correct in self.KEYWORD_TYPOS.items():
             # Use word boundaries to avoid partial matches
             pattern = r'\b' + re.escape(typo) + r'\b'
             corrected = re.sub(pattern, correct, corrected, flags=re.IGNORECASE)
-        
+
         # Fix function name typos
         for typo, correct in self.FUNCTION_TYPOS.items():
             pattern = r'\b' + re.escape(typo) + r'\s*\('
             corrected = re.sub(pattern, correct + '(', corrected, flags=re.IGNORECASE)
-        
+
         return corrected
-    
+
     def _check_common_mistakes(self, sql: str) -> None:
         """Check for common SQL mistakes."""
         sql_upper = sql.upper()
-        
+
         # Check for SELECT without FROM (unless it's SELECT constant)
         if re.search(r'\bSELECT\b', sql_upper) and not re.search(r'\bFROM\b', sql_upper):
             # Check if it's a constant SELECT (SELECT 1, SELECT NOW(), etc.)
@@ -226,7 +224,7 @@ class QueryCorrector:
                     message="SELECT statement missing FROM clause",
                     explanation="Most SELECT statements require a FROM clause. Use 'SELECT 1' for constants."
                 ))
-        
+
         # Check for WHERE without condition
         if re.search(r'\bWHERE\s*$', sql_upper) or re.search(r'\bWHERE\s+(?:ORDER|GROUP|LIMIT|;|\Z)', sql_upper):
             self.errors.append(QueryError(
@@ -234,7 +232,7 @@ class QueryCorrector:
                 message="WHERE clause missing condition",
                 explanation="WHERE clause must be followed by a condition (e.g., WHERE id = 1)"
             ))
-        
+
         # Check for JOIN without ON
         if re.search(r'\b(?:INNER|LEFT|RIGHT|FULL)?\s*JOIN\b', sql_upper):
             # Count JOINs and ONs
@@ -246,7 +244,7 @@ class QueryCorrector:
                     message=f"JOIN statement(s) missing ON clause ({join_count} JOINs, {on_count} ONs)",
                     explanation="Each JOIN must have an ON clause specifying the join condition"
                 ))
-        
+
         # Check for GROUP BY without aggregate functions
         if re.search(r'\bGROUP\s+BY\b', sql_upper) and not re.search(r'\b(?:COUNT|SUM|AVG|MAX|MIN|STRING_AGG|ARRAY_AGG)\s*\(', sql_upper):
             self.errors.append(QueryError(
@@ -254,7 +252,7 @@ class QueryCorrector:
                 message="GROUP BY used without aggregate functions",
                 explanation="GROUP BY is typically used with aggregate functions (COUNT, SUM, AVG, etc.)"
             ))
-        
+
         # Check for HAVING without GROUP BY
         if re.search(r'\bHAVING\b', sql_upper) and not re.search(r'\bGROUP\s+BY\b', sql_upper):
             self.errors.append(QueryError(
@@ -262,11 +260,11 @@ class QueryCorrector:
                 message="HAVING clause used without GROUP BY",
                 explanation="HAVING can only be used with GROUP BY"
             ))
-    
+
     def _check_missing_clauses(self, sql: str) -> None:
         """Check for missing important clauses."""
         sql_upper = sql.upper()
-        
+
         # Check for UPDATE/DELETE without WHERE (dangerous!)
         if re.search(r'\bUPDATE\s+\w+\s+SET\b', sql_upper) and not re.search(r'\bWHERE\b', sql_upper):
             self.errors.append(QueryError(
@@ -275,7 +273,7 @@ class QueryCorrector:
                 explanation="UPDATE without WHERE will update all rows. Add a WHERE clause to limit the update.",
                 confidence=1.0
             ))
-        
+
         if re.search(r'\bDELETE\s+FROM\s+\w+', sql_upper) and not re.search(r'\bWHERE\b', sql_upper):
             self.errors.append(QueryError(
                 error_type="safety",
@@ -283,11 +281,11 @@ class QueryCorrector:
                 explanation="DELETE without WHERE will delete all rows. Add a WHERE clause to limit the deletion.",
                 confidence=1.0
             ))
-    
+
     def _generate_suggestions(self) -> List[Dict[str, Any]]:
         """Generate correction suggestions from errors."""
         suggestions = []
-        
+
         for error in self.errors:
             if error.corrected:
                 suggestions.append({
@@ -305,17 +303,17 @@ class QueryCorrector:
                     "message": error.message,
                     "explanation": error.explanation
                 })
-        
+
         return suggestions
 
 
 def correct_query(sql: str) -> Dict[str, Any]:
     """
     Convenience function to correct a SQL query.
-    
+
     Args:
         sql: SQL query string to correct
-        
+
     Returns:
         Dict with correction results
     """

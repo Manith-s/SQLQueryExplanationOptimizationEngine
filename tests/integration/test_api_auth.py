@@ -7,9 +7,9 @@ These tests require:
 """
 
 import os
+
 import pytest
 from fastapi.testclient import TestClient
-
 
 # Skip all tests in this module if RUN_DB_TESTS is not set
 pytestmark = pytest.mark.skipif(

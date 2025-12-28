@@ -11,7 +11,6 @@ Features:
 
 import logging
 import warnings
-from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
@@ -379,13 +378,12 @@ class PredictionEngine:
 
             # Try Isolation Forest if sklearn available
             try:
-                from sklearn.ensemble import IsolationForest
-
-                iso_anomalies = self._detect_isolation_forest_anomalies(
-                    metric_name, history, window_size
-                )
-                anomalies.extend(iso_anomalies)
-
+                import importlib.util
+                if importlib.util.find_spec("sklearn.ensemble") is not None:
+                    iso_anomalies = self._detect_isolation_forest_anomalies(
+                        metric_name, history, window_size
+                    )
+                    anomalies.extend(iso_anomalies)
             except ImportError:
                 logger.debug("sklearn not available, skipping Isolation Forest")
 
@@ -610,7 +608,7 @@ class PredictiveMonitor:
             forecast = self._forecasts_cache[metric_name]
 
             # Check predictions within 2-hour window
-            for pred_time, pred_value, lower, upper in forecast.predictions:
+            for pred_time, pred_value, _lower, _upper in forecast.predictions:
                 if pred_time <= now or pred_time > now + breach_window:
                     continue
 

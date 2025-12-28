@@ -12,10 +12,9 @@ Uses reinforcement learning to:
 import logging
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
-import json
 
 import numpy as np
 

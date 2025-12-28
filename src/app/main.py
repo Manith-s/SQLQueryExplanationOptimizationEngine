@@ -4,31 +4,40 @@ FastAPI application entry point.
 Mounts routers and provides minimal health route.
 """
 
-from fastapi import FastAPI, Request, Response, Depends
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 import time
-import os
 from pathlib import Path
+
+from fastapi import Depends, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
 
-from app.routers import health, lint, explain, optimize, schema
-from app.routers import workload, profile, catalog, index, cache, correct
-from app.core.metrics import init_metrics, observe_request, metrics_exposition
 from app.core.auth import verify_token
+from app.core.config import settings
+from app.core.metrics import init_metrics, metrics_exposition, observe_request
+from app.routers import (
+    cache,
+    catalog,
+    correct,
+    explain,
+    health,
+    index,
+    lint,
+    optimize,
+    profile,
+    schema,
+    workload,
+)
 
 app = FastAPI(
     title="SQL Query Explanation & Optimization Engine",
     description="A local, offline-capable tool for SQL analysis, explanation, and optimization",
     version="0.7.0",
 )
-
-# CORS middleware for development
-from app.core.config import settings
 
 # Configure rate limiter
 limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])

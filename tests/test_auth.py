@@ -6,6 +6,7 @@ and that health endpoints remain public.
 """
 
 import os
+
 import pytest
 from fastapi.testclient import TestClient
 

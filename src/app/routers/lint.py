@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
-from app.core.sql_analyzer import parse_sql, lint_rules
+from fastapi import APIRouter
+from pydantic import BaseModel, Field
+
+from app.core.sql_analyzer import lint_rules, parse_sql
 
 router = APIRouter()
 
@@ -37,7 +38,7 @@ async def lint_sql(request: LintRequest):
             issues=[],
             summary=LintSummary(risk="high")
         )
-    
+
     try:
         ast_info = parse_sql(sql)
         lint_result = lint_rules(ast_info)

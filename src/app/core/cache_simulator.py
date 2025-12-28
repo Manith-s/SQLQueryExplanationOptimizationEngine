@@ -9,16 +9,13 @@ Provides:
 - Configuration comparison
 """
 
-import time
-import copy
-from typing import Any, Dict, List, Optional, Tuple
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from collections import deque
-from pathlib import Path
 import json
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-from app.core.cache_manager import CacheManager, QueryFingerprinter
+from app.core.cache_manager import CacheManager
 
 
 @dataclass
@@ -488,7 +485,7 @@ class CacheSimulator:
         self,
         workload: Workload,
         cache_size_mb: int,
-        pressure_levels: List[float] = [0.5, 0.8, 0.95, 1.0, 1.2]
+        pressure_levels: List[float] = None
     ) -> Dict[str, Any]:
         """
         Test cache behavior under different memory pressure levels.
@@ -501,6 +498,8 @@ class CacheSimulator:
         Returns:
             Results for each pressure level
         """
+        if pressure_levels is None:
+            pressure_levels = [0.5, 0.8, 0.95, 1.0, 1.2]
         results = {}
 
         for pressure in pressure_levels:

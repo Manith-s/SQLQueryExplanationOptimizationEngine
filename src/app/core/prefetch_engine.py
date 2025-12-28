@@ -10,17 +10,15 @@ Implements:
 """
 
 import time
-import hashlib
-from typing import Any, Dict, List, Optional, Set, Tuple
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
 from collections import defaultdict, deque
-from threading import Thread, Lock
+from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
-import asyncio
+from threading import Lock, Thread
+from typing import Any, Dict, List, Optional, Tuple
 
-from app.core.cache_manager import get_cache_manager, QueryFingerprinter
-from app.core.db import get_conn, run_explain
+from app.core.cache_manager import QueryFingerprinter, get_cache_manager
+from app.core.db import get_conn
 
 
 class PrefetchStrategy(Enum):
@@ -458,7 +456,7 @@ class PrefetchEngine:
                 cur.execute(candidate.sql)
                 result = cur.fetchall()
 
-            execution_time = (time.time() - start_time) * 1000
+            (time.time() - start_time) * 1000
 
             # Cache result
             self.cache_manager.put(

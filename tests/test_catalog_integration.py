@@ -6,9 +6,10 @@ visual plan generation, and query history system.
 """
 
 import os
-import pytest
 import tempfile
 from pathlib import Path
+
+import pytest
 
 # Skip if DB tests not enabled
 pytestmark = pytest.mark.skipif(
@@ -86,7 +87,7 @@ def test_query_type_detection(query_history):
     ]
 
     for sql, expected_type in queries:
-        query_id = query_history.add_query(sql, execution_time_ms=100.0)
+        query_history.add_query(sql, execution_time_ms=100.0)
         recent = query_history.get_recent_queries(limit=1)
         assert recent[0]["query_type"] == expected_type
 
@@ -215,6 +216,7 @@ def test_query_history_statistics(query_history):
 async def test_catalog_endpoint():
     """Test catalog API endpoint."""
     from fastapi.testclient import TestClient
+
     from app.main import app
 
     client = TestClient(app)
@@ -236,6 +238,7 @@ async def test_catalog_endpoint():
 async def test_validate_endpoint():
     """Test query validation endpoint."""
     from fastapi.testclient import TestClient
+
     from app.main import app
 
     client = TestClient(app)
@@ -261,6 +264,7 @@ async def test_validate_endpoint():
 async def test_suggest_endpoint():
     """Test query suggestion endpoint."""
     from fastapi.testclient import TestClient
+
     from app.main import app
 
     client = TestClient(app)
@@ -284,6 +288,7 @@ async def test_suggest_endpoint():
 async def test_visual_plan_endpoint():
     """Test visual plan endpoint."""
     from fastapi.testclient import TestClient
+
     from app.main import app
 
     client = TestClient(app)
@@ -379,6 +384,7 @@ def test_query_metadata_storage(query_history):
 def test_query_builder_ui_accessible():
     """Test that query builder UI is accessible."""
     from fastapi.testclient import TestClient
+
     from app.main import app
 
     client = TestClient(app)
@@ -394,6 +400,7 @@ def test_query_builder_ui_accessible():
 def test_plan_visualizer_ui_accessible():
     """Test that plan visualizer UI is accessible."""
     from fastapi.testclient import TestClient
+
     from app.main import app
 
     client = TestClient(app)

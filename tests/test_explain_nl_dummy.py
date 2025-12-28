@@ -3,12 +3,12 @@ Tests for natural language explanation using the dummy LLM provider.
 """
 
 import os
-import json
+
 import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.core.config import settings
+
 
 @pytest.fixture
 def client():
@@ -33,10 +33,10 @@ def test_explain_nl_simple(client):
         "nl": True,
         "analyze": False
     })
-    
+
     assert response.status_code == 200
     data = response.json()
-    
+
     assert data["ok"] is True
     assert data["explanation"] is not None
     assert len(data["explanation"]) > 0
@@ -65,10 +65,10 @@ def test_explain_nl_complex(client):
         "style": "detailed",
         "length": "long"
     })
-    
+
     assert response.status_code == 200
     data = response.json()
-    
+
     assert data["ok"] is True
     assert data["explanation"] is not None
     assert len(data["explanation"]) > 200  # Should be detailed
@@ -83,17 +83,17 @@ def test_explain_nl_huge_plan(client):
             "Plans": [{"Node Type": "Seq Scan"}] * 1000
         }
     }
-    
+
     response = client.post("/api/v1/explain", json={
         "sql": "SELECT 1",
         "nl": True,
         "analyze": False,
         "plan": huge_plan
     })
-    
+
     assert response.status_code == 200
     data = response.json()
-    
+
     assert data["ok"] is True
     assert data["explanation"] is not None
     assert len(data["explanation"]) < 5000  # Should be reasonably truncated
@@ -102,15 +102,15 @@ def test_explain_nl_invalid_provider(client):
     """Test graceful handling of invalid LLM provider."""
     # Set invalid provider
     os.environ["LLM_PROVIDER"] = "nonexistent"
-    
+
     response = client.post("/api/v1/explain", json={
         "sql": "SELECT 1",
         "nl": True
     })
-    
+
     assert response.status_code == 200
     data = response.json()
-    
+
     assert data["ok"] is True
     assert data["explanation"] is None
     assert "failed" in data["message"].lower()
@@ -123,16 +123,16 @@ def test_explain_nl_ollama(client):
     """Test NL explanation using Ollama (when available)."""
     # Use Ollama provider
     os.environ["LLM_PROVIDER"] = "ollama"
-    
+
     response = client.post("/api/v1/explain", json={
         "sql": "SELECT * FROM users WHERE active = true",
         "nl": True,
         "analyze": False
     })
-    
+
     assert response.status_code == 200
     data = response.json()
-    
+
     if data["explanation"] is not None:
         assert data["explain_provider"] == "ollama"
         assert len(data["explanation"]) > 0

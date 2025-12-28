@@ -7,10 +7,9 @@ These tests require:
 """
 
 import os
-import pytest
-import time
-from fastapi.testclient import TestClient
 
+import pytest
+from fastapi.testclient import TestClient
 
 # Skip all tests in this module if RUN_DB_TESTS is not set
 pytestmark = pytest.mark.skipif(
@@ -32,7 +31,6 @@ def test_rate_limit_headers_present(client):
     assert response.status_code == 200
 
     # Check for rate limit headers (slowapi adds these)
-    headers = response.headers
     # Note: slowapi may not add headers in test mode, but we verify the decorator is applied
 
 
@@ -40,7 +38,7 @@ def test_optimize_endpoint_has_lower_rate_limit(client):
     """Optimize endpoint should have a stricter rate limit (10/min vs 100/min)."""
     # Make 11 rapid requests to optimize endpoint
     responses = []
-    for i in range(11):
+    for _i in range(11):
         response = client.post(
             "/api/v1/optimize",
             json={"sql": "SELECT 1"}
@@ -48,7 +46,7 @@ def test_optimize_endpoint_has_lower_rate_limit(client):
         responses.append(response)
 
     # At least one should be rate limited (429)
-    status_codes = [r.status_code for r in responses]
+    [r.status_code for r in responses]
 
     # Note: In test environment, rate limiting may not work as expected
     # This test documents the expected behavior
@@ -59,7 +57,7 @@ def test_general_endpoints_have_higher_rate_limit(client):
     """General endpoints should have 100/min rate limit."""
     # Make multiple requests to lint endpoint
     responses = []
-    for i in range(15):
+    for _i in range(15):
         response = client.post("/api/v1/lint", json={"sql": "SELECT 1"})
         responses.append(response)
 
@@ -98,7 +96,7 @@ def test_rate_limit_resets_over_time(client):
 def test_health_endpoint_not_rate_limited(client):
     """Health endpoint should not be rate limited."""
     # Make many requests to health endpoint
-    for i in range(150):
+    for _i in range(150):
         response = client.get("/health")
         assert response.status_code == 200  # Should never be rate limited
 
@@ -153,11 +151,6 @@ def test_rate_limit_headers_include_limit_info(client):
             headers_lower = {k.lower(): v for k, v in response.headers.items()}
 
             # Check for common rate limit headers
-            has_rate_info = (
-                "x-ratelimit-limit" in headers_lower or
-                "retry-after" in headers_lower or
-                "x-ratelimit-reset" in headers_lower
-            )
             # Our custom handler adds these
             assert "retry-after" in headers_lower
             break

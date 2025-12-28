@@ -9,16 +9,15 @@ Implements:
 - Adaptive timeout management
 """
 
-import time
 import random
-import asyncio
-from typing import Any, Callable, Optional, Dict, List
-from functools import wraps
-from enum import Enum
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from threading import Lock, Semaphore
+import time
 from collections import deque
+from dataclasses import dataclass
+from datetime import datetime
+from enum import Enum
+from functools import wraps
+from threading import Lock, Semaphore
+from typing import Any, Callable, Dict, Optional
 
 from app.core.observability import get_observability
 
@@ -139,7 +138,7 @@ class CircuitBreaker:
             result = func(*args, **kwargs)
             self._record_success(time.time() - start_time)
             return result
-        except Exception as e:
+        except Exception:
             self._record_failure(time.time() - start_time)
             raise
 

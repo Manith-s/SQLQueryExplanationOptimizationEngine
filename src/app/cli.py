@@ -11,8 +11,7 @@ import json
 import sys
 from typing import Any, Dict, List
 
-from app.core import sql_analyzer, plan_heuristics, db
-from app.core import whatif
+from app.core import db, plan_heuristics, sql_analyzer, whatif
 
 
 def _print(data: Dict[str, Any], fmt: str) -> None:

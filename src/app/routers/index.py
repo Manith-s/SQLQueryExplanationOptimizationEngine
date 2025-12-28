@@ -6,14 +6,13 @@ self-healing capabilities, and advanced analytics.
 """
 
 from typing import Any, Dict, List, Optional
-from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
+
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from app.core.index_manager import get_index_manager, IndexRecommendation
-from app.core.self_healing import get_self_healing_manager, ActionStatus
+from app.core.index_manager import get_index_manager
+from app.core.self_healing import ActionStatus, get_self_healing_manager
 from app.core.stats_collector import get_stats_collector
-from app.core.config import settings
-
 
 router = APIRouter(prefix="/api/v1/index", tags=["index-management"])
 
@@ -194,7 +193,7 @@ async def analyze_indexes(request: AnalyzeRequest):
         return AnalyzeResponse(**response_data)
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}") from e
 
 
 @router.post("/recommend", response_model=RecommendResponse)
@@ -252,7 +251,7 @@ async def recommend_indexes(request: RecommendRequest):
         )
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Recommendation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Recommendation failed: {str(e)}") from e
 
 
 @router.post("/impact", response_model=ImpactResponse)
@@ -333,7 +332,7 @@ async def estimate_impact(request: ImpactRequest):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Impact analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Impact analysis failed: {str(e)}") from e
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -389,7 +388,7 @@ async def get_index_health(schema: str = Query(default="public")):
         )
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Health check failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Health check failed: {str(e)}") from e
 
 
 @router.post("/auto-tune", response_model=AutoTuneResponse)
@@ -446,7 +445,7 @@ async def enable_auto_tune(
         )
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Auto-tune configuration failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Auto-tune configuration failed: {str(e)}") from e
 
 
 @router.get("/actions")
@@ -475,7 +474,7 @@ async def get_healing_actions(
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve actions: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve actions: {str(e)}") from e
 
 
 @router.post("/actions/{action_id}/execute")
@@ -499,7 +498,7 @@ async def execute_action(
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Execution failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Execution failed: {str(e)}") from e
 
 
 @router.post("/actions/{action_id}/rollback")
@@ -522,7 +521,7 @@ async def rollback_action(
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Rollback failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Rollback failed: {str(e)}") from e
 
 
 @router.get("/statistics/{table_name}")
@@ -563,4 +562,4 @@ async def get_table_statistics(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Statistics collection failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Statistics collection failed: {str(e)}") from e

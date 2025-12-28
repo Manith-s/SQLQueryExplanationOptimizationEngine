@@ -10,12 +10,13 @@ Usage:
 
 import argparse
 import asyncio
-import aiohttp
-import time
-from datetime import datetime
-from typing import Dict, List
 import json
-from dataclasses import dataclass, asdict
+import time
+from dataclasses import asdict, dataclass
+from datetime import datetime
+from typing import List
+
+import aiohttp
 
 
 @dataclass
@@ -56,7 +57,7 @@ class GradualRampTest:
         print("=" * 80)
         print(f"Target URL: {self.target_url}")
         print(f"Duration: {self.duration_minutes} minutes")
-        print(f"RPS Range: 100 → 10,000")
+        print("RPS Range: 100 → 10,000")
         print("=" * 80)
         print()
 
@@ -203,7 +204,7 @@ class GradualRampTest:
                 success = response.status == 200
                 return (latency_ms, success)
 
-        except Exception as e:
+        except Exception:
             latency_ms = (time.time() - start) * 1000
             return (latency_ms, False)
 

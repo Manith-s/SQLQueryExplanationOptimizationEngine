@@ -13,14 +13,15 @@ WARNING: This test will cause actual service disruptions!
 
 import argparse
 import asyncio
-import aiohttp
-import subprocess
-import random
-import time
-from datetime import datetime
-from typing import Dict, List, Optional
 import json
-from dataclasses import dataclass, asdict
+import random
+import subprocess
+import time
+from dataclasses import asdict, dataclass
+from datetime import datetime
+from typing import List
+
+import aiohttp
 
 
 @dataclass
@@ -115,7 +116,7 @@ class ChaosTest:
         print("📊 Starting availability monitoring...")
 
         while True:
-            start = time.time()
+            time.time()
 
             # Make 100 requests over 60 seconds (1 every 0.6s)
             attempted = 0
@@ -242,12 +243,12 @@ class ChaosTest:
 
                     print(f"   ✓ Pod {target_pod} killed")
                 else:
-                    print(f"   ⚠️  No pods found")
+                    print("   ⚠️  No pods found")
 
             except subprocess.CalledProcessError as e:
                 print(f"   ❌ Failed: {e}")
         else:
-            print(f"   [DRY RUN] Would kill random pod")
+            print("   [DRY RUN] Would kill random pod")
 
     async def _chaos_network_latency(self):
         """Inject network latency using tc (traffic control)."""
@@ -267,10 +268,10 @@ class ChaosTest:
         print(f"   Duration: {event.duration_seconds}s")
 
         if not self.dry_run:
-            print(f"   ⚠️  Network latency injection requires chaos-mesh or similar tool")
-            print(f"   [SKIPPED] Not implemented in this test")
+            print("   ⚠️  Network latency injection requires chaos-mesh or similar tool")
+            print("   [SKIPPED] Not implemented in this test")
         else:
-            print(f"   [DRY RUN] Would inject 200ms latency")
+            print("   [DRY RUN] Would inject 200ms latency")
 
         # Wait for duration
         await asyncio.sleep(event.duration_seconds)
@@ -312,14 +313,14 @@ class ChaosTest:
                         "stress-ng", "--cpu", "2", "--timeout", f"{event.duration_seconds}s"
                     ])
 
-                    print(f"   ✓ CPU stress started")
+                    print("   ✓ CPU stress started")
                 else:
-                    print(f"   ⚠️  No pods found")
+                    print("   ⚠️  No pods found")
 
             except subprocess.CalledProcessError as e:
                 print(f"   ❌ Failed: {e}")
         else:
-            print(f"   [DRY RUN] Would stress CPU to 90%")
+            print("   [DRY RUN] Would stress CPU to 90%")
 
         # Wait for duration
         await asyncio.sleep(event.duration_seconds)
@@ -342,10 +343,10 @@ class ChaosTest:
         print(f"   Duration: {event.duration_seconds}s")
 
         if not self.dry_run:
-            print(f"   ⚠️  Memory stress requires stress-ng or similar tool installed in pods")
-            print(f"   [SKIPPED] Not implemented in this test")
+            print("   ⚠️  Memory stress requires stress-ng or similar tool installed in pods")
+            print("   [SKIPPED] Not implemented in this test")
         else:
-            print(f"   [DRY RUN] Would consume 80% memory")
+            print("   [DRY RUN] Would consume 80% memory")
 
         # Wait for duration
         await asyncio.sleep(event.duration_seconds)
@@ -369,7 +370,7 @@ class ChaosTest:
         if not self.dry_run:
             try:
                 # Kill connections via SQL
-                print(f"   Killing database connections...")
+                print("   Killing database connections...")
 
                 subprocess.run([
                     "kubectl", "exec", "-n", "qeo", "cockroachdb-0", "--",
@@ -377,12 +378,12 @@ class ChaosTest:
                     "-e", "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'queryexpnopt';"
                 ], check=True, capture_output=True)
 
-                print(f"   ✓ Database connections killed")
+                print("   ✓ Database connections killed")
 
             except subprocess.CalledProcessError as e:
                 print(f"   ❌ Failed: {e}")
         else:
-            print(f"   [DRY RUN] Would kill all database connections")
+            print("   [DRY RUN] Would kill all database connections")
 
     def _generate_report(self):
         """Generate final chaos test report."""
@@ -432,7 +433,7 @@ class ChaosTest:
         else:
             print("❌ TEST FAILED")
             print(f"   - Availability: {overall_availability:.4f}% < {target_availability}%")
-            print(f"   - System did not meet 99.99% availability target")
+            print("   - System did not meet 99.99% availability target")
 
         print()
         print("=" * 80)

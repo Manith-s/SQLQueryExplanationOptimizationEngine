@@ -9,11 +9,11 @@ Tests the complete profiler system including:
 - Background task system
 """
 
-import asyncio
 import os
-import pytest
 import tempfile
 from pathlib import Path
+
+import pytest
 
 # Skip if DB tests not enabled
 pytestmark = pytest.mark.skipif(

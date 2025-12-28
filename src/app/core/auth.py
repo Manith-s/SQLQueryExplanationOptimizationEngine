@@ -5,8 +5,10 @@ Provides Bearer token authentication using API keys configured via environment v
 """
 
 from typing import Optional
+
 from fastapi import HTTPException, Security
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
 from app.core.config import settings
 
 # Create security scheme for Bearer tokens (auto_error=False makes it optional)

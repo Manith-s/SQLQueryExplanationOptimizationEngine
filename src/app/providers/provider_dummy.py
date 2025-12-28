@@ -5,8 +5,9 @@ This provider is useful for testing and development when a real LLM
 is not needed or available.
 """
 
-from typing import Optional, Dict, Any, List
 import os
+from typing import Any, Dict, List, Optional
+
 from app.core.llm_adapter import LLMProvider
 
 _TEMPLATES: Dict[str, str] | None = None
@@ -51,7 +52,7 @@ class DummyLLMProvider(LLMProvider):
     Dummy LLM provider that returns fixed responses based on input length.
     Useful for testing and development.
     """
-    
+
     def complete(self, prompt: str, system: Optional[str] = None) -> str:
         """
         Return a deterministic response based on prompt characteristics.

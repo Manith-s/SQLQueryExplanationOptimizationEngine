@@ -4,18 +4,16 @@ SQL optimization router.
 Provides deterministic rewrite and index suggestions for a given SQL query.
 """
 
-from typing import List, Optional, Literal, Dict, Any
+from typing import Any, Dict, List, Literal, Optional
+
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field, conint
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from app.core import db, sql_analyzer, plan_heuristics
+from app.core import db, plan_diff, plan_heuristics, sql_analyzer, whatif
 from app.core.config import settings
 from app.core.optimizer import analyze as optimizer_analyze
-from app.core import whatif
-from app.core import plan_diff
-
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -129,7 +127,7 @@ async def optimize_sql(request: Request, req: OptimizeRequest) -> OptimizeRespon
             # Log the error but don't fail the request
             import logging
             logging.warning(f"Schema fetch failed: {schema_err}")
-        
+
         try:
             stats = db.fetch_table_stats(tables)
             stats_used = True
@@ -211,4 +209,4 @@ async def optimize_sql(request: Request, req: OptimizeRequest) -> OptimizeRespon
         )
 
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e

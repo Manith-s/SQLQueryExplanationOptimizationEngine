@@ -22,18 +22,18 @@ Match the audience level and requested length."""
 def _truncate_json(obj: Any, max_depth: int = 2, current_depth: int = 0) -> Any:
     """
     Recursively truncate JSON objects to a maximum depth.
-    
+
     Args:
         obj: JSON-serializable object
         max_depth: Maximum nesting depth to keep
         current_depth: Current recursion depth
-    
+
     Returns:
         Truncated object with "...(truncated)" for cut branches
     """
     if current_depth >= max_depth:
         return "...(truncated)"
-        
+
     if isinstance(obj, dict):
         return {
             k: _truncate_json(v, max_depth, current_depth + 1)
@@ -50,7 +50,7 @@ def _format_warnings(warnings: List[Dict[str, Any]]) -> str:
     """Format warning list into readable text."""
     if not warnings:
         return "No warnings identified."
-    
+
     return "\n".join(
         f"- {w['code']}: {w['detail']}"
         for w in warnings
@@ -77,7 +77,7 @@ def explain_template(
 ) -> str:
     """
     Generate a prompt for explaining a SQL query.
-    
+
     Args:
         sql: SQL query text
         ast: Optional parsed AST
@@ -87,7 +87,7 @@ def explain_template(
         audience: Target audience (beginner/practitioner/dba)
         style: Explanation style (concise/detailed)
         length: Response length (short/medium/long)
-    
+
     Returns:
         Formatted prompt string
     """
@@ -96,32 +96,32 @@ def explain_template(
         ast = _truncate_json(ast)
     if plan:
         plan = _truncate_json(plan)
-    
+
     # Build prompt sections with length control
     sections = [
         f"Explain this SQL query concisely for a {audience}:\n\n{sql}\n"
     ]
-    
+
     if ast:
         sections.append(
             f"\nParsed structure:\n{json.dumps(ast, indent=2)}\n"
         )
-    
+
     if plan:
         sections.append(
             f"\nExecution plan:\n{json.dumps(plan, indent=2)}\n"
         )
-    
+
     if warnings:
         sections.append(
             f"\nPerformance warnings:\n{_format_warnings(warnings)}\n"
         )
-    
+
     if metrics:
         sections.append(
             f"\nPlan metrics:\n{_format_metrics(metrics)}\n"
         )
-    
+
     # Add specific instructions based on audience
     if audience == "beginner":
         sections.append(
@@ -138,7 +138,7 @@ def explain_template(
             "\nFocus on performance characteristics and optimization "
             "opportunities. Be specific about indexes and plan choices."
         )
-    
+
     # Add length guidance
     if length == "short":
         sections.append("\nKeep the explanation brief and focused.")
@@ -146,6 +146,6 @@ def explain_template(
         sections.append("\nProvide moderate detail while staying concise.")
     else:  # long
         sections.append("\nProvide comprehensive explanation and context.")
-    
+
     return "\n".join(sections)
 

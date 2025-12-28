@@ -9,16 +9,19 @@ Provides endpoints for:
 - Effectiveness reporting
 """
 
-from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
-from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
-from app.core.cache_manager import get_cache_manager
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
+from pydantic import BaseModel, Field
+
+from app.core.cache_analytics import (
+    QueryCacheability,
+    get_cache_analytics,
+)
 from app.core.cache_invalidator import get_cache_invalidator
+from app.core.cache_manager import get_cache_manager
 from app.core.prefetch_engine import get_prefetch_engine
-from app.core.cache_analytics import get_cache_analytics, QueryCacheability, CacheTuningPriority
-
 
 router = APIRouter(prefix="/api/v1/cache")
 
@@ -237,7 +240,7 @@ async def invalidate_cache(request: InvalidateCacheRequest):
 
     elif request.sql:
         entries_invalidated = cache_manager.invalidate(sql=request.sql)
-        message = f"Invalidated cache for specific query"
+        message = "Invalidated cache for specific query"
 
     elif request.table:
         entries_invalidated = cache_manager.invalidate(table=request.table)
@@ -434,11 +437,11 @@ async def get_query_metrics(
     if cacheability:
         try:
             cacheability_enum = QueryCacheability(cacheability)
-        except ValueError:
+        except ValueError as e:
             raise HTTPException(
                 status_code=400,
                 detail=f"Invalid cacheability: {cacheability}. Must be one of: highly_cacheable, moderately_cacheable, poorly_cacheable, non_cacheable"
-            )
+            ) from e
 
     metrics = analytics.get_query_metrics(
         sql=sql,

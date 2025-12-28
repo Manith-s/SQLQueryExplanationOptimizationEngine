@@ -5,6 +5,7 @@ Provides database schema information including tables, columns, indexes, and con
 """
 
 from typing import Optional
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
@@ -25,24 +26,24 @@ async def get_schema(
 ) -> SchemaResponse:
     """
     Get database schema information.
-    
+
     Args:
         schema: Schema name to inspect (default: public)
         table: Optional table name to filter results
-    
+
     Returns:
         SchemaResponse with schema information
-    
+
     Raises:
         HTTPException: If schema inspection fails
     """
     try:
         schema_info = db.fetch_schema(schema=schema, table=table)
         return SchemaResponse(ok=True, schema=schema_info)
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=400,
             detail=str(e)
-        )
+        ) from e
 

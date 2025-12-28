@@ -15,8 +15,8 @@ from typing import Dict, List
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from ..core.slo import SLOManager, ConservativeMode
 from ..core.metrics import observe_request
+from ..core.slo import SLOManager
 
 logger = logging.getLogger(__name__)
 
@@ -100,11 +100,6 @@ async def get_slo_status():
 
         # In production, fetch these from Prometheus
         # For now, use mock data (would integrate with actual metrics)
-        from ..core.metrics import (
-            http_requests_total,
-            http_request_duration_seconds,
-            optimization_results_total,
-        )
 
         # Calculate metrics from Prometheus counters
         # Note: In real implementation, query Prometheus API for 28-day windows
@@ -166,7 +161,7 @@ async def get_slo_status():
 
     except Exception as e:
         logger.error(f"Error getting SLO status: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/budget", response_model=Dict[str, ErrorBudgetResponse])
@@ -191,7 +186,7 @@ async def get_error_budgets():
 
     except Exception as e:
         logger.error(f"Error getting error budgets: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/report")
@@ -219,7 +214,7 @@ async def get_budget_report(
 
     except Exception as e:
         logger.error(f"Error generating budget report: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/can-deploy", response_model=CanDeployResponse)
@@ -262,4 +257,4 @@ async def can_deploy():
 
     except Exception as e:
         logger.error(f"Error checking deployment status: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e

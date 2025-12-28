@@ -9,10 +9,11 @@ Usage:
 
 import asyncio
 import time
-from datetime import datetime, timedelta
-from typing import Dict, List, Tuple
-import requests
 from dataclasses import dataclass
+from datetime import datetime
+from typing import Dict, List, Tuple
+
+import requests
 
 # API endpoint
 API_URL = "http://localhost:8000"
@@ -108,7 +109,7 @@ class SLOTrackingValidator:
                     self.results.append(ValidationResult(
                         test_name=f"SLO API - {endpoint}",
                         passed=True,
-                        message=f"Endpoint accessible",
+                        message="Endpoint accessible",
                         duration_ms=duration_ms,
                         details=data
                     ))
@@ -158,7 +159,7 @@ class SLOTrackingValidator:
                         message="Missing required SLI fields",
                         duration_ms=duration_ms,
                     ))
-                    print(f"  ✗ Missing fields in error budget response")
+                    print("  ✗ Missing fields in error budget response")
                     return
 
                 # Verify each SLI
@@ -322,7 +323,7 @@ class SLOTrackingValidator:
         start = time.time()
         try:
             # Make a test request to generate SLI data
-            test_response = requests.post(
+            requests.post(
                 f"{API_URL}/api/v1/lint",
                 json={"sql": "SELECT * FROM users"},
                 timeout=5,
@@ -360,7 +361,7 @@ class SLOTrackingValidator:
                         self.results.append(ValidationResult(
                             test_name=f"SLI Recording - {sli_name}",
                             passed=False,
-                            message=f"Missing current value",
+                            message="Missing current value",
                             duration_ms=duration_ms,
                         ))
                         print(f"  ✗ {sli_name}: Missing current value")
@@ -433,7 +434,7 @@ class SLOTrackingValidator:
                         message="Missing required fields",
                         duration_ms=duration_ms,
                     ))
-                    print(f"  ✗ Missing fields in can-deploy response")
+                    print("  ✗ Missing fields in can-deploy response")
                     return
 
                 can_deploy = data["can_deploy"]
@@ -459,7 +460,7 @@ class SLOTrackingValidator:
                     status = "✓ Yes" if can_deploy else "⚠ No"
                     print(f"  {status}: {reason}")
                 else:
-                    print(f"  ✗ Invalid can_deploy value")
+                    print("  ✗ Invalid can_deploy value")
 
             else:
                 self.results.append(ValidationResult(
@@ -508,7 +509,7 @@ class SLOTrackingValidator:
                         message="Missing required sections",
                         duration_ms=duration_ms,
                     ))
-                    print(f"  ✗ Incomplete report structure")
+                    print("  ✗ Incomplete report structure")
                     return
 
                 # Verify summary has key metrics
@@ -537,7 +538,7 @@ class SLOTrackingValidator:
                     health = summary.get("overall_health", "unknown")
                     print(f"  ✓ Report generated: {health} health")
                 else:
-                    print(f"  ✗ Incomplete report structure")
+                    print("  ✗ Incomplete report structure")
 
             else:
                 self.results.append(ValidationResult(
@@ -586,7 +587,7 @@ async def main():
             indent=2,
         )
 
-    print(f"\nResults saved to: validation_results_slo.json")
+    print("\nResults saved to: validation_results_slo.json")
 
     return 0 if success else 1
 

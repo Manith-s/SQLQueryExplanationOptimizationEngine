@@ -12,43 +12,32 @@ Tests cover:
 - Cache coherency
 """
 
-import pytest
-import tempfile
 import time
-from pathlib import Path
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch
 
-from app.core.cache_manager import (
-    CacheManager,
-    LRUCache,
-    QueryFingerprinter,
-    CacheEntry,
-    CacheTier
+import pytest
+
+from app.core.cache_analytics import (
+    CacheAnalytics,
+    QueryCacheability,
 )
 from app.core.cache_invalidator import (
     CacheInvalidator,
     DependencyGraph,
     InvalidationStrategy,
-    ChangeType
 )
-from app.core.prefetch_engine import (
-    PrefetchEngine,
-    MarkovChainModel,
-    PrefetchCandidate
-)
-from app.core.cache_analytics import (
-    CacheAnalytics,
-    QueryCacheability,
-    QueryPerformanceMetrics
+from app.core.cache_manager import (
+    CacheEntry,
+    CacheManager,
+    CacheTier,
+    LRUCache,
+    QueryFingerprinter,
 )
 from app.core.cache_simulator import (
-    CacheSimulator,
     CacheConfiguration,
-    Workload,
-    WorkloadQuery
+    CacheSimulator,
 )
-
+from app.core.prefetch_engine import MarkovChainModel, PrefetchCandidate, PrefetchEngine
 
 # ============================================================================
 # Cache Manager Tests
@@ -210,7 +199,7 @@ class TestCacheManager:
         cache.put(sql3, {"id": 1})
 
         # Invalidate users table
-        invalidated = cache.invalidate(table="users")
+        cache.invalidate(table="users")
 
         # Users queries should be invalidated
         assert cache.get(sql1) is None
@@ -297,7 +286,7 @@ class TestCacheInvalidator:
         invalidator.register_query(fingerprint, {"users"})
 
         # Invalidate by table
-        invalidated = invalidator.invalidate_by_table("users")
+        invalidator.invalidate_by_table("users")
 
         # Query should be invalidated
         assert cache_manager.get(sql) is None
@@ -481,7 +470,7 @@ class TestCacheAnalytics:
 
         # Poorly cacheable query (rare, low hit rate, cheap)
         sql_bad = "SELECT cheap FROM small_table"
-        for i in range(5):
+        for _i in range(5):
             analytics.record_query(
                 sql=sql_bad,
                 execution_time_ms=10.0,

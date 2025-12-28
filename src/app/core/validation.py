@@ -8,10 +8,10 @@ Provides:
 - Sanitization
 """
 
-import re
-from typing import Optional
-from fastapi import HTTPException, Request
 import logging
+import re
+
+from fastapi import HTTPException, Request
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +136,7 @@ def validate_workload_sqls(sqls: list) -> None:
             raise HTTPException(
                 status_code=400,
                 detail=f"Query #{i+1} validation failed: {e.detail}"
-            )
+            ) from None
 
 
 async def validate_request_size(request: Request) -> None:

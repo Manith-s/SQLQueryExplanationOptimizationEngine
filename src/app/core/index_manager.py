@@ -5,13 +5,11 @@ Tracks index usage, scores effectiveness, and provides automated recommendations
 for optimal database performance.
 """
 
-from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass
-from datetime import datetime, timedelta
-import json
+from typing import Any, Dict, List, Optional, Tuple
 
-from app.core.db import run_sql, get_conn
 from app.core.config import settings
+from app.core.db import get_conn
 
 
 @dataclass
@@ -285,7 +283,7 @@ class IndexLifecycleManager:
             by_table[idx.table_name].append(idx)
 
         # Check each table's indexes for redundancy
-        for table_name, indexes in by_table.items():
+        for _table_name, indexes in by_table.items():
             for i, idx1 in enumerate(indexes):
                 for idx2 in indexes[i+1:]:
                     reason = self._check_redundancy(idx1, idx2)

@@ -5,10 +5,11 @@ This module provides safe connection handling, EXPLAIN helpers, and schema inspe
 utilities for the Query Explain & Optimize engine.
 """
 
-from contextlib import contextmanager
-import os
-from typing import Any, Dict, List, Optional, Tuple, Union
 import json
+import os
+from contextlib import contextmanager
+from typing import Any, Dict, List, Optional, Tuple
+
 import psycopg2
 from psycopg2.extensions import connection as pg_connection
 from psycopg2.extras import RealDictCursor
@@ -41,7 +42,6 @@ def get_conn() -> pg_connection:
     # Non-global mode: open/close per context
     conn_local: Optional[pg_connection] = None
     # Simple pool reuse
-    pool_min = int(os.getenv("POOL_MINCONN", "1"))
     pool_max = int(os.getenv("POOL_MAXCONN", "5"))
     try:
         if _POOL:
@@ -64,12 +64,12 @@ def get_conn() -> pg_connection:
 def run_sql(sql: str, params: Optional[Tuple] = None, timeout_ms: int = 10000) -> List[Tuple]:
     """
     Execute SQL with proper connection handling and timeout.
-    
+
     Args:
         sql: SQL query to execute
         params: Query parameters (optional)
         timeout_ms: Statement timeout in milliseconds
-    
+
     Returns:
         List of result tuples
     """
@@ -100,21 +100,21 @@ def run_sql(sql: str, params: Optional[Tuple] = None, timeout_ms: int = 10000) -
 def run_explain(sql: str, analyze: bool = False, timeout_ms: int = 10000) -> Dict:
     """
     Run EXPLAIN on a query and return the execution plan.
-    
+
     Args:
         sql: SQL query to explain
         analyze: If True, use EXPLAIN ANALYZE
         timeout_ms: Statement timeout in milliseconds
-    
+
     Returns:
         Normalized plan dictionary
     """
     explain_options = ["FORMAT JSON"]
     if analyze:
         explain_options.extend(["ANALYZE", "BUFFERS", "TIMING"])
-    
+
     explain_sql = f"EXPLAIN ({', '.join(explain_options)}) {sql}"
-    
+
     with get_conn() as conn:
         with conn.cursor() as cur:
             try:
@@ -149,7 +149,7 @@ def run_explain(sql: str, analyze: bool = False, timeout_ms: int = 10000) -> Dic
                     conn.rollback()
                 except Exception:
                     pass
-                raise Exception(f"EXPLAIN failed: {str(e)}")
+                raise Exception(f"EXPLAIN failed: {str(e)}") from e
 
 def run_explain_costs(sql: str, timeout_ms: int = 10000) -> Dict:
     """
@@ -188,11 +188,11 @@ def run_explain_costs(sql: str, timeout_ms: int = 10000) -> Dict:
 def fetch_schema(schema: str = "public", table: Optional[str] = None) -> Dict:
     """
     Fetch database schema information using information_schema views.
-    
+
     Args:
         schema: Schema name to inspect
         table: Optional table name to filter results
-    
+
     Returns:
         Dictionary containing tables, columns, indexes, and constraints
     """
@@ -208,30 +208,30 @@ def fetch_schema(schema: str = "public", table: Optional[str] = None) -> Dict:
     with get_conn() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             # Base table query
-            table_where = f"AND table_name = %s" if table else ""
+            table_where = "AND table_name = %s" if table else ""
             table_params = (schema, table) if table else (schema,)
-            
+
             # Get tables
             cur.execute(f"""
                 SELECT table_name
-                FROM information_schema.tables 
+                FROM information_schema.tables
                 WHERE table_schema = %s
                 {table_where}
                 AND table_type = 'BASE TABLE'
                 ORDER BY table_name
             """, table_params)
             tables = cur.fetchall()
-            
+
             result = {
                 "schema": schema,
                 "tables": []
             }
-            
+
             for tbl in tables:
                 table_name = tbl['table_name']
-                table_info = {"name": table_name, "columns": [], "indexes": [], 
+                table_info = {"name": table_name, "columns": [], "indexes": [],
                               "primary_key": [], "foreign_keys": []}
-                
+
                 # Get columns
                 cur.execute(
                     """
@@ -257,7 +257,7 @@ def fetch_schema(schema: str = "public", table: Optional[str] = None) -> Dict:
                         }
                     )
                 table_info["columns"] = norm_cols
-                
+
                 # Get primary key
                 cur.execute("""
                     SELECT a.attname as column_name
@@ -269,7 +269,7 @@ def fetch_schema(schema: str = "public", table: Optional[str] = None) -> Dict:
                 """, (f"{schema}.{table_name}",))
                 pk_columns = cur.fetchall()
                 table_info["primary_key"] = [col['column_name'] for col in pk_columns]
-                
+
                 # Get indexes
                 cur.execute("""
                     SELECT
@@ -296,7 +296,7 @@ def fetch_schema(schema: str = "public", table: Optional[str] = None) -> Dict:
                         i.relname;
                 """, (f"{schema}.{table_name}",))
                 table_info["indexes"] = cur.fetchall()
-                
+
                 # Get foreign keys
                 cur.execute("""
                     SELECT
@@ -317,9 +317,9 @@ def fetch_schema(schema: str = "public", table: Optional[str] = None) -> Dict:
                         AND tc.table_name = %s
                 """, (schema, table_name))
                 table_info["foreign_keys"] = cur.fetchall()
-                
+
                 result["tables"].append(table_info)
-            
+
             if _CACHE_SCHEMA_TTL_S > 0:
                 _SCHEMA_CACHE[cache_key] = result
                 _SCHEMA_CACHE_TS[cache_key] = time.time()
@@ -520,3 +520,4 @@ def get_column_stats(schema: str, table: str, timeout_ms: int = 5000) -> Dict[st
                     "avg_width": int(r.get("avg_width") or 0),
                 }
     return out
+

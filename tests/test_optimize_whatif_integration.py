@@ -1,9 +1,10 @@
 import os
+
 import pytest
 from fastapi.testclient import TestClient
-from app.main import app
-from app.core import db
 
+from app.core import db
+from app.main import app
 
 pytestmark = pytest.mark.integration
 

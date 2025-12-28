@@ -23,7 +23,7 @@ def test_llm_adapter_import():
 
 def test_sql_analyzer_import():
     """Test that SQL analyzer module can be imported."""
-    from app.core.sql_analyzer import parse_sql, extract_tables, extract_columns
+    from app.core.sql_analyzer import extract_columns, extract_tables, parse_sql
     assert parse_sql is not None
     assert extract_tables is not None
     assert extract_columns is not None
@@ -40,15 +40,15 @@ def test_providers_import():
     """Test that provider modules can be imported."""
     from app.providers.provider_dummy import DummyLLMProvider
     from app.providers.provider_ollama import OllamaLLMProvider
-    
+
     assert DummyLLMProvider is not None
     assert OllamaLLMProvider is not None
 
 
 def test_routers_import():
     """Test that router modules can be imported."""
-    from app.routers import health, lint, explain, optimize
-    
+    from app.routers import explain, health, lint, optimize
+
     assert health is not None
     assert lint is not None
     assert explain is not None
@@ -64,10 +64,10 @@ def test_main_app_import():
 def test_dummy_provider_works():
     """Test that dummy provider returns expected responses."""
     from app.providers.provider_dummy import DummyLLMProvider
-    
+
     provider = DummyLLMProvider()
     assert provider.is_available() is True
-    
+
     response = provider.generate("test prompt")
     assert isinstance(response, str)
     assert len(response) > 0
@@ -76,9 +76,9 @@ def test_dummy_provider_works():
 def test_ollama_provider_raises_not_implemented():
     """Test that Ollama provider raises NotImplementedError as expected."""
     from app.providers.provider_ollama import OllamaLLMProvider
-    
+
     provider = OllamaLLMProvider()
     assert provider.is_available() is False
-    
+
     with pytest.raises(NotImplementedError):
         provider.generate("test prompt")

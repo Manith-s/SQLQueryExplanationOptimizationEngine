@@ -9,11 +9,12 @@ Usage:
 
 import asyncio
 import time
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, List, Tuple
-import requests
+
 import psycopg2
-from dataclasses import dataclass
+import requests
 
 # Region configurations
 REGIONS = {
@@ -250,7 +251,7 @@ class RegionValidator:
                         self.results.append(ValidationResult(
                             test_name=f"CockroachDB Replication - {region}",
                             passed=True,
-                            message=f"Data replicated successfully",
+                            message="Data replicated successfully",
                             duration_ms=read_duration,
                             details={"replication_lag_ms": read_duration - write_duration}
                         ))
@@ -300,7 +301,7 @@ class RegionValidator:
         for region, config in REGIONS.items():
             start = time.time()
             try:
-                response = requests.get(
+                requests.get(
                     config["api_url"] + "/health",
                     timeout=5,
                 )
@@ -367,7 +368,7 @@ class RegionValidator:
                     message=f"EU request correctly routed to {routed_region}",
                     duration_ms=duration_ms,
                 ))
-                print(f"  ✓ GDPR: EU data stayed in EU region")
+                print("  ✓ GDPR: EU data stayed in EU region")
             else:
                 self.results.append(ValidationResult(
                     test_name="Data Residency - GDPR Enforcement",
@@ -462,7 +463,7 @@ async def main():
             indent=2,
         )
 
-    print(f"\nResults saved to: validation_results_regions.json")
+    print("\nResults saved to: validation_results_regions.json")
 
     return 0 if success else 1
 

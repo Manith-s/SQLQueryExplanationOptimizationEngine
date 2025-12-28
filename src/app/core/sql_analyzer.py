@@ -1,6 +1,7 @@
-from typing import List, Dict, Any, Optional
 import re
-from sqlglot import parse_one, exp
+from typing import Any, Dict, List, Optional
+
+from sqlglot import exp, parse_one
 
 DIALECT = "duckdb"
 
@@ -79,7 +80,7 @@ def extract_tables(ast: exp.Expression):
                 # Fallback: try to extract from the FROM expression itself
                 name, alias, raw = _relation_name_alias(from_expr)
                 out.append({"name": name, "alias": alias, "raw": raw})
-        
+
         # JOIN clauses
         joins = ast.args.get("joins") or []
         for join in joins:
@@ -119,7 +120,7 @@ def _extract_joins(ast: exp.Expression):
     out = []
     if not isinstance(ast, exp.Select):
         return out
-    
+
     joins = ast.args.get("joins") or []
     for join in joins:
         if isinstance(join, exp.Join):
@@ -159,17 +160,21 @@ def _extract_limit(select: exp.Select):
         return None
     expr = getattr(lim, "expression", lim)
     try:
-        return int(getattr(expr, "name"))
+        return int(expr.name)
     except Exception:
         return _sql(expr)
 
 def _has_restrictive_filter(filters: List[str]) -> bool:
     for f in filters or []:
         s = f or ""
-        if re.search(r"[<>]", s): return True
-        if re.search(r"\b(BETWEEN|IN\s*\(|LIKE|DATE|TIMESTAMP)\b", s, re.I): return True
-        if "'" in s: return True
-        if re.search(r"=\s*\d", s): return True
+        if re.search(r"[<>]", s):
+            return True
+        if re.search(r"\b(BETWEEN|IN\s*\(|LIKE|DATE|TIMESTAMP)\b", s, re.I):
+            return True
+        if "'" in s:
+            return True
+        if re.search(r"=\s*\d", s):
+            return True
     return False
 
 def parse_sql(sql: str) -> Dict[str, Any]:
@@ -207,7 +212,7 @@ def parse_sql(sql: str) -> Dict[str, Any]:
 
 def lint_rules(ast_info: Dict[str, Any]) -> Dict[str, Any]:
     issues = []
-    
+
     # Handle parse errors first
     if "error" in ast_info:
         issues.append({
@@ -231,12 +236,12 @@ def lint_rules(ast_info: Dict[str, Any]) -> Dict[str, Any]:
                 "severity": "warn",
                 "hint": "Explicitly list required columns"
             })
-            
+
         # Join rules
         for join in ast_info.get("joins", []):
             join_type = join.get("type", "").upper()
             is_cross = join_type == "CROSS JOIN"
-            
+
             if not is_cross and not join.get("condition"):
                 issues.append({
                     "code": "MISSING_JOIN_ON",
@@ -244,7 +249,7 @@ def lint_rules(ast_info: Dict[str, Any]) -> Dict[str, Any]:
                     "severity": "high",
                     "hint": "Add an ON clause with join conditions"
                 })
-                
+
             if not join.get("condition"):
                 issues.append({
                     "code": "CARTESIAN_JOIN",
@@ -252,7 +257,7 @@ def lint_rules(ast_info: Dict[str, Any]) -> Dict[str, Any]:
                     "severity": "info" if is_cross else "high",
                     "hint": "Add join conditions or confirm if CROSS JOIN is intended"
                 })
-                
+
         # Ambiguous column check
         tables = ast_info.get("tables", [])
         if len(tables) >= 2:
@@ -265,13 +270,13 @@ def lint_rules(ast_info: Dict[str, Any]) -> Dict[str, Any]:
                         "severity": "warn",
                         "hint": "Qualify column with table name or alias"
                     })
-                    
+
         # Large table check
         large_patterns = ["events", "logs", "transactions", "fact_"]
         filters = ast_info.get("filters", [])
         limit = ast_info.get("limit")
         has_restrictive_filter = _has_restrictive_filter(filters)
-        
+
         for table in tables:
             table_name = (table.get("name") or "").lower()
             if any(pattern in table_name for pattern in large_patterns):
@@ -282,7 +287,7 @@ def lint_rules(ast_info: Dict[str, Any]) -> Dict[str, Any]:
                         "severity": "warn",
                         "hint": "Add WHERE clause with restrictive predicates or LIMIT"
                     })
-                    
+
         # Implicit cast check
         id_patterns = ["_id", "_key", "_fk"]
         for filter_expr in filters:
@@ -294,12 +299,12 @@ def lint_rules(ast_info: Dict[str, Any]) -> Dict[str, Any]:
                     "severity": "info",
                     "hint": "Ensure column and literal types match"
                 })
-                
+
         # Unused join check
         if len(tables) > 1:  # Only check if we have joins
             joined = [(t.get("alias") or t.get("name") or "") for t in tables[1:]]
             used = set()
-            
+
             # Check if we have SELECT * - if so, all tables are considered used
             has_select_star = any(c.get("name") == "*" for c in ast_info.get("columns", []))
             if not has_select_star:  # Only check for unused tables if not SELECT *
@@ -307,14 +312,14 @@ def lint_rules(ast_info: Dict[str, Any]) -> Dict[str, Any]:
                 for col in ast_info.get("columns", []):
                     if col.get("table"):
                         used.add(col.get("table"))
-                        
+
                 # Check filters, group by, and order by
                 for s in (filters or []) + (ast_info.get("group_by") or []) + (ast_info.get("order_by") or []):
                     s = s or ""
                     for j in joined:
                         if j and j in s:
                             used.add(j)
-                            
+
                 # Report unused joined tables
                 for j in joined:
                     if j and j not in used:
@@ -332,7 +337,7 @@ def lint_rules(ast_info: Dict[str, Any]) -> Dict[str, Any]:
         high_count = sum(1 for issue in issues if issue["severity"] == "high")
         warn_count = sum(1 for issue in issues if issue["severity"] == "warn")
         info_count = sum(1 for issue in issues if issue["severity"] == "info")
-        
+
         if high_count > 0:
             risk = "high"
         elif warn_count > 1:  # Changed from > 0 to > 1 for valid queries

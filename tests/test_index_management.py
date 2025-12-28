@@ -6,10 +6,10 @@ for index manager, self-healing, and statistics collector.
 """
 
 import os
-import pytest
-import tempfile
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
+
+import pytest
 
 # Skip if DB tests not enabled
 pytestmark = pytest.mark.skipif(
@@ -234,7 +234,7 @@ def test_performance_threshold_classification():
 
 def test_healing_action_creation():
     """Test creation of healing actions."""
-    from app.core.self_healing import SelfHealingManager, ActionStatus
+    from app.core.self_healing import ActionStatus, SelfHealingManager
 
     mgr = SelfHealingManager(auto_approve=False, dry_run_default=True)
 
@@ -253,7 +253,6 @@ def test_healing_action_creation():
 def test_dry_run_simulation():
     """Test dry-run execution simulation."""
     from app.core.self_healing import SelfHealingManager
-    from app.core.index_manager import IndexRecommendation
 
     mgr = SelfHealingManager(dry_run_default=True)
 
@@ -271,7 +270,7 @@ def test_dry_run_simulation():
 
 def test_auto_approve_behavior():
     """Test auto-approval of actions."""
-    from app.core.self_healing import SelfHealingManager, ActionStatus
+    from app.core.self_healing import ActionStatus, SelfHealingManager
 
     mgr = SelfHealingManager(auto_approve=True, dry_run_default=True)
 
@@ -287,7 +286,7 @@ def test_auto_approve_behavior():
 
 def test_action_approval_workflow():
     """Test manual approval workflow."""
-    from app.core.self_healing import SelfHealingManager, ActionStatus
+    from app.core.self_healing import ActionStatus, SelfHealingManager
 
     mgr = SelfHealingManager(auto_approve=False)
 
@@ -497,7 +496,7 @@ def test_chaos_rollback_of_nonexistent_action():
 
 def test_chaos_index_with_special_characters():
     """Chaos test: Handle indexes with special characters in names."""
-    from app.core.index_manager import IndexMetrics, IndexLifecycleManager
+    from app.core.index_manager import IndexLifecycleManager, IndexMetrics
 
     mgr = IndexLifecycleManager()
 
@@ -558,6 +557,7 @@ def test_chaos_zero_division_scenarios():
 async def test_index_analyze_endpoint():
     """Test the /api/v1/index/analyze endpoint."""
     from fastapi.testclient import TestClient
+
     from app.main import app
 
     client = TestClient(app)
@@ -585,6 +585,7 @@ async def test_index_analyze_endpoint():
 async def test_index_health_endpoint():
     """Test the /api/v1/index/health endpoint."""
     from fastapi.testclient import TestClient
+
     from app.main import app
 
     client = TestClient(app)

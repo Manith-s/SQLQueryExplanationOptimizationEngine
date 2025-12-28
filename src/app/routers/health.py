@@ -5,6 +5,7 @@ Provides basic health and status endpoints.
 """
 
 from fastapi import APIRouter
+
 from app.core import db
 
 router = APIRouter()

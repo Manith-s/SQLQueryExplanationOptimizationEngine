@@ -11,7 +11,6 @@ Automates incident post-mortem creation:
 """
 
 import logging
-import hashlib
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
@@ -315,7 +314,7 @@ class PostMortemGenerator:
         similar_incidents: List[Incident],
     ) -> str:
         """Perform root cause analysis with context from similar incidents."""
-        analysis = f"## Root Cause Analysis\n\n"
+        analysis = "## Root Cause Analysis\n\n"
 
         if incident.root_cause:
             analysis += f"**Identified Root Cause:** {incident.root_cause}\n\n"
@@ -367,9 +366,11 @@ class PostMortemGenerator:
     def distribute_postmortem(
         self,
         postmortem: PostMortem,
-        channels: List[str] = ["slack", "email"],
+        channels: List[str] = None,
     ):
         """Distribute post-mortem via specified channels."""
+        if channels is None:
+            channels = ["slack", "email"]
         logger.info(f"Distributing post-mortem {postmortem.incident_id} via {channels}")
 
         if "slack" in channels:

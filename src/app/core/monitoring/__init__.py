@@ -9,11 +9,11 @@ Features:
 """
 
 from .predictive import (
-    PredictiveMonitor,
-    Forecast,
     Anomaly,
     AnomalyType,
+    Forecast,
     PredictionEngine,
+    PredictiveMonitor,
 )
 
 __all__ = [

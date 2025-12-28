@@ -5,6 +5,7 @@ These tests require a running PostgreSQL database and RUN_DB_TESTS=1.
 """
 
 import os
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -73,23 +74,23 @@ def test_explain_large_result(client):
     # Create a test table
     client.post("/api/v1/explain", json={
         "sql": """
-        CREATE TEMPORARY TABLE test_large AS 
+        CREATE TEMPORARY TABLE test_large AS
         SELECT * FROM generate_series(1, 200000) AS id;
         """
     })
-    
+
     # Query it with a sequential scan
     response = client.post("/api/v1/explain", json={
         "sql": "SELECT * FROM test_large WHERE id > 0",
         "analyze": True
     })
-    
+
     assert response.status_code == 200
     data = response.json()
-    
+
     # Should have SEQ_SCAN_LARGE warning
     assert any(
-        w["code"] == "SEQ_SCAN_LARGE" 
+        w["code"] == "SEQ_SCAN_LARGE"
         for w in data["warnings"]
     )
 

@@ -12,16 +12,17 @@ Implements a sophisticated caching system with:
 import hashlib
 import json
 import pickle
-import zlib
-import time
 import re
-from typing import Any, Dict, List, Optional, Tuple, Set
+import time
+import zlib
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from collections import OrderedDict
+from enum import Enum
 from pathlib import Path
 from threading import RLock
-from enum import Enum
+from typing import Any, Dict, Optional, Set
+
 import sqlglot
 
 from app.core.config import settings

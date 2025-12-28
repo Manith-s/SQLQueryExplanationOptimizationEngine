@@ -8,10 +8,10 @@ Tracks:
 - Endpoint performance
 """
 
-import time
-from typing import Dict, Any, Optional
-from collections import defaultdict
 import threading
+import time
+from collections import defaultdict
+from typing import Any, Dict, Optional
 
 
 class PerformanceMetrics:

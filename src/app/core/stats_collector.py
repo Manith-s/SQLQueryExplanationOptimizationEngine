@@ -5,14 +5,12 @@ Gathers comprehensive table and column statistics, tracks data patterns,
 and predicts future characteristics for intelligent index management.
 """
 
-from typing import Any, Dict, List, Optional, Tuple
-from dataclasses import dataclass
-from datetime import datetime, timedelta
 from collections import defaultdict
-import statistics
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
-from app.core.db import run_sql, get_conn
-from app.core.config import settings
+from app.core.db import get_conn
 
 
 @dataclass

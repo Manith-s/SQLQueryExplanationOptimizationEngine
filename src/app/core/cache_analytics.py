@@ -9,16 +9,15 @@ Provides:
 - Performance impact measurement
 """
 
-import time
-from typing import Any, Dict, List, Optional, Tuple
-from dataclasses import dataclass, field
+from collections import deque
+from dataclasses import dataclass
 from datetime import datetime, timedelta
-from collections import defaultdict, deque
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
-from app.core.cache_manager import get_cache_manager, QueryFingerprinter
-from app.core.prefetch_engine import get_prefetch_engine
 from app.core.cache_invalidator import get_cache_invalidator
+from app.core.cache_manager import QueryFingerprinter, get_cache_manager
+from app.core.prefetch_engine import get_prefetch_engine
 
 
 class QueryCacheability(Enum):

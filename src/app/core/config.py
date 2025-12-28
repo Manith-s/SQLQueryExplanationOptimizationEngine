@@ -5,6 +5,7 @@ Loads settings from environment variables (via .env if present).
 
 import os
 from typing import List
+
 from dotenv import load_dotenv
 
 # Load .env once at import time (real OS env still wins if set)

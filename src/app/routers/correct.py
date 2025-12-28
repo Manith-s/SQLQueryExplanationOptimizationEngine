@@ -2,9 +2,10 @@
 Query correction router for detecting and fixing SQL errors.
 """
 
+from typing import Any, Dict, List, Optional
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any, Optional
 
 from app.core.query_corrector import correct_query
 
@@ -38,7 +39,7 @@ class CorrectResponse(BaseModel):
 async def correct_sql(request: CorrectRequest):
     """
     Correct SQL query syntax errors and common mistakes.
-    
+
     Detects:
     - Syntax errors
     - Common typos (keywords, functions)
@@ -49,10 +50,10 @@ async def correct_sql(request: CorrectRequest):
     sql = (request.sql or "").strip()
     if not sql:
         raise HTTPException(status_code=400, detail="SQL is required")
-    
+
     try:
         result = correct_query(sql)
-        
+
         return CorrectResponse(
             ok=True,
             original=result["original"],
@@ -65,7 +66,7 @@ async def correct_sql(request: CorrectRequest):
             can_auto_correct=result.get("can_auto_correct", False)
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error during correction: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error during correction: {str(e)}") from e
 
 
 

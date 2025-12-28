@@ -208,7 +208,7 @@ class ContinuousOptimizationPipeline:
             return False
 
         if proposal.risk_level == "high":
-            logger.warning(f"Risk level too high for automatic deployment")
+            logger.warning("Risk level too high for automatic deployment")
             return False
 
         logger.info(f"Tests passed for {proposal.proposal_id}")

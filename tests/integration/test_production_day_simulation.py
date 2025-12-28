@@ -15,12 +15,14 @@ Usage:
 
 import asyncio
 import json
-import time
-from datetime import datetime, timedelta
-from typing import Dict, List
+import os
 import subprocess
-import requests
+import time
+from datetime import datetime
+from typing import Dict
+
 import pytest
+import requests
 
 
 class ProductionDaySimulation:
@@ -240,7 +242,7 @@ class ProductionDaySimulation:
             for i in range(100):
                 try:
                     req_start = time.time()
-                    response = requests.get(f"{self.api_base}/schema", timeout=10)
+                    requests.get(f"{self.api_base}/schema", timeout=10)
                     latency = (time.time() - req_start) * 1000
                     latencies.append(latency)
 
@@ -728,7 +730,6 @@ async def test_production_day_simulation():
 
     Pass criteria: No critical failures (failed tests <= 2)
     """
-    import os
 
     simulation = ProductionDaySimulation()
     results = await simulation.run_simulation()

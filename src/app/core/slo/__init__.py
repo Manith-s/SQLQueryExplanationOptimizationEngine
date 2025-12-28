@@ -6,11 +6,11 @@ monitors burn rates, and triggers automated responses.
 """
 
 from .manager import (
-    SLOManager,
-    SLOStatus,
-    ErrorBudget,
     BurnRate,
     ConservativeMode,
+    ErrorBudget,
+    SLOManager,
+    SLOStatus,
 )
 
 __all__ = [

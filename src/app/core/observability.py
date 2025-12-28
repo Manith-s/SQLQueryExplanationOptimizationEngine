@@ -9,31 +9,30 @@ Provides:
 - Performance profiling and analysis
 """
 
-import time
-import logging
 import json
+import logging
+import time
 import uuid
-from typing import Any, Dict, Optional, Callable
-from functools import wraps
 from contextvars import ContextVar
 from datetime import datetime
+from functools import wraps
+from typing import Any, Callable, Dict, Optional
 
-from opentelemetry import trace, metrics
+from opentelemetry import trace
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.resources import SERVICE_NAME, SERVICE_VERSION, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-from opentelemetry.sdk.resources import Resource, SERVICE_NAME, SERVICE_VERSION
 from opentelemetry.trace import Status, StatusCode
-from opentelemetry.metrics import CallbackOptions, Observation
-
-from prometheus_client import Counter, Histogram, Gauge, Summary, Info
-from prometheus_client import CollectorRegistry
+from prometheus_client import (
+    CollectorRegistry,
+    Counter,
+    Gauge,
+    Histogram,
+    Info,
+)
 
 from app.core.config import settings
-
 
 # Correlation ID context variable
 correlation_id_ctx: ContextVar[str] = ContextVar('correlation_id', default='')
@@ -468,7 +467,7 @@ def get_observability() -> Observability:
 
 # Convenience decorators
 
-def trace(operation_name: str):
+def trace_operation(operation_name: str):
     """
     Trace an operation.
 

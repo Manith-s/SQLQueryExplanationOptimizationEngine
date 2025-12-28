@@ -13,12 +13,12 @@ Design goals:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from app.core.config import settings
-from app.core import db as db_core
-from typing import Any, Dict, List, Optional, Tuple
 import re
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Tuple
 
+from app.core import db as db_core
+from app.core.config import settings
 
 # ---------- Public types ----------
 
@@ -254,7 +254,7 @@ def suggest_rewrites(ast_info: Dict[str, Any], schema: Dict[str, Any]) -> List[S
                     alt_sql="-- Convert: WHERE col = (SELECT ... FROM t2 WHERE t2.id = t1.id)\n-- To: JOIN t2 ON t2.id = t1.id WHERE col = t2.col",
                 )
             )
-    
+
     # DISTINCT with GROUP BY
     columns = ast_info.get("columns") or []
     has_distinct = any(c.get("distinct") for c in columns if isinstance(c, dict))
@@ -270,7 +270,7 @@ def suggest_rewrites(ast_info: Dict[str, Any], schema: Dict[str, Any]) -> List[S
                 alt_sql="-- Remove DISTINCT keyword when GROUP BY is present",
             )
         )
-    
+
     # LIKE patterns optimization
     for f in filters:
         f_str = f or ""
@@ -300,7 +300,7 @@ def suggest_rewrites(ast_info: Dict[str, Any], schema: Dict[str, Any]) -> List[S
                     alt_sql="-- Consider full-text search (tsvector) or pattern matching functions for complex patterns",
                 )
             )
-    
+
     # UNION vs UNION ALL
     # Try to get original SQL from ast_info, fallback to empty string
     raw_sql = ast_info.get("raw_sql") or ""
@@ -320,7 +320,7 @@ def suggest_rewrites(ast_info: Dict[str, Any], schema: Dict[str, Any]) -> List[S
                 alt_sql="-- Replace UNION with UNION ALL if duplicate elimination is not needed",
             )
         )
-    
+
     # COUNT(*) vs COUNT(column)
     for col in columns:
         col_str = str(col.get("name") or col)
@@ -336,7 +336,7 @@ def suggest_rewrites(ast_info: Dict[str, Any], schema: Dict[str, Any]) -> List[S
                     alt_sql="-- Use COUNT(*) unless you specifically need to exclude NULL values",
                 )
             )
-    
+
     # ORDER BY without LIMIT on large result sets
     if ast_info.get("order_by") and not ast_info.get("limit"):
         suggestions.append(
@@ -350,7 +350,7 @@ def suggest_rewrites(ast_info: Dict[str, Any], schema: Dict[str, Any]) -> List[S
                 alt_sql="-- Add LIMIT clause to restrict result set size",
             )
         )
-    
+
     # Multiple OR conditions that could be IN
     for f in filters:
         f_str = f or ""
@@ -368,7 +368,7 @@ def suggest_rewrites(ast_info: Dict[str, Any], schema: Dict[str, Any]) -> List[S
                     alt_sql="-- Convert: col = val1 OR col = val2 OR col = val3\n-- To: col IN (val1, val2, val3)",
                 )
             )
-    
+
     # NOT IN vs NOT EXISTS
     for f in filters:
         f_str = f or ""
@@ -384,7 +384,7 @@ def suggest_rewrites(ast_info: Dict[str, Any], schema: Dict[str, Any]) -> List[S
                     alt_sql="-- Convert: WHERE col NOT IN (SELECT ...)\n-- To: WHERE NOT EXISTS (SELECT 1 FROM ... WHERE ... = col)",
                 )
             )
-    
+
     # Implicit joins (comma-separated) to explicit JOINs
     tables = ast_info.get("tables") or []
     joins = ast_info.get("joins") or []
@@ -396,7 +396,7 @@ def suggest_rewrites(ast_info: Dict[str, Any], schema: Dict[str, Any]) -> List[S
             # Pattern: table1.col = table2.col
             if re.search(r'\w+\.\w+\s*=\s*\w+\.\w+', f_str):
                 join_conditions.append(f_str)
-        
+
         if join_conditions:
             suggestions.append(
                 Suggestion(

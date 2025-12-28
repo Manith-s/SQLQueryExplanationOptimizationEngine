@@ -1,4 +1,3 @@
-import os
 from app.core.optimizer import analyze
 
 

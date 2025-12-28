@@ -8,12 +8,11 @@ Usage:
 """
 
 import asyncio
-import time
 from datetime import datetime
-from typing import List
+
 import requests
 
-from app.ml.autonomous import AutonomousOpsAI, SystemState, IncidentType
+from app.ml.autonomous import AutonomousOpsAI, IncidentType, SystemState
 
 
 class AIOperationsValidator:
@@ -158,7 +157,7 @@ class AIOperationsValidator:
                 "passed": False,
                 "message": "No action recommended or zero confidence",
             })
-            print(f"  ✗ No valid action recommended")
+            print("  ✗ No valid action recommended")
 
     async def test_confidence_scoring(self):
         """Test confidence scores are within expected ranges."""
@@ -236,7 +235,7 @@ class AIOperationsValidator:
 
             incident = self.ai.detect_incident(state)
             action = self.ai.recommend_action(incident, state)
-            outcome = self.ai.execute_action(action, state)
+            self.ai.execute_action(action, state)
 
         # Check Q-table grew
         final_q_table_size = len(self.ai._q_table)
@@ -254,7 +253,7 @@ class AIOperationsValidator:
                 "passed": False,
                 "message": f"Q-table did not grow ({final_q_table_size})",
             })
-            print(f"  ✗ Q-table did not grow")
+            print("  ✗ Q-table did not grow")
 
     async def test_human_override(self):
         """Test human override tracking."""
@@ -296,7 +295,7 @@ class AIOperationsValidator:
                 "passed": False,
                 "message": "Override not recorded",
             })
-            print(f"  ✗ Override not recorded")
+            print("  ✗ Override not recorded")
 
     async def test_api_integration(self):
         """Test AI operations API endpoints."""
@@ -322,7 +321,7 @@ class AIOperationsValidator:
                         "passed": True,
                         "message": f"Stats API working, autonomy: {data.get('autonomy_level', 0):.0%}",
                     })
-                    print(f"  ✓ Stats API working")
+                    print("  ✓ Stats API working")
                     print(f"    Actions: {data.get('total_actions', 0)}")
                     print(f"    Autonomy: {data.get('autonomy_level', 0):.0%}")
                 else:
@@ -331,7 +330,7 @@ class AIOperationsValidator:
                         "passed": False,
                         "message": "Missing required fields in response",
                     })
-                    print(f"  ✗ Missing fields in response")
+                    print("  ✗ Missing fields in response")
             else:
                 self.results.append({
                     "test_name": "API Integration - Stats Endpoint",
@@ -367,7 +366,7 @@ async def main():
             indent=2,
         )
 
-    print(f"\nResults saved to: validation_results_ai.json")
+    print("\nResults saved to: validation_results_ai.json")
 
     return 0 if success else 1
 

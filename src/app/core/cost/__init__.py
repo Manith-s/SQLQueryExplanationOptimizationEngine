@@ -11,9 +11,9 @@ Features:
 
 from .analyzer import (
     CostAnalyzer,
-    QueryCost,
     CostRecommendation,
     CostTrend,
+    QueryCost,
 )
 
 __all__ = [

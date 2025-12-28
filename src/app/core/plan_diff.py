@@ -1,4 +1,4 @@
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 
 def _walk(plan: Dict[str, Any]) -> List[Dict[str, Any]]:

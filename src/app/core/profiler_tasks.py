@@ -8,11 +8,10 @@ and generate automated performance reports with recommendations.
 import asyncio
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
 from app.core.config import settings
 from app.core.profiler import get_profiler
-
 
 logger = logging.getLogger(__name__)
 
@@ -224,7 +223,6 @@ class ProfilerBackgroundTasks:
         """
         try:
             import json
-            from contextlib import contextmanager
 
             for rec in recommendations:
                 with self.profiler._get_connection() as conn:

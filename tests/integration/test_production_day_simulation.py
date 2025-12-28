@@ -731,8 +731,7 @@ class ProductionDaySimulation:
 # Pytest integration
 @pytest.mark.asyncio
 @pytest.mark.skipif(
-    not pytest.config.getoption("--run-db-tests", default=False)
-    and not os.environ.get("RUN_DB_TESTS"),
+    not os.environ.get("RUN_DB_TESTS"),
     reason="Requires RUN_DB_TESTS=1",
 )
 async def test_production_day_simulation():

@@ -7,8 +7,10 @@ from app.core.sql_analyzer import lint_rules, parse_sql
 
 router = APIRouter()
 
+
 class LintRequest(BaseModel):
     sql: str = Field(..., description="SQL query to lint")
+
 
 class LintIssue(BaseModel):
     code: str = Field(..., description="Issue code")
@@ -16,16 +18,21 @@ class LintIssue(BaseModel):
     severity: str = Field(..., description="Severity level: info, warn, or high")
     hint: str = Field(..., description="Suggestion to fix the issue")
 
+
 class LintSummary(BaseModel):
     risk: str = Field(..., description="Overall risk level: low, medium, or high")
+
 
 class LintResponse(BaseModel):
     ok: bool = Field(..., description="Whether the request was successful")
     message: Optional[str] = Field(None, description="Response message")
     error: Optional[str] = Field(None, description="Error message when ok=False")
     ast: Optional[Dict[str, Any]] = Field(None, description="Parsed AST information")
-    issues: List[LintIssue] = Field(default_factory=list, description="List of linting issues")
+    issues: List[LintIssue] = Field(
+        default_factory=list, description="List of linting issues"
+    )
     summary: LintSummary = Field(..., description="Summary of linting results")
+
 
 @router.post("/lint", response_model=LintResponse)
 async def lint_sql(request: LintRequest):
@@ -36,7 +43,7 @@ async def lint_sql(request: LintRequest):
             error="SQL is required",
             ast=None,
             issues=[],
-            summary=LintSummary(risk="high")
+            summary=LintSummary(risk="high"),
         )
 
     try:
@@ -50,18 +57,20 @@ async def lint_sql(request: LintRequest):
             message="stub: lint ok",
             ast=ast_info,
             issues=issues,
-            summary=summary
+            summary=summary,
         )
     except Exception as e:
         return LintResponse(
             ok=True,  # Keep ok=True for parse errors
             message="stub: lint ok",
             ast={"type": "UNKNOWN", "error": str(e)},
-            issues=[{
-                "code": "PARSE_ERROR",
-                "message": f"Error during SQL linting: {str(e)}",
-                "severity": "high",
-                "hint": "Check SQL syntax"
-            }],
-            summary=LintSummary(risk="high")
+            issues=[
+                {
+                    "code": "PARSE_ERROR",
+                    "message": f"Error during SQL linting: {str(e)}",
+                    "severity": "high",
+                    "hint": "Check SQL syntax",
+                }
+            ],
+            summary=LintSummary(risk="high"),
         )

@@ -13,16 +13,18 @@ from app.core import db
 
 router = APIRouter()
 
+
 class SchemaResponse(BaseModel):
     """Response model for schema endpoint."""
+
     ok: bool = True
     schema: dict = Field(..., description="Schema information")
     message: str = "ok"
 
+
 @router.get("/schema", response_model=SchemaResponse)
 async def get_schema(
-    schema: str = "public",
-    table: Optional[str] = None
+    schema: str = "public", table: Optional[str] = None
 ) -> SchemaResponse:
     """
     Get database schema information.
@@ -42,8 +44,4 @@ async def get_schema(
         return SchemaResponse(ok=True, schema=schema_info)
 
     except Exception as e:
-        raise HTTPException(
-            status_code=400,
-            detail=str(e)
-        ) from e
-
+        raise HTTPException(status_code=400, detail=str(e)) from e

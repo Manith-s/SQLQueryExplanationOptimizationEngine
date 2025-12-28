@@ -15,6 +15,7 @@ from app.core.db import get_conn
 @dataclass
 class IndexMetrics:
     """Metrics for a single index."""
+
     schema_name: str
     table_name: str
     index_name: str
@@ -38,6 +39,7 @@ class IndexMetrics:
 @dataclass
 class IndexRecommendation:
     """Recommendation for index creation or modification."""
+
     action: str  # "create", "drop", "recreate"
     priority: int  # 1-10, 10 being highest
     table_name: str
@@ -62,7 +64,9 @@ class IndexRecommendation:
         else:
             col_spec = ", ".join(self.columns)
 
-        using_clause = f"USING {self.index_type.upper()}" if self.index_type != "btree" else ""
+        using_clause = (
+            f"USING {self.index_type.upper()}" if self.index_type != "btree" else ""
+        )
         where_clause = f"WHERE {self.where_clause}" if self.where_clause else ""
 
         return (
@@ -138,14 +142,22 @@ class IndexLifecycleManager:
                             is_primary=row[8],
                             definition=row[9],
                             index_type=row[10],
-                            columns=columns
+                            columns=columns,
                         )
 
                         # Calculate derived metrics
-                        metrics.effectiveness_score = self._calculate_effectiveness_score(metrics)
-                        metrics.scan_efficiency = self._calculate_scan_efficiency(metrics)
-                        metrics.usage_frequency = self._calculate_usage_frequency(metrics)
-                        metrics.maintenance_cost = self._calculate_maintenance_cost(metrics)
+                        metrics.effectiveness_score = (
+                            self._calculate_effectiveness_score(metrics)
+                        )
+                        metrics.scan_efficiency = self._calculate_scan_efficiency(
+                            metrics
+                        )
+                        metrics.usage_frequency = self._calculate_usage_frequency(
+                            metrics
+                        )
+                        metrics.maintenance_cost = self._calculate_maintenance_cost(
+                            metrics
+                        )
 
                         metrics_list.append(metrics)
 
@@ -161,7 +173,7 @@ class IndexLifecycleManager:
             start = definition.find("(")
             end = definition.find(")")
             if start != -1 and end != -1:
-                cols_str = definition[start+1:end]
+                cols_str = definition[start + 1 : end]
                 # Handle expressions and strip whitespace
                 columns = [c.strip() for c in cols_str.split(",")]
                 return columns
@@ -232,7 +244,7 @@ class IndexLifecycleManager:
             "gin": 0.8,
             "gist": 0.7,
             "brin": 0.1,
-            "sp-gist": 0.6
+            "sp-gist": 0.6,
         }
         type_cost = type_costs.get(metrics.index_type.lower(), 0.5) * 0.5
 
@@ -240,9 +252,7 @@ class IndexLifecycleManager:
         return float(f"{total_cost:.3f}")
 
     def identify_unused_indexes(
-        self,
-        min_scans: Optional[int] = None,
-        exclude_primary: bool = True
+        self, min_scans: Optional[int] = None, exclude_primary: bool = True
     ) -> List[IndexMetrics]:
         """
         Identify indexes that are not being used.
@@ -265,7 +275,9 @@ class IndexLifecycleManager:
 
         return unused
 
-    def identify_redundant_indexes(self) -> List[Tuple[IndexMetrics, IndexMetrics, str]]:
+    def identify_redundant_indexes(
+        self,
+    ) -> List[Tuple[IndexMetrics, IndexMetrics, str]]:
         """
         Identify redundant or duplicate indexes.
 
@@ -285,7 +297,7 @@ class IndexLifecycleManager:
         # Check each table's indexes for redundancy
         for _table_name, indexes in by_table.items():
             for i, idx1 in enumerate(indexes):
-                for idx2 in indexes[i+1:]:
+                for idx2 in indexes[i + 1 :]:
                     reason = self._check_redundancy(idx1, idx2)
                     if reason:
                         redundant_pairs.append((idx1, idx2, reason))
@@ -293,9 +305,7 @@ class IndexLifecycleManager:
         return redundant_pairs
 
     def _check_redundancy(
-        self,
-        idx1: IndexMetrics,
-        idx2: IndexMetrics
+        self, idx1: IndexMetrics, idx2: IndexMetrics
     ) -> Optional[str]:
         """Check if two indexes are redundant and return reason."""
         # Skip if different types
@@ -310,20 +320,24 @@ class IndexLifecycleManager:
         if idx1.index_type.lower() == "btree":
             # Check if idx1 columns are a prefix of idx2
             if len(idx1.columns) < len(idx2.columns):
-                if idx2.columns[:len(idx1.columns)] == idx1.columns:
-                    return f"{idx1.index_name} is redundant (prefix of {idx2.index_name})"
+                if idx2.columns[: len(idx1.columns)] == idx1.columns:
+                    return (
+                        f"{idx1.index_name} is redundant (prefix of {idx2.index_name})"
+                    )
 
             # Check reverse
             if len(idx2.columns) < len(idx1.columns):
-                if idx1.columns[:len(idx2.columns)] == idx2.columns:
-                    return f"{idx2.index_name} is redundant (prefix of {idx1.index_name})"
+                if idx1.columns[: len(idx2.columns)] == idx2.columns:
+                    return (
+                        f"{idx2.index_name} is redundant (prefix of {idx1.index_name})"
+                    )
 
         return None
 
     def generate_recommendations(
         self,
         query_patterns: Optional[List[Dict[str, Any]]] = None,
-        table_stats: Optional[Dict[str, Any]] = None
+        table_stats: Optional[Dict[str, Any]] = None,
     ) -> List[IndexRecommendation]:
         """
         Generate intelligent index recommendations based on usage patterns.
@@ -354,7 +368,7 @@ class IndexLifecycleManager:
                     rationale=f"Unused index with only {idx.scans} scans. Size: {idx.size_bytes / 1024 / 1024:.1f} MB",
                     estimated_benefit=float(idx.size_bytes / (1024 * 1024)),  # MB saved
                     estimated_cost_bytes=0,
-                    confidence=0.9
+                    confidence=0.9,
                 )
                 recommendations.append(rec)
 
@@ -373,7 +387,7 @@ class IndexLifecycleManager:
                     rationale=f"Redundant index: {reason}",
                     estimated_benefit=float(to_drop.size_bytes / (1024 * 1024)),
                     estimated_cost_bytes=0,
-                    confidence=0.95
+                    confidence=0.95,
                 )
                 recommendations.append(rec)
 
@@ -390,9 +404,7 @@ class IndexLifecycleManager:
         return recommendations
 
     def _analyze_query_patterns_for_indexes(
-        self,
-        patterns: List[Dict[str, Any]],
-        current_indexes: List[IndexMetrics]
+        self, patterns: List[Dict[str, Any]], current_indexes: List[IndexMetrics]
     ) -> List[IndexRecommendation]:
         """Analyze query patterns to suggest new indexes."""
         recommendations = []
@@ -413,13 +425,17 @@ class IndexLifecycleManager:
                 for filter_col in filters:
                     col_name = self._extract_column_name(filter_col)
                     if col_name:
-                        column_usage[table][col_name] = column_usage[table].get(col_name, 0) + 1
+                        column_usage[table][col_name] = (
+                            column_usage[table].get(col_name, 0) + 1
+                        )
 
                 # Track order by columns
                 for order_col in order_by:
                     col_name = self._extract_column_name(order_col)
                     if col_name:
-                        column_usage[table][col_name] = column_usage[table].get(col_name, 0) + 1
+                        column_usage[table][col_name] = (
+                            column_usage[table].get(col_name, 0) + 1
+                        )
 
         # Generate recommendations for frequently used columns without indexes
         for table, columns in column_usage.items():
@@ -439,9 +455,11 @@ class IndexLifecycleManager:
                             index_type="btree",
                             columns=[column],
                             rationale=f"Column used in {count} queries without index",
-                            estimated_benefit=float(count * 10),  # Arbitrary benefit score
+                            estimated_benefit=float(
+                                count * 10
+                            ),  # Arbitrary benefit score
                             estimated_cost_bytes=1024 * 1024,  # Estimate 1MB
-                            confidence=0.8
+                            confidence=0.8,
                         )
                         recommendations.append(rec)
 
@@ -472,7 +490,8 @@ class IndexLifecycleManager:
         total_scans = sum(idx.scans for idx in all_indexes)
         avg_effectiveness = (
             sum(idx.effectiveness_score for idx in all_indexes) / len(all_indexes)
-            if all_indexes else 0.0
+            if all_indexes
+            else 0.0
         )
 
         # Health score (0-100)
@@ -494,26 +513,28 @@ class IndexLifecycleManager:
                     "name": idx.index_name,
                     "table": idx.table_name,
                     "scans": idx.scans,
-                    "effectiveness": idx.effectiveness_score
+                    "effectiveness": idx.effectiveness_score,
                 }
-                for idx in sorted(all_indexes, key=lambda x: x.effectiveness_score, reverse=True)[:5]
+                for idx in sorted(
+                    all_indexes, key=lambda x: x.effectiveness_score, reverse=True
+                )[:5]
             ],
             "worst_performers": [
                 {
                     "name": idx.index_name,
                     "table": idx.table_name,
                     "scans": idx.scans,
-                    "effectiveness": idx.effectiveness_score
+                    "effectiveness": idx.effectiveness_score,
                 }
                 for idx in sorted(all_indexes, key=lambda x: x.effectiveness_score)[:5]
-            ]
+            ],
         }
 
     def _calculate_overall_health_score(
         self,
         all_indexes: List[IndexMetrics],
         unused: List[IndexMetrics],
-        redundant: List[Tuple]
+        redundant: List[Tuple],
     ) -> int:
         """Calculate overall index health score (0-100)."""
         if not all_indexes:
@@ -523,10 +544,14 @@ class IndexLifecycleManager:
         unused_penalty = (len(unused) / len(all_indexes)) * 30
         redundant_penalty = (len(redundant) / max(len(all_indexes), 1)) * 20
 
-        avg_effectiveness = sum(idx.effectiveness_score for idx in all_indexes) / len(all_indexes)
+        avg_effectiveness = sum(idx.effectiveness_score for idx in all_indexes) / len(
+            all_indexes
+        )
         effectiveness_score = avg_effectiveness * 50
 
-        final_score = 100 - unused_penalty - redundant_penalty + effectiveness_score - 50
+        final_score = (
+            100 - unused_penalty - redundant_penalty + effectiveness_score - 50
+        )
         return int(max(0, min(100, final_score)))
 
     def _group_by_type(self, indexes: List[IndexMetrics]) -> Dict[str, int]:

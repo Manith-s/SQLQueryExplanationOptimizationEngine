@@ -28,8 +28,10 @@ router = APIRouter(prefix="/api/v1/cache")
 
 # Request/Response Models
 
+
 class CacheStatsResponse(BaseModel):
     """Cache statistics response."""
+
     cache_stats: Dict[str, Any]
     prefetch_stats: Dict[str, Any]
     invalidation_stats: Dict[str, Any]
@@ -38,12 +40,14 @@ class CacheStatsResponse(BaseModel):
 
 class WarmCacheRequest(BaseModel):
     """Request to warm cache."""
+
     queries: List[str] = Field(..., description="SQL queries to execute and cache")
     parallel: bool = Field(default=True, description="Execute in parallel")
 
 
 class WarmCacheResponse(BaseModel):
     """Cache warming response."""
+
     total_queries: int
     successful: int
     failed: int
@@ -53,20 +57,27 @@ class WarmCacheResponse(BaseModel):
 
 class InvalidateCacheRequest(BaseModel):
     """Request to invalidate cache."""
+
     sql: Optional[str] = Field(None, description="Specific SQL query to invalidate")
-    table: Optional[str] = Field(None, description="Invalidate all queries using this table")
-    pattern: Optional[str] = Field(None, description="Pattern to match for invalidation")
+    table: Optional[str] = Field(
+        None, description="Invalidate all queries using this table"
+    )
+    pattern: Optional[str] = Field(
+        None, description="Pattern to match for invalidation"
+    )
     clear_all: bool = Field(default=False, description="Clear entire cache")
 
 
 class InvalidateCacheResponse(BaseModel):
     """Cache invalidation response."""
+
     entries_invalidated: int
     message: str
 
 
 class CacheConfigResponse(BaseModel):
     """Cache configuration response."""
+
     memory_size_mb: int
     disk_cache_enabled: bool
     disk_cache_dir: Optional[str]
@@ -80,6 +91,7 @@ class CacheConfigResponse(BaseModel):
 
 class UpdateCacheConfigRequest(BaseModel):
     """Request to update cache configuration."""
+
     memory_size_mb: Optional[int] = Field(None, ge=10, le=10240)
     default_ttl_seconds: Optional[int] = Field(None, ge=60, le=86400)
     prefetch_threshold: Optional[float] = Field(None, ge=0.0, le=1.0)
@@ -88,6 +100,7 @@ class UpdateCacheConfigRequest(BaseModel):
 
 class UpdateCacheConfigResponse(BaseModel):
     """Cache configuration update response."""
+
     success: bool
     message: str
     updated_config: CacheConfigResponse
@@ -95,6 +108,7 @@ class UpdateCacheConfigResponse(BaseModel):
 
 class QueryMetricsResponse(BaseModel):
     """Query performance metrics response."""
+
     fingerprint: str
     sql: str
     total_executions: int
@@ -113,6 +127,7 @@ class QueryMetricsResponse(BaseModel):
 
 class TuningRecommendationResponse(BaseModel):
     """Cache tuning recommendation."""
+
     priority: str
     category: str
     title: str
@@ -124,6 +139,7 @@ class TuningRecommendationResponse(BaseModel):
 
 class EffectivenessReportResponse(BaseModel):
     """Cache effectiveness report."""
+
     report_time: datetime
     time_period_hours: float
     total_queries: int
@@ -139,23 +155,27 @@ class EffectivenessReportResponse(BaseModel):
 
 class PrefetchCandidatesResponse(BaseModel):
     """Prefetch candidates response."""
+
     candidates: List[Dict[str, Any]]
     total_candidates: int
 
 
 class SetupTriggersRequest(BaseModel):
     """Request to setup cache invalidation triggers."""
+
     tables: List[str] = Field(..., description="Table names to monitor")
 
 
 class SetupTriggersResponse(BaseModel):
     """Trigger setup response."""
+
     results: Dict[str, str]
     successful: int
     failed: int
 
 
 # API Endpoints
+
 
 @router.get("/stats", response_model=CacheStatsResponse)
 async def get_cache_stats():
@@ -181,7 +201,7 @@ async def get_cache_stats():
         cache_stats=cache_stats.__dict__,
         prefetch_stats=prefetch_stats,
         invalidation_stats=invalidation_stats,
-        memory_stats=memory_stats
+        memory_stats=memory_stats,
     )
 
 
@@ -206,8 +226,7 @@ async def warm_cache(request: WarmCacheRequest, background_tasks: BackgroundTask
 
     # Execute warming in background if requested
     result = prefetch_engine.warm_cache(
-        queries=request.queries,
-        parallel=request.parallel
+        queries=request.queries, parallel=request.parallel
     )
 
     return WarmCacheResponse(**result)
@@ -252,13 +271,11 @@ async def invalidate_cache(request: InvalidateCacheRequest):
 
     else:
         raise HTTPException(
-            status_code=400,
-            detail="Must provide sql, table, pattern, or clear_all"
+            status_code=400, detail="Must provide sql, table, pattern, or clear_all"
         )
 
     return InvalidateCacheResponse(
-        entries_invalidated=entries_invalidated,
-        message=message
+        entries_invalidated=entries_invalidated, message=message
     )
 
 
@@ -275,13 +292,15 @@ async def get_cache_config():
     return CacheConfigResponse(
         memory_size_mb=cache_manager.memory_cache.max_size_bytes // (1024 * 1024),
         disk_cache_enabled=cache_manager.disk_cache_dir is not None,
-        disk_cache_dir=str(cache_manager.disk_cache_dir) if cache_manager.disk_cache_dir else None,
+        disk_cache_dir=(
+            str(cache_manager.disk_cache_dir) if cache_manager.disk_cache_dir else None
+        ),
         default_ttl_seconds=cache_manager.default_ttl_seconds,
         compression_enabled=cache_manager.enable_compression,
         encryption_enabled=cache_manager.enable_encryption,
         prefetch_enabled=prefetch_engine.enable_speculative,
         prefetch_threshold=prefetch_engine.prefetch_threshold,
-        max_prefetch_cost_ms=prefetch_engine.max_prefetch_cost_ms
+        max_prefetch_cost_ms=prefetch_engine.max_prefetch_cost_ms,
     )
 
 
@@ -327,26 +346,32 @@ async def update_cache_config(request: UpdateCacheConfigRequest):
     updated_config = CacheConfigResponse(
         memory_size_mb=cache_manager.memory_cache.max_size_bytes // (1024 * 1024),
         disk_cache_enabled=cache_manager.disk_cache_dir is not None,
-        disk_cache_dir=str(cache_manager.disk_cache_dir) if cache_manager.disk_cache_dir else None,
+        disk_cache_dir=(
+            str(cache_manager.disk_cache_dir) if cache_manager.disk_cache_dir else None
+        ),
         default_ttl_seconds=cache_manager.default_ttl_seconds,
         compression_enabled=cache_manager.enable_compression,
         encryption_enabled=cache_manager.enable_encryption,
         prefetch_enabled=prefetch_engine.enable_speculative,
         prefetch_threshold=prefetch_engine.prefetch_threshold,
-        max_prefetch_cost_ms=prefetch_engine.max_prefetch_cost_ms
+        max_prefetch_cost_ms=prefetch_engine.max_prefetch_cost_ms,
     )
 
     return UpdateCacheConfigResponse(
         success=True,
         message=f"Updated: {', '.join(updated)}",
-        updated_config=updated_config
+        updated_config=updated_config,
     )
 
 
 @router.get("/effectiveness", response_model=EffectivenessReportResponse)
 async def get_effectiveness_report(
-    time_period_hours: float = Query(default=24.0, ge=1.0, le=168.0, description="Time period to analyze"),
-    top_k: int = Query(default=10, ge=1, le=50, description="Number of top queries to include")
+    time_period_hours: float = Query(
+        default=24.0, ge=1.0, le=168.0, description="Time period to analyze"
+    ),
+    top_k: int = Query(
+        default=10, ge=1, le=50, description="Number of top queries to include"
+    ),
 ):
     """
     Generate cache effectiveness report.
@@ -364,8 +389,7 @@ async def get_effectiveness_report(
     analytics = get_cache_analytics()
 
     report = analytics.generate_effectiveness_report(
-        time_period_hours=time_period_hours,
-        top_k=top_k
+        time_period_hours=time_period_hours, top_k=top_k
     )
 
     # Convert to response model
@@ -384,7 +408,7 @@ async def get_effectiveness_report(
             time_saved_by_cache_ms=m.time_saved_by_cache_ms,
             cacheability_score=m.cacheability_score,
             cacheability=m.cacheability.value,
-            last_executed=m.last_executed
+            last_executed=m.last_executed,
         )
 
     def rec_to_response(r):
@@ -395,7 +419,7 @@ async def get_effectiveness_report(
             description=r.description,
             impact=r.impact,
             action=r.action,
-            estimated_improvement=r.estimated_improvement
+            estimated_improvement=r.estimated_improvement,
         )
 
     return EffectivenessReportResponse(
@@ -408,8 +432,10 @@ async def get_effectiveness_report(
         total_time_saved_ms=report.total_time_saved_ms,
         memory_utilization=report.memory_utilization,
         top_cached_queries=[metrics_to_response(m) for m in report.top_cached_queries],
-        cache_hostile_queries=[metrics_to_response(m) for m in report.cache_hostile_queries],
-        recommendations=[rec_to_response(r) for r in report.recommendations]
+        cache_hostile_queries=[
+            metrics_to_response(m) for m in report.cache_hostile_queries
+        ],
+        recommendations=[rec_to_response(r) for r in report.recommendations],
     )
 
 
@@ -417,7 +443,9 @@ async def get_effectiveness_report(
 async def get_query_metrics(
     sql: Optional[str] = Query(None, description="Specific SQL query"),
     min_executions: int = Query(default=1, ge=1, description="Minimum execution count"),
-    cacheability: Optional[str] = Query(None, description="Filter by cacheability level")
+    cacheability: Optional[str] = Query(
+        None, description="Filter by cacheability level"
+    ),
 ):
     """
     Get performance metrics for queries.
@@ -440,13 +468,11 @@ async def get_query_metrics(
         except ValueError as e:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid cacheability: {cacheability}. Must be one of: highly_cacheable, moderately_cacheable, poorly_cacheable, non_cacheable"
+                detail=f"Invalid cacheability: {cacheability}. Must be one of: highly_cacheable, moderately_cacheable, poorly_cacheable, non_cacheable",
             ) from e
 
     metrics = analytics.get_query_metrics(
-        sql=sql,
-        min_executions=min_executions,
-        cacheability=cacheability_enum
+        sql=sql, min_executions=min_executions, cacheability=cacheability_enum
     )
 
     return {
@@ -465,17 +491,19 @@ async def get_query_metrics(
                 time_saved_by_cache_ms=m.time_saved_by_cache_ms,
                 cacheability_score=m.cacheability_score,
                 cacheability=m.cacheability.value,
-                last_executed=m.last_executed
+                last_executed=m.last_executed,
             )
             for m in metrics
         ],
-        "total": len(metrics)
+        "total": len(metrics),
     }
 
 
 @router.get("/queries/cache-friendly")
 async def get_cache_friendly_queries(
-    top_k: int = Query(default=10, ge=1, le=50, description="Number of queries to return")
+    top_k: int = Query(
+        default=10, ge=1, le=50, description="Number of queries to return"
+    )
 ):
     """
     Get most cache-friendly queries.
@@ -507,7 +535,7 @@ async def get_cache_friendly_queries(
                 time_saved_by_cache_ms=m.time_saved_by_cache_ms,
                 cacheability_score=m.cacheability_score,
                 cacheability=m.cacheability.value,
-                last_executed=m.last_executed
+                last_executed=m.last_executed,
             )
             for m in metrics
         ]
@@ -516,7 +544,9 @@ async def get_cache_friendly_queries(
 
 @router.get("/queries/cache-hostile")
 async def get_cache_hostile_queries(
-    top_k: int = Query(default=10, ge=1, le=50, description="Number of queries to return")
+    top_k: int = Query(
+        default=10, ge=1, le=50, description="Number of queries to return"
+    )
 ):
     """
     Get least cache-friendly queries.
@@ -548,7 +578,7 @@ async def get_cache_hostile_queries(
                 time_saved_by_cache_ms=m.time_saved_by_cache_ms,
                 cacheability_score=m.cacheability_score,
                 cacheability=m.cacheability.value,
-                last_executed=m.last_executed
+                last_executed=m.last_executed,
             )
             for m in metrics
         ]
@@ -559,7 +589,7 @@ async def get_cache_hostile_queries(
 async def get_prefetch_candidates(
     session_id: Optional[str] = Query(None, description="Session ID for predictions"),
     user_id: Optional[str] = Query(None, description="User ID for predictions"),
-    top_k: int = Query(default=5, ge=1, le=20, description="Number of candidates")
+    top_k: int = Query(default=5, ge=1, le=20, description="Number of candidates"),
 ):
     """
     Get prefetch candidates based on query patterns.
@@ -577,9 +607,7 @@ async def get_prefetch_candidates(
     prefetch_engine = get_prefetch_engine()
 
     candidates = prefetch_engine.predict_next_queries(
-        session_id=session_id,
-        user_id=user_id,
-        top_k=top_k
+        session_id=session_id, user_id=user_id, top_k=top_k
     )
 
     return PrefetchCandidatesResponse(
@@ -591,11 +619,11 @@ async def get_prefetch_candidates(
                 "estimated_cost_ms": c.estimated_cost_ms,
                 "estimated_benefit": c.estimated_benefit,
                 "priority_score": c.priority_score,
-                "reason": c.reason
+                "reason": c.reason,
             }
             for c in candidates
         ],
-        total_candidates=len(candidates)
+        total_candidates=len(candidates),
     )
 
 
@@ -622,8 +650,4 @@ async def setup_invalidation_triggers(request: SetupTriggersRequest):
     successful = sum(1 for status in results.values() if status == "success")
     failed = len(results) - successful
 
-    return SetupTriggersResponse(
-        results=results,
-        successful=successful,
-        failed=failed
-    )
+    return SetupTriggersResponse(results=results, successful=successful, failed=failed)

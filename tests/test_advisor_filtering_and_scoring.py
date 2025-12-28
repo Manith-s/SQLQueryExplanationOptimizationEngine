@@ -69,7 +69,11 @@ def test_score_and_reason_present(monkeypatch):
     from app.core import db as db_core
 
     def fake_col_stats(schema, table, timeout_ms=5000):
-        return {"user_id": {"avg_width": 4}, "status": {"avg_width": 8}, "created_at": {"avg_width": 8}}
+        return {
+            "user_id": {"avg_width": 4},
+            "status": {"avg_width": 8},
+            "created_at": {"avg_width": 8},
+        }
 
     monkeypatch.setattr(db_core, "get_column_stats", fake_col_stats)
 
@@ -81,16 +85,6 @@ def test_score_and_reason_present(monkeypatch):
     assert all("reason" in s for s in idx)
     # Ordering: rewrites first, then index sorted by -score then title
     titles = [s["title"] for s in out["suggestions"]]
-    assert titles[0].startswith("Replace SELECT *") or titles[0].startswith("Align ORDER BY")
-
-
-
-
-
-
-
-
-
-
-
-
+    assert titles[0].startswith("Replace SELECT *") or titles[0].startswith(
+        "Align ORDER BY"
+    )

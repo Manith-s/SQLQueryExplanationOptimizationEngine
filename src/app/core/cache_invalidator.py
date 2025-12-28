@@ -27,6 +27,7 @@ from app.core.db import get_conn
 
 class InvalidationStrategy(Enum):
     """Cache invalidation strategies."""
+
     IMMEDIATE = "immediate"  # Invalidate immediately on change
     BATCH = "batch"  # Batch invalidations
     PROBABILISTIC = "probabilistic"  # Probabilistic for approximate queries
@@ -35,6 +36,7 @@ class InvalidationStrategy(Enum):
 
 class ChangeType(Enum):
     """Database change types."""
+
     INSERT = "INSERT"
     UPDATE = "UPDATE"
     DELETE = "DELETE"
@@ -44,6 +46,7 @@ class ChangeType(Enum):
 @dataclass
 class TableChange:
     """Record of a table modification."""
+
     table_name: str
     change_type: ChangeType
     timestamp: datetime
@@ -55,16 +58,20 @@ class TableChange:
 @dataclass
 class InvalidationRule:
     """Rule for cache invalidation."""
+
     table: str
     strategy: InvalidationStrategy
     probability: float = 1.0  # For probabilistic invalidation
     delay_seconds: int = 0  # For batched invalidation
-    selective_columns: Optional[Set[str]] = None  # Only invalidate if these columns change
+    selective_columns: Optional[Set[str]] = (
+        None  # Only invalidate if these columns change
+    )
 
 
 @dataclass
 class DependencyNode:
     """Node in dependency graph."""
+
     table: str
     dependent_tables: Set[str] = field(default_factory=set)
     cached_queries: Set[str] = field(default_factory=set)  # Fingerprints
@@ -161,15 +168,19 @@ class DependencyGraph:
     def get_statistics(self) -> Dict[str, Any]:
         """Get dependency graph statistics."""
         with self.lock:
-            total_queries = sum(len(node.cached_queries) for node in self.nodes.values())
+            total_queries = sum(
+                len(node.cached_queries) for node in self.nodes.values()
+            )
 
             return {
                 "tables_tracked": len(self.nodes),
                 "total_cached_queries": total_queries,
-                "avg_queries_per_table": total_queries / len(self.nodes) if self.nodes else 0,
+                "avg_queries_per_table": (
+                    total_queries / len(self.nodes) if self.nodes else 0
+                ),
                 "tables_with_dependencies": sum(
                     1 for node in self.nodes.values() if node.dependent_tables
-                )
+                ),
             }
 
 
@@ -188,7 +199,7 @@ class CacheInvalidator:
         self,
         cache_manager=None,
         enable_listen: bool = True,
-        batch_interval_seconds: int = 5
+        batch_interval_seconds: int = 5,
     ):
         """
         Initialize cache invalidator.
@@ -227,7 +238,7 @@ class CacheInvalidator:
         self,
         query_fingerprint: str,
         tables: Set[str],
-        strategy: InvalidationStrategy = InvalidationStrategy.IMMEDIATE
+        strategy: InvalidationStrategy = InvalidationStrategy.IMMEDIATE,
     ):
         """
         Register cached query for invalidation tracking.
@@ -244,8 +255,7 @@ class CacheInvalidator:
             table_lower = table.lower()
             if table_lower not in self.invalidation_rules:
                 self.invalidation_rules[table_lower] = InvalidationRule(
-                    table=table_lower,
-                    strategy=strategy
+                    table=table_lower, strategy=strategy
                 )
 
     def invalidate_by_table(
@@ -254,7 +264,7 @@ class CacheInvalidator:
         change_type: ChangeType = ChangeType.UPDATE,
         affected_rows: int = 1,
         changed_columns: Optional[Set[str]] = None,
-        cascade: bool = True
+        cascade: bool = True,
     ) -> int:
         """
         Invalidate cache entries for a table.
@@ -286,18 +296,21 @@ class CacheInvalidator:
             if rule.strategy == InvalidationStrategy.PROBABILISTIC:
                 # Probabilistic invalidation
                 import random
+
                 if random.random() > rule.probability:
                     return 0  # Skip invalidation
 
             elif rule.strategy == InvalidationStrategy.BATCH:
                 # Add to pending batch
-                self._add_pending_invalidation(TableChange(
-                    table_name=table_lower,
-                    change_type=change_type,
-                    timestamp=datetime.utcnow(),
-                    affected_rows=affected_rows,
-                    changed_columns=changed_columns or set()
-                ))
+                self._add_pending_invalidation(
+                    TableChange(
+                        table_name=table_lower,
+                        change_type=change_type,
+                        timestamp=datetime.utcnow(),
+                        affected_rows=affected_rows,
+                        changed_columns=changed_columns or set(),
+                    )
+                )
                 return 0  # Will be processed in batch
 
             elif rule.strategy == InvalidationStrategy.LAZY:
@@ -306,7 +319,9 @@ class CacheInvalidator:
                 return 0
 
         # Get affected queries
-        affected_queries = self.dependency_graph.get_affected_queries(table_lower, cascade)
+        affected_queries = self.dependency_graph.get_affected_queries(
+            table_lower, cascade
+        )
 
         # Invalidate cache
         invalidated += self.cache_manager.invalidate(table=table_lower)
@@ -323,11 +338,7 @@ class CacheInvalidator:
 
         return invalidated
 
-    def invalidate_selective(
-        self,
-        sql: str,
-        where_clause: Optional[str] = None
-    ) -> int:
+    def invalidate_selective(self, sql: str, where_clause: Optional[str] = None) -> int:
         """
         Selective invalidation based on query patterns.
 
@@ -346,9 +357,7 @@ class CacheInvalidator:
         invalidated = 0
         for table in tables:
             invalidated += self.invalidate_by_table(
-                table,
-                change_type=ChangeType.UPDATE,
-                cascade=True
+                table, change_type=ChangeType.UPDATE, cascade=True
             )
 
         return invalidated
@@ -395,14 +404,18 @@ class CacheInvalidator:
                     cur.execute(trigger_func)
 
                     # Create triggers for INSERT, UPDATE, DELETE
-                    for operation in ['INSERT', 'UPDATE', 'DELETE']:
-                        trigger_name = f"cache_invalidation_{table_lower}_{operation.lower()}"
+                    for operation in ["INSERT", "UPDATE", "DELETE"]:
+                        trigger_name = (
+                            f"cache_invalidation_{table_lower}_{operation.lower()}"
+                        )
 
                         # Drop existing trigger
-                        cur.execute(f"DROP TRIGGER IF EXISTS {trigger_name} ON {table_lower}")
+                        cur.execute(
+                            f"DROP TRIGGER IF EXISTS {trigger_name} ON {table_lower}"
+                        )
 
                         # Create new trigger
-                        timing = 'AFTER'
+                        timing = "AFTER"
                         trigger_sql = f"""
                         CREATE TRIGGER {trigger_name}
                         {timing} {operation} ON {table_lower}
@@ -449,7 +462,7 @@ class CacheInvalidator:
                 "selective_invalidations": self.selective_invalidation_count,
                 "cascade_invalidations": self.cascade_invalidation_count,
                 "pending_batch_invalidations": len(self.pending_invalidations),
-                "dependency_graph": self.dependency_graph.get_statistics()
+                "dependency_graph": self.dependency_graph.get_statistics(),
             }
 
         return stats
@@ -494,10 +507,11 @@ class CacheInvalidator:
         """Process a NOTIFY payload."""
         try:
             import json
+
             data = json.loads(payload)
 
-            table = data.get('table')
-            operation = data.get('operation')
+            table = data.get("table")
+            operation = data.get("operation")
 
             if table and operation:
                 change_type = ChangeType[operation]
@@ -518,7 +532,9 @@ class CacheInvalidator:
             else:
                 self.pending_invalidations[change.table_name] = change
 
-    def _update_volatility(self, table: str, change_type: ChangeType, affected_rows: int):
+    def _update_volatility(
+        self, table: str, change_type: ChangeType, affected_rows: int
+    ):
         """Update table volatility score based on change patterns."""
         # Simple heuristic: more frequent changes = higher volatility
         # In a real system, this would use time-series analysis
@@ -565,8 +581,7 @@ def get_cache_invalidator() -> CacheInvalidator:
 
     if _cache_invalidator is None:
         _cache_invalidator = CacheInvalidator(
-            enable_listen=True,
-            batch_interval_seconds=5
+            enable_listen=True, batch_interval_seconds=5
         )
 
     return _cache_invalidator

@@ -348,7 +348,9 @@ class CostAnalyzer:
                 continue
 
             current_day = costs_by_day[sorted_days[-1]]
-            previous_day = costs_by_day[sorted_days[-2]] if len(sorted_days) > 1 else current_day
+            previous_day = (
+                costs_by_day[sorted_days[-2]] if len(sorted_days) > 1 else current_day
+            )
             week_costs = [costs_by_day[d] for d in sorted_days[-7:]]
             week_avg = sum(week_costs) / len(week_costs)
             month_projected = sum(costs_by_day.values()) * (30 / len(sorted_days))
@@ -426,7 +428,9 @@ class CostAnalyzer:
                     title="Optimize expensive query patterns",
                     description=f"Top 5 query patterns cost ${total_expensive:.4f}. Add indexes or rewrite queries.",
                     category=CostCategory.DATABASE,
-                    potential_savings_usd_monthly=float(f"{total_expensive * 30 * 0.5:.2f}"),  # 50% reduction
+                    potential_savings_usd_monthly=float(
+                        f"{total_expensive * 30 * 0.5:.2f}"
+                    ),  # 50% reduction
                     confidence=0.8,
                     implementation_effort="medium",
                     priority=1,
@@ -511,18 +515,22 @@ class CostAnalyzer:
         """
         # Check per-query limit
         if query_cost > query_limit:
-            return False, f"Query cost ${query_cost:.4f} exceeds limit ${query_limit:.2f}"
+            return (
+                False,
+                f"Query cost ${query_cost:.4f} exceeds limit ${query_limit:.2f}",
+            )
 
         # Check daily limit
         today = datetime.utcnow().date()
         today_costs = [
-            c.total_cost_usd
-            for c in self._query_costs
-            if c.timestamp.date() == today
+            c.total_cost_usd for c in self._query_costs if c.timestamp.date() == today
         ]
         today_total = sum(today_costs)
 
         if today_total + query_cost > daily_limit:
-            return False, f"Daily cost limit exceeded: ${today_total:.2f} + ${query_cost:.4f} > ${daily_limit:.2f}"
+            return (
+                False,
+                f"Daily cost limit exceeded: ${today_total:.2f} + ${query_cost:.4f} > ${daily_limit:.2f}",
+            )
 
         return True, "OK"

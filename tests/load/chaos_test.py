@@ -27,6 +27,7 @@ import aiohttp
 @dataclass
 class ChaosEvent:
     """A chaos engineering event."""
+
     timestamp: str
     event_type: str
     target: str
@@ -37,6 +38,7 @@ class ChaosEvent:
 @dataclass
 class AvailabilityMetric:
     """Availability measurement."""
+
     timestamp: str
     requests_attempted: int
     requests_successful: int
@@ -48,7 +50,9 @@ class AvailabilityMetric:
 class ChaosTest:
     """Chaos engineering test suite."""
 
-    def __init__(self, target_url: str, duration_minutes: int = 60, dry_run: bool = True):
+    def __init__(
+        self, target_url: str, duration_minutes: int = 60, dry_run: bool = True
+    ):
         self.target_url = target_url
         self.duration_minutes = duration_minutes
         self.dry_run = dry_run
@@ -156,8 +160,12 @@ class ChaosTest:
             self.metrics.append(metric)
 
             # Print status
-            status = "✅" if availability >= 99.99 else "⚠️" if availability >= 99.0 else "❌"
-            print(f"{status} Availability: {availability:.3f}% (Latency: {avg_latency:.0f}ms, Failed: {failed})")
+            status = (
+                "✅" if availability >= 99.99 else "⚠️" if availability >= 99.0 else "❌"
+            )
+            print(
+                f"{status} Availability: {availability:.3f}% (Latency: {avg_latency:.0f}ms, Failed: {failed})"
+            )
 
     async def _inject_chaos(self):
         """Inject chaos events randomly."""
@@ -193,8 +201,7 @@ class ChaosTest:
             async with aiohttp.ClientSession() as session:
                 start = time.time()
                 async with session.get(
-                    f"{self.target_url}/health",
-                    timeout=aiohttp.ClientTimeout(total=5)
+                    f"{self.target_url}/health", timeout=aiohttp.ClientTimeout(total=5)
                 ) as response:
                     latency_ms = (time.time() - start) * 1000
                     success = response.status == 200
@@ -224,11 +231,22 @@ class ChaosTest:
         if not self.dry_run:
             try:
                 # Get pod list
-                result = subprocess.run([
-                    "kubectl", "get", "pods", "-n", "qeo",
-                    "-l", "app=qeo",
-                    "-o", "jsonpath={.items[*].metadata.name}"
-                ], capture_output=True, text=True, check=True)
+                result = subprocess.run(
+                    [
+                        "kubectl",
+                        "get",
+                        "pods",
+                        "-n",
+                        "qeo",
+                        "-l",
+                        "app=qeo",
+                        "-o",
+                        "jsonpath={.items[*].metadata.name}",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
 
                 pods = result.stdout.strip().split()
 
@@ -237,9 +255,11 @@ class ChaosTest:
                     target_pod = random.choice(pods)
                     print(f"   Killing pod: {target_pod}")
 
-                    subprocess.run([
-                        "kubectl", "delete", "pod", target_pod, "-n", "qeo"
-                    ], check=True, capture_output=True)
+                    subprocess.run(
+                        ["kubectl", "delete", "pod", target_pod, "-n", "qeo"],
+                        check=True,
+                        capture_output=True,
+                    )
 
                     print(f"   ✓ Pod {target_pod} killed")
                 else:
@@ -296,11 +316,22 @@ class ChaosTest:
         if not self.dry_run:
             try:
                 # Get random pod
-                result = subprocess.run([
-                    "kubectl", "get", "pods", "-n", "qeo",
-                    "-l", "app=qeo",
-                    "-o", "jsonpath={.items[0].metadata.name}"
-                ], capture_output=True, text=True, check=True)
+                result = subprocess.run(
+                    [
+                        "kubectl",
+                        "get",
+                        "pods",
+                        "-n",
+                        "qeo",
+                        "-l",
+                        "app=qeo",
+                        "-o",
+                        "jsonpath={.items[0].metadata.name}",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
 
                 target_pod = result.stdout.strip()
 
@@ -308,10 +339,21 @@ class ChaosTest:
                     print(f"   Stressing CPU on pod: {target_pod}")
 
                     # Use stress-ng to stress CPU
-                    subprocess.Popen([
-                        "kubectl", "exec", target_pod, "-n", "qeo", "--",
-                        "stress-ng", "--cpu", "2", "--timeout", f"{event.duration_seconds}s"
-                    ])
+                    subprocess.Popen(
+                        [
+                            "kubectl",
+                            "exec",
+                            target_pod,
+                            "-n",
+                            "qeo",
+                            "--",
+                            "stress-ng",
+                            "--cpu",
+                            "2",
+                            "--timeout",
+                            f"{event.duration_seconds}s",
+                        ]
+                    )
 
                     print("   ✓ CPU stress started")
                 else:
@@ -343,7 +385,9 @@ class ChaosTest:
         print(f"   Duration: {event.duration_seconds}s")
 
         if not self.dry_run:
-            print("   ⚠️  Memory stress requires stress-ng or similar tool installed in pods")
+            print(
+                "   ⚠️  Memory stress requires stress-ng or similar tool installed in pods"
+            )
             print("   [SKIPPED] Not implemented in this test")
         else:
             print("   [DRY RUN] Would consume 80% memory")
@@ -372,11 +416,23 @@ class ChaosTest:
                 # Kill connections via SQL
                 print("   Killing database connections...")
 
-                subprocess.run([
-                    "kubectl", "exec", "-n", "qeo", "cockroachdb-0", "--",
-                    "cockroach", "sql", "--insecure",
-                    "-e", "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'queryexpnopt';"
-                ], check=True, capture_output=True)
+                subprocess.run(
+                    [
+                        "kubectl",
+                        "exec",
+                        "-n",
+                        "qeo",
+                        "cockroachdb-0",
+                        "--",
+                        "cockroach",
+                        "sql",
+                        "--insecure",
+                        "-e",
+                        "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'queryexpnopt';",
+                    ],
+                    check=True,
+                    capture_output=True,
+                )
 
                 print("   ✓ Database connections killed")
 
@@ -397,7 +453,9 @@ class ChaosTest:
         total_successful = sum(m.requests_successful for m in self.metrics)
         total_failed = sum(m.requests_failed for m in self.metrics)
 
-        overall_availability = (total_successful / total_attempted * 100) if total_attempted > 0 else 0
+        overall_availability = (
+            (total_successful / total_attempted * 100) if total_attempted > 0 else 0
+        )
 
         print(f"Overall Availability: {overall_availability:.4f}%")
         print(f"Total Requests: {total_attempted:,}")
@@ -408,7 +466,9 @@ class ChaosTest:
         # Chaos events
         print(f"Chaos Events Injected: {len(self.chaos_events)}")
         for i, event in enumerate(self.chaos_events, 1):
-            print(f"  {i}. [{event.timestamp}] {event.event_type} - {event.description}")
+            print(
+                f"  {i}. [{event.timestamp}] {event.event_type} - {event.description}"
+            )
 
         print()
 
@@ -417,8 +477,10 @@ class ChaosTest:
         print("Timestamp            | Availability | Failed | Latency")
         print("-" * 70)
         for metric in self.metrics[-20:]:  # Last 20 measurements
-            ts = metric.timestamp.split('.')[0]  # Remove microseconds
-            print(f"{ts} | {metric.availability_pct:11.3f}% | {metric.requests_failed:6d} | {metric.avg_latency_ms:7.0f}ms")
+            ts = metric.timestamp.split(".")[0]  # Remove microseconds
+            print(
+                f"{ts} | {metric.availability_pct:11.3f}% | {metric.requests_failed:6d} | {metric.avg_latency_ms:7.0f}ms"
+            )
 
         print()
 
@@ -428,20 +490,28 @@ class ChaosTest:
 
         if passed:
             print("✅ TEST PASSED")
-            print(f"   - Availability: {overall_availability:.4f}% >= {target_availability}%")
-            print(f"   - System maintained availability despite {len(self.chaos_events)} chaos events")
+            print(
+                f"   - Availability: {overall_availability:.4f}% >= {target_availability}%"
+            )
+            print(
+                f"   - System maintained availability despite {len(self.chaos_events)} chaos events"
+            )
         else:
             print("❌ TEST FAILED")
-            print(f"   - Availability: {overall_availability:.4f}% < {target_availability}%")
+            print(
+                f"   - Availability: {overall_availability:.4f}% < {target_availability}%"
+            )
             print("   - System did not meet 99.99% availability target")
 
         print()
         print("=" * 80)
 
         # Save report
-        report_file = f"chaos_test_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        report_file = (
+            f"chaos_test_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        )
 
-        with open(report_file, 'w') as f:
+        with open(report_file, "w") as f:
             json.dump(
                 {
                     "test_info": {
@@ -461,7 +531,7 @@ class ChaosTest:
                     "metrics": [asdict(m) for m in self.metrics],
                 },
                 f,
-                indent=2
+                indent=2,
             )
 
         print(f"Report saved to: {report_file}")
@@ -471,20 +541,18 @@ async def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(description="QEO Chaos Engineering Test")
     parser.add_argument(
-        "--target-url",
-        default="http://localhost:8000",
-        help="Target API URL"
+        "--target-url", default="http://localhost:8000", help="Target API URL"
     )
     parser.add_argument(
         "--duration",
         type=int,
         default=60,
-        help="Test duration in minutes (default: 60)"
+        help="Test duration in minutes (default: 60)",
     )
     parser.add_argument(
         "--no-dry-run",
         action="store_true",
-        help="Run actual chaos events (WARNING: will disrupt service)"
+        help="Run actual chaos events (WARNING: will disrupt service)",
     )
 
     args = parser.parse_args()
@@ -492,7 +560,7 @@ async def main():
     test = ChaosTest(
         target_url=args.target_url,
         duration_minutes=args.duration,
-        dry_run=not args.no_dry_run
+        dry_run=not args.no_dry_run,
     )
 
     await test.run()

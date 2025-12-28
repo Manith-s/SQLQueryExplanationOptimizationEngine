@@ -5,11 +5,13 @@ from sqlglot import exp, parse_one
 
 DIALECT = "duckdb"
 
+
 def _sql(node: exp.Expression) -> str:
     try:
         return node.sql(dialect=DIALECT)
     except Exception:
         return node.sql()
+
 
 def _alias_name_from_raw(raw: str, base_name: str) -> Optional[str]:
     s = raw.strip()
@@ -25,6 +27,7 @@ def _alias_name_from_raw(raw: str, base_name: str) -> Optional[str]:
             return last
     return None
 
+
 def _relation_name_alias(rel: exp.Expression):
     if isinstance(rel, exp.Alias):
         inner = rel.this
@@ -38,7 +41,9 @@ def _relation_name_alias(rel: exp.Expression):
             base = _sql(inner)
         # prefer AST alias; fallback to raw parse
         alias_expr = getattr(rel, "alias", None)
-        alias = getattr(getattr(alias_expr, "this", None), "name", None) or getattr(alias_expr, "name", None)
+        alias = getattr(getattr(alias_expr, "this", None), "name", None) or getattr(
+            alias_expr, "name", None
+        )
         if not alias:
             alias = _alias_name_from_raw(raw, base)
         return base, alias, raw
@@ -47,7 +52,9 @@ def _relation_name_alias(rel: exp.Expression):
     if isinstance(rel, exp.Table):
         base = rel.name
         alias_expr = getattr(rel, "alias", None)
-        alias = getattr(getattr(alias_expr, "this", None), "name", None) or getattr(alias_expr, "name", None)
+        alias = getattr(getattr(alias_expr, "this", None), "name", None) or getattr(
+            alias_expr, "name", None
+        )
         if not alias:
             alias = _alias_name_from_raw(raw, base)
         return base, alias, raw
@@ -60,6 +67,7 @@ def _relation_name_alias(rel: exp.Expression):
 
     # Fallback
     return _sql(rel), None, raw
+
 
 def extract_tables(ast: exp.Expression):
     out = []
@@ -96,6 +104,7 @@ def extract_tables(ast: exp.Expression):
             break
     return out
 
+
 def extract_columns(ast: exp.Expression):
     cols = []
     if isinstance(ast, exp.Select):
@@ -103,18 +112,31 @@ def extract_columns(ast: exp.Expression):
         for proj in ast.expressions:
             if isinstance(proj, exp.Alias):
                 alias_id = getattr(proj, "alias", None)
-                alias = getattr(getattr(alias_id, "this", None), "name", None) or getattr(alias_id, "name", None)
-                cols.append({"table": None, "name": alias or _sql(proj.this), "raw": _sql(proj)})
+                alias = getattr(
+                    getattr(alias_id, "this", None), "name", None
+                ) or getattr(alias_id, "name", None)
+                cols.append(
+                    {"table": None, "name": alias or _sql(proj.this), "raw": _sql(proj)}
+                )
             elif isinstance(proj, exp.Column):
-                cols.append({"table": (proj.table or None), "name": proj.name, "raw": _sql(proj)})
+                cols.append(
+                    {
+                        "table": (proj.table or None),
+                        "name": proj.name,
+                        "raw": _sql(proj),
+                    }
+                )
             elif isinstance(proj, exp.Star):
                 q = getattr(proj, "this", None)
-                qual = getattr(getattr(q, "this", None), "name", None) or getattr(q, "name", None)
+                qual = getattr(getattr(q, "this", None), "name", None) or getattr(
+                    q, "name", None
+                )
                 cols.append({"table": (qual or None), "name": "*", "raw": _sql(proj)})
             else:
                 cols.append({"table": None, "name": _sql(proj), "raw": _sql(proj)})
 
     return cols
+
 
 def _extract_joins(ast: exp.Expression):
     out = []
@@ -127,15 +149,18 @@ def _extract_joins(ast: exp.Expression):
             on = join.args.get("on")
             cond = _sql(on) if on else None
             raw = _sql(join)
-            jkind = (join.args.get("kind") or join.args.get("side") or "JOIN")
+            jkind = join.args.get("kind") or join.args.get("side") or "JOIN"
             is_cross = "CROSS JOIN" in raw.upper()
-            out.append({
-                "type": "CROSS JOIN" if is_cross else str(jkind).upper(),
-                "right": _sql(join.this) if join.this else None,
-                "condition": cond,
-                "raw": raw,
-            })
+            out.append(
+                {
+                    "type": "CROSS JOIN" if is_cross else str(jkind).upper(),
+                    "right": _sql(join.this) if join.this else None,
+                    "condition": cond,
+                    "raw": raw,
+                }
+            )
     return out
+
 
 def _extract_filters(select: exp.Select) -> List[str]:
     w = select.args.get("where")
@@ -144,15 +169,18 @@ def _extract_filters(select: exp.Select) -> List[str]:
     node = getattr(w, "this", w)
     return [_sql(node)]
 
+
 def _extract_group_by(select: exp.Select) -> List[str]:
     g = select.args.get("group")
     exprs = getattr(g, "expressions", []) if g else []
     return [_sql(e) for e in exprs]
 
+
 def _extract_order_by(select: exp.Select) -> List[str]:
     o = select.args.get("order")
     exprs = getattr(o, "expressions", []) if o else []
     return [_sql(e) for e in exprs]
+
 
 def _extract_limit(select: exp.Select):
     lim = select.args.get("limit")
@@ -163,6 +191,7 @@ def _extract_limit(select: exp.Select):
         return int(expr.name)
     except Exception:
         return _sql(expr)
+
 
 def _has_restrictive_filter(filters: List[str]) -> bool:
     for f in filters or []:
@@ -176,6 +205,7 @@ def _has_restrictive_filter(filters: List[str]) -> bool:
         if re.search(r"=\s*\d", s):
             return True
     return False
+
 
 def parse_sql(sql: str) -> Dict[str, Any]:
     try:
@@ -191,7 +221,7 @@ def parse_sql(sql: str) -> Dict[str, Any]:
             "filters": [],
             "group_by": [],
             "order_by": [],
-            "limit": None
+            "limit": None,
         }
 
     stmt_type = (getattr(ast, "key", "") or "").upper() or "UNKNOWN"
@@ -205,37 +235,39 @@ def parse_sql(sql: str) -> Dict[str, Any]:
         "filters": _extract_filters(ast) if isinstance(ast, exp.Select) else [],
         "group_by": _extract_group_by(ast) if isinstance(ast, exp.Select) else [],
         "order_by": _extract_order_by(ast) if isinstance(ast, exp.Select) else [],
-        "limit": _extract_limit(ast) if isinstance(ast, exp.Select) else None
+        "limit": _extract_limit(ast) if isinstance(ast, exp.Select) else None,
     }
 
     return info
+
 
 def lint_rules(ast_info: Dict[str, Any]) -> Dict[str, Any]:
     issues = []
 
     # Handle parse errors first
     if "error" in ast_info:
-        issues.append({
-            "code": "PARSE_ERROR",
-            "message": ast_info["error"],
-            "severity": "high",
-            "hint": "Check SQL syntax"
-        })
-        return {
-            "issues": issues,
-            "summary": {"risk": "high"}
-        }
+        issues.append(
+            {
+                "code": "PARSE_ERROR",
+                "message": ast_info["error"],
+                "severity": "high",
+                "hint": "Check SQL syntax",
+            }
+        )
+        return {"issues": issues, "summary": {"risk": "high"}}
 
     # Only apply full rule set to SELECT queries
     if ast_info.get("type") == "SELECT":
         # SELECT * rule
         if any(c.get("name") == "*" for c in ast_info.get("columns", [])):
-            issues.append({
-                "code": "SELECT_STAR",
-                "message": "Using SELECT * is not recommended",
-                "severity": "warn",
-                "hint": "Explicitly list required columns"
-            })
+            issues.append(
+                {
+                    "code": "SELECT_STAR",
+                    "message": "Using SELECT * is not recommended",
+                    "severity": "warn",
+                    "hint": "Explicitly list required columns",
+                }
+            )
 
         # Join rules
         for join in ast_info.get("joins", []):
@@ -243,20 +275,24 @@ def lint_rules(ast_info: Dict[str, Any]) -> Dict[str, Any]:
             is_cross = join_type == "CROSS JOIN"
 
             if not is_cross and not join.get("condition"):
-                issues.append({
-                    "code": "MISSING_JOIN_ON",
-                    "message": f"Missing ON clause in {join_type}",
-                    "severity": "high",
-                    "hint": "Add an ON clause with join conditions"
-                })
+                issues.append(
+                    {
+                        "code": "MISSING_JOIN_ON",
+                        "message": f"Missing ON clause in {join_type}",
+                        "severity": "high",
+                        "hint": "Add an ON clause with join conditions",
+                    }
+                )
 
             if not join.get("condition"):
-                issues.append({
-                    "code": "CARTESIAN_JOIN",
-                    "message": "Cartesian product detected",
-                    "severity": "info" if is_cross else "high",
-                    "hint": "Add join conditions or confirm if CROSS JOIN is intended"
-                })
+                issues.append(
+                    {
+                        "code": "CARTESIAN_JOIN",
+                        "message": "Cartesian product detected",
+                        "severity": "info" if is_cross else "high",
+                        "hint": "Add join conditions or confirm if CROSS JOIN is intended",
+                    }
+                )
 
         # Ambiguous column check
         tables = ast_info.get("tables", [])
@@ -264,12 +300,14 @@ def lint_rules(ast_info: Dict[str, Any]) -> Dict[str, Any]:
             columns = ast_info.get("columns", [])
             for col in columns:
                 if not col.get("table") and col.get("name") != "*":
-                    issues.append({
-                        "code": "AMBIGUOUS_COLUMN",
-                        "message": f"Column {col.get('name')} is not table-qualified",
-                        "severity": "warn",
-                        "hint": "Qualify column with table name or alias"
-                    })
+                    issues.append(
+                        {
+                            "code": "AMBIGUOUS_COLUMN",
+                            "message": f"Column {col.get('name')} is not table-qualified",
+                            "severity": "warn",
+                            "hint": "Qualify column with table name or alias",
+                        }
+                    )
 
         # Large table check
         large_patterns = ["events", "logs", "transactions", "fact_"]
@@ -281,24 +319,31 @@ def lint_rules(ast_info: Dict[str, Any]) -> Dict[str, Any]:
             table_name = (table.get("name") or "").lower()
             if any(pattern in table_name for pattern in large_patterns):
                 if not has_restrictive_filter and not limit:
-                    issues.append({
-                        "code": "UNFILTERED_LARGE_TABLE",
-                        "message": f"Large table {table_name} queried without restrictive filters",
-                        "severity": "warn",
-                        "hint": "Add WHERE clause with restrictive predicates or LIMIT"
-                    })
+                    issues.append(
+                        {
+                            "code": "UNFILTERED_LARGE_TABLE",
+                            "message": f"Large table {table_name} queried without restrictive filters",
+                            "severity": "warn",
+                            "hint": "Add WHERE clause with restrictive predicates or LIMIT",
+                        }
+                    )
 
         # Implicit cast check
         id_patterns = ["_id", "_key", "_fk"]
         for filter_expr in filters:
             filter_expr = filter_expr or ""
-            if any(pattern in filter_expr.lower() for pattern in id_patterns) and "'" in filter_expr:
-                issues.append({
-                    "code": "IMPLICIT_CAST_PREDICATE",
-                    "message": "Possible implicit cast in predicate",
-                    "severity": "info",
-                    "hint": "Ensure column and literal types match"
-                })
+            if (
+                any(pattern in filter_expr.lower() for pattern in id_patterns)
+                and "'" in filter_expr
+            ):
+                issues.append(
+                    {
+                        "code": "IMPLICIT_CAST_PREDICATE",
+                        "message": "Possible implicit cast in predicate",
+                        "severity": "info",
+                        "hint": "Ensure column and literal types match",
+                    }
+                )
 
         # Unused join check
         if len(tables) > 1:  # Only check if we have joins
@@ -306,7 +351,9 @@ def lint_rules(ast_info: Dict[str, Any]) -> Dict[str, Any]:
             used = set()
 
             # Check if we have SELECT * - if so, all tables are considered used
-            has_select_star = any(c.get("name") == "*" for c in ast_info.get("columns", []))
+            has_select_star = any(
+                c.get("name") == "*" for c in ast_info.get("columns", [])
+            )
             if not has_select_star:  # Only check for unused tables if not SELECT *
                 # Check columns
                 for col in ast_info.get("columns", []):
@@ -314,7 +361,11 @@ def lint_rules(ast_info: Dict[str, Any]) -> Dict[str, Any]:
                         used.add(col.get("table"))
 
                 # Check filters, group by, and order by
-                for s in (filters or []) + (ast_info.get("group_by") or []) + (ast_info.get("order_by") or []):
+                for s in (
+                    (filters or [])
+                    + (ast_info.get("group_by") or [])
+                    + (ast_info.get("order_by") or [])
+                ):
                     s = s or ""
                     for j in joined:
                         if j and j in s:
@@ -323,12 +374,14 @@ def lint_rules(ast_info: Dict[str, Any]) -> Dict[str, Any]:
                 # Report unused joined tables
                 for j in joined:
                     if j and j not in used:
-                        issues.append({
-                            "code": "UNUSED_JOINED_TABLE",
-                            "message": f"Table {j} is joined but not used",
-                            "severity": "warn",
-                            "hint": "Remove unused join or use columns from the table"
-                        })
+                        issues.append(
+                            {
+                                "code": "UNUSED_JOINED_TABLE",
+                                "message": f"Table {j} is joined but not used",
+                                "severity": "warn",
+                                "hint": "Remove unused join or use columns from the table",
+                            }
+                        )
 
     # Calculate risk level
     if "error" in ast_info:
@@ -347,7 +400,4 @@ def lint_rules(ast_info: Dict[str, Any]) -> Dict[str, Any]:
         else:
             risk = "low"
 
-    return {
-        "issues": issues,
-        "summary": {"risk": risk}
-    }
+    return {"issues": issues, "summary": {"risk": risk}}

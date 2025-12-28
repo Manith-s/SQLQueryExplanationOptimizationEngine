@@ -43,6 +43,7 @@ from app.core.prefetch_engine import MarkovChainModel, PrefetchCandidate, Prefet
 # Cache Manager Tests
 # ============================================================================
 
+
 class TestQueryFingerprinter:
     """Test query normalization and fingerprinting."""
 
@@ -100,7 +101,7 @@ class TestLRUCache:
             created_at=datetime.utcnow(),
             expires_at=None,
             last_accessed=datetime.utcnow(),
-            size_bytes=4
+            size_bytes=4,
         )
 
         # Put and get
@@ -122,7 +123,7 @@ class TestLRUCache:
                 created_at=datetime.utcnow(),
                 expires_at=None,
                 last_accessed=datetime.utcnow(),
-                size_bytes=3
+                size_bytes=3,
             )
             cache.put(entry)
 
@@ -144,7 +145,7 @@ class TestLRUCache:
             created_at=datetime.utcnow() - timedelta(hours=2),
             expires_at=datetime.utcnow() - timedelta(hours=1),
             last_accessed=datetime.utcnow() - timedelta(hours=2),
-            size_bytes=4
+            size_bytes=4,
         )
 
         cache.put(entry)
@@ -228,6 +229,7 @@ class TestCacheManager:
 # Cache Invalidator Tests
 # ============================================================================
 
+
 class TestDependencyGraph:
     """Test dependency graph."""
 
@@ -304,26 +306,21 @@ class TestCacheInvalidator:
 
         # Set selective columns rule
         from app.core.cache_invalidator import InvalidationRule
+
         invalidator.invalidation_rules["users"] = InvalidationRule(
             table="users",
             strategy=InvalidationStrategy.IMMEDIATE,
-            selective_columns={"email"}  # Only invalidate if email changes
+            selective_columns={"email"},  # Only invalidate if email changes
         )
 
         # Change to 'name' column should not trigger invalidation
-        invalidator.invalidate_by_table(
-            "users",
-            changed_columns={"name"}
-        )
+        invalidator.invalidate_by_table("users", changed_columns={"name"})
 
         # Query should still be cached
         assert cache_manager.get(sql) is not None
 
         # Change to 'email' column should trigger invalidation
-        invalidator.invalidate_by_table(
-            "users",
-            changed_columns={"email"}
-        )
+        invalidator.invalidate_by_table("users", changed_columns={"email"})
 
         assert cache_manager.get(sql) is None
 
@@ -331,6 +328,7 @@ class TestCacheInvalidator:
 # ============================================================================
 # Prefetch Engine Tests
 # ============================================================================
+
 
 class TestMarkovChainModel:
     """Test Markov chain model."""
@@ -371,27 +369,31 @@ class TestPrefetchEngine:
 
         # Record query sequence
         session_id = "test_session"
-        queries = ["SELECT * FROM users", "SELECT * FROM orders", "SELECT * FROM products"]
+        queries = [
+            "SELECT * FROM users",
+            "SELECT * FROM orders",
+            "SELECT * FROM products",
+        ]
 
         for sql in queries * 5:  # Repeat pattern
             engine.record_query_execution(
-                sql=sql,
-                execution_time_ms=100.0,
-                session_id=session_id
+                sql=sql, execution_time_ms=100.0, session_id=session_id
             )
 
         # Should be able to predict
         candidates = engine.predict_next_queries(session_id=session_id, top_k=3)
 
         # Should have some predictions
-        assert len(candidates) >= 0  # May or may not have predictions depending on history
+        assert (
+            len(candidates) >= 0
+        )  # May or may not have predictions depending on history
 
     def test_cost_benefit_analysis(self):
         """Test prefetch decision making."""
         engine = PrefetchEngine(
             prefetch_threshold=0.5,
             max_prefetch_cost_ms=1000.0,
-            enable_speculative=False
+            enable_speculative=False,
         )
 
         # High probability, low cost candidate
@@ -401,7 +403,7 @@ class TestPrefetchEngine:
             probability=0.9,
             estimated_cost_ms=100.0,
             estimated_benefit=1000.0,
-            priority_score=9.0
+            priority_score=9.0,
         )
 
         decision = engine.should_prefetch(candidate)
@@ -415,7 +417,7 @@ class TestPrefetchEngine:
             probability=0.2,  # Below threshold
             estimated_cost_ms=100.0,
             estimated_benefit=200.0,
-            priority_score=2.0
+            priority_score=2.0,
         )
 
         decision2 = engine.should_prefetch(low_prob_candidate)
@@ -426,6 +428,7 @@ class TestPrefetchEngine:
 # ============================================================================
 # Cache Analytics Tests
 # ============================================================================
+
 
 class TestCacheAnalytics:
     """Test cache analytics."""
@@ -442,7 +445,7 @@ class TestCacheAnalytics:
                 sql=sql,
                 execution_time_ms=100.0 + i * 10,
                 cache_hit=(i % 2 == 0),  # 50% hit rate
-                result_size_bytes=1024
+                result_size_bytes=1024,
             )
 
         # Get metrics
@@ -465,7 +468,7 @@ class TestCacheAnalytics:
                 sql=sql_good,
                 execution_time_ms=1000.0,
                 cache_hit=True,
-                result_size_bytes=10 * 1024
+                result_size_bytes=10 * 1024,
             )
 
         # Poorly cacheable query (rare, low hit rate, cheap)
@@ -475,7 +478,7 @@ class TestCacheAnalytics:
                 sql=sql_bad,
                 execution_time_ms=10.0,
                 cache_hit=False,
-                result_size_bytes=100
+                result_size_bytes=100,
             )
 
         metrics_good = analytics.get_query_metrics(sql=sql_good)[0]
@@ -495,7 +498,7 @@ class TestCacheAnalytics:
                 sql=f"SELECT * FROM table WHERE id = {i % 10}",
                 execution_time_ms=100.0,
                 cache_hit=(i % 3 == 0),
-                result_size_bytes=1024
+                result_size_bytes=1024,
             )
 
         report = analytics.generate_effectiveness_report(time_period_hours=1.0)
@@ -509,6 +512,7 @@ class TestCacheAnalytics:
 # Cache Simulator Tests
 # ============================================================================
 
+
 class TestCacheSimulator:
     """Test cache simulation framework."""
 
@@ -517,9 +521,7 @@ class TestCacheSimulator:
         simulator = CacheSimulator()
 
         workload = simulator.generate_synthetic_workload(
-            num_queries=100,
-            num_unique_queries=10,
-            time_span_hours=1.0
+            num_queries=100, num_unique_queries=10, time_span_hours=1.0
         )
 
         assert len(workload.queries) == 100
@@ -532,10 +534,10 @@ class TestCacheSimulator:
         # Create simple workload
         queries = [
             {
-                'sql': f"SELECT * FROM table WHERE id = {i % 5}",
-                'timestamp': datetime.utcnow() + timedelta(seconds=i),
-                'execution_time_ms': 100.0,
-                'result_size_bytes': 1024
+                "sql": f"SELECT * FROM table WHERE id = {i % 5}",
+                "timestamp": datetime.utcnow() + timedelta(seconds=i),
+                "execution_time_ms": 100.0,
+                "result_size_bytes": 1024,
             }
             for i in range(50)
         ]
@@ -544,9 +546,7 @@ class TestCacheSimulator:
 
         # Create config
         config = CacheConfiguration(
-            name="test",
-            memory_size_mb=10,
-            default_ttl_seconds=3600
+            name="test", memory_size_mb=10, default_ttl_seconds=3600
         )
 
         # Run simulation
@@ -565,7 +565,7 @@ class TestCacheSimulator:
         configs = [
             CacheConfiguration("small", memory_size_mb=10, default_ttl_seconds=3600),
             CacheConfiguration("medium", memory_size_mb=50, default_ttl_seconds=3600),
-            CacheConfiguration("large", memory_size_mb=100, default_ttl_seconds=3600)
+            CacheConfiguration("large", memory_size_mb=100, default_ttl_seconds=3600),
         ]
 
         report = simulator.compare_configurations(workload, configs)
@@ -581,11 +581,7 @@ class TestCacheSimulator:
         workload = simulator.generate_synthetic_workload(num_queries=100)
 
         recommendation = simulator.recommend_optimal_size(
-            workload,
-            min_size_mb=10,
-            max_size_mb=100,
-            step_mb=20,
-            target_hit_rate=0.7
+            workload, min_size_mb=10, max_size_mb=100, step_mb=20, target_hit_rate=0.7
         )
 
         assert "recommended_size_mb" in recommendation
@@ -596,6 +592,7 @@ class TestCacheSimulator:
 # ============================================================================
 # Performance Benchmarks
 # ============================================================================
+
 
 class TestPerformance:
     """Performance benchmarks for cache system."""
@@ -629,7 +626,7 @@ class TestPerformance:
         queries = [
             "SELECT * FROM users WHERE id = 123",
             "SELECT u.name, o.amount FROM users u JOIN orders o ON u.id = o.user_id",
-            "SELECT * FROM products WHERE category = 'electronics' AND price > 100"
+            "SELECT * FROM products WHERE category = 'electronics' AND price > 100",
         ] * 100
 
         start = time.time()
@@ -650,6 +647,7 @@ class TestPerformance:
 # Cache Coherency Tests
 # ============================================================================
 
+
 class TestCacheCoherency:
     """Test cache coherency and consistency."""
 
@@ -662,7 +660,7 @@ class TestCacheCoherency:
         queries = [
             "SELECT * FROM users WHERE id = 1",
             "SELECT * FROM users WHERE id = 2",
-            "SELECT name FROM users WHERE status = 'active'"
+            "SELECT name FROM users WHERE status = 'active'",
         ]
 
         for sql in queries:

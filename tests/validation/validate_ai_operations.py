@@ -109,19 +109,25 @@ class AIOperationsValidator:
             incident = self.ai.detect_incident(test["state"])
 
             if incident == test["expected"]:
-                self.results.append({
-                    "test_name": f"Incident Detection - {test['name']}",
-                    "passed": True,
-                    "message": f"Correctly detected {incident.value}",
-                })
+                self.results.append(
+                    {
+                        "test_name": f"Incident Detection - {test['name']}",
+                        "passed": True,
+                        "message": f"Correctly detected {incident.value}",
+                    }
+                )
                 print(f"  ✓ {test['name']}: Detected {incident.value}")
             else:
-                self.results.append({
-                    "test_name": f"Incident Detection - {test['name']}",
-                    "passed": False,
-                    "message": f"Expected {test['expected'].value}, got {incident}",
-                })
-                print(f"  ✗ {test['name']}: Expected {test['expected'].value}, got {incident}")
+                self.results.append(
+                    {
+                        "test_name": f"Incident Detection - {test['name']}",
+                        "passed": False,
+                        "message": f"Expected {test['expected'].value}, got {incident}",
+                    }
+                )
+                print(
+                    f"  ✗ {test['name']}: Expected {test['expected'].value}, got {incident}"
+                )
 
     async def test_action_recommendation(self):
         """Test AI recommends appropriate actions."""
@@ -144,19 +150,25 @@ class AIOperationsValidator:
 
         # Check action is reasonable
         if action and action.confidence > 0:
-            self.results.append({
-                "test_name": "Action Recommendation",
-                "passed": True,
-                "message": f"Recommended {action.action_type.value} with {action.confidence:.0%} confidence",
-            })
-            print(f"  ✓ Recommended: {action.action_type.value} ({action.confidence:.0%})")
+            self.results.append(
+                {
+                    "test_name": "Action Recommendation",
+                    "passed": True,
+                    "message": f"Recommended {action.action_type.value} with {action.confidence:.0%} confidence",
+                }
+            )
+            print(
+                f"  ✓ Recommended: {action.action_type.value} ({action.confidence:.0%})"
+            )
             print(f"    Reasoning: {action.reasoning[:100]}...")
         else:
-            self.results.append({
-                "test_name": "Action Recommendation",
-                "passed": False,
-                "message": "No action recommended or zero confidence",
-            })
+            self.results.append(
+                {
+                    "test_name": "Action Recommendation",
+                    "passed": False,
+                    "message": "No action recommended or zero confidence",
+                }
+            )
             print("  ✗ No valid action recommended")
 
     async def test_confidence_scoring(self):
@@ -180,37 +192,49 @@ class AIOperationsValidator:
 
         # Confidence should be between 0 and 1
         if 0 <= action.confidence <= 1:
-            self.results.append({
-                "test_name": "Confidence Scoring - Range",
-                "passed": True,
-                "message": f"Confidence: {action.confidence:.3f} (valid range)",
-            })
+            self.results.append(
+                {
+                    "test_name": "Confidence Scoring - Range",
+                    "passed": True,
+                    "message": f"Confidence: {action.confidence:.3f} (valid range)",
+                }
+            )
             print(f"  ✓ Confidence score valid: {action.confidence:.3f}")
         else:
-            self.results.append({
-                "test_name": "Confidence Scoring - Range",
-                "passed": False,
-                "message": f"Confidence: {action.confidence} (out of range)",
-            })
+            self.results.append(
+                {
+                    "test_name": "Confidence Scoring - Range",
+                    "passed": False,
+                    "message": f"Confidence: {action.confidence} (out of range)",
+                }
+            )
             print(f"  ✗ Confidence out of range: {action.confidence}")
 
         # For initial deployment, expect at least 70% confidence for known issues
         target_confidence = 0.70
 
         if action.confidence >= target_confidence:
-            self.results.append({
-                "test_name": "Confidence Scoring - Threshold",
-                "passed": True,
-                "message": f"Confidence {action.confidence:.0%} meets {target_confidence:.0%} target",
-            })
-            print(f"  ✓ Confidence meets target: {action.confidence:.0%} >= {target_confidence:.0%}")
+            self.results.append(
+                {
+                    "test_name": "Confidence Scoring - Threshold",
+                    "passed": True,
+                    "message": f"Confidence {action.confidence:.0%} meets {target_confidence:.0%} target",
+                }
+            )
+            print(
+                f"  ✓ Confidence meets target: {action.confidence:.0%} >= {target_confidence:.0%}"
+            )
         else:
-            self.results.append({
-                "test_name": "Confidence Scoring - Threshold",
-                "passed": False,
-                "message": f"Confidence {action.confidence:.0%} below {target_confidence:.0%}",
-            })
-            print(f"  ✗ Confidence below target: {action.confidence:.0%} < {target_confidence:.0%}")
+            self.results.append(
+                {
+                    "test_name": "Confidence Scoring - Threshold",
+                    "passed": False,
+                    "message": f"Confidence {action.confidence:.0%} below {target_confidence:.0%}",
+                }
+            )
+            print(
+                f"  ✗ Confidence below target: {action.confidence:.0%} < {target_confidence:.0%}"
+            )
 
     async def test_learning_capability(self):
         """Test AI can learn from outcomes."""
@@ -241,18 +265,22 @@ class AIOperationsValidator:
         final_q_table_size = len(self.ai._q_table)
 
         if final_q_table_size > initial_q_table_size:
-            self.results.append({
-                "test_name": "Learning Capability - Q-Table Growth",
-                "passed": True,
-                "message": f"Q-table grew from {initial_q_table_size} to {final_q_table_size}",
-            })
+            self.results.append(
+                {
+                    "test_name": "Learning Capability - Q-Table Growth",
+                    "passed": True,
+                    "message": f"Q-table grew from {initial_q_table_size} to {final_q_table_size}",
+                }
+            )
             print(f"  ✓ Q-table grew: {initial_q_table_size} → {final_q_table_size}")
         else:
-            self.results.append({
-                "test_name": "Learning Capability - Q-Table Growth",
-                "passed": False,
-                "message": f"Q-table did not grow ({final_q_table_size})",
-            })
+            self.results.append(
+                {
+                    "test_name": "Learning Capability - Q-Table Growth",
+                    "passed": False,
+                    "message": f"Q-table did not grow ({final_q_table_size})",
+                }
+            )
             print("  ✗ Q-table did not grow")
 
     async def test_human_override(self):
@@ -279,22 +307,27 @@ class AIOperationsValidator:
         action = self.ai.recommend_action(incident, state)
 
         from app.ml.autonomous.ops_ai import ActionType
+
         self.ai.record_human_override(action, ActionType.ROLLBACK_DEPLOYMENT)
 
         # Check override was recorded
         if self.ai._human_overrides > initial_overrides:
-            self.results.append({
-                "test_name": "Human Override Tracking",
-                "passed": True,
-                "message": f"Override recorded ({self.ai._human_overrides} total)",
-            })
+            self.results.append(
+                {
+                    "test_name": "Human Override Tracking",
+                    "passed": True,
+                    "message": f"Override recorded ({self.ai._human_overrides} total)",
+                }
+            )
             print(f"  ✓ Override tracked: {self.ai._human_overrides} total")
         else:
-            self.results.append({
-                "test_name": "Human Override Tracking",
-                "passed": False,
-                "message": "Override not recorded",
-            })
+            self.results.append(
+                {
+                    "test_name": "Human Override Tracking",
+                    "passed": False,
+                    "message": "Override not recorded",
+                }
+            )
             print("  ✗ Override not recorded")
 
     async def test_api_integration(self):
@@ -316,35 +349,43 @@ class AIOperationsValidator:
                 has_all_fields = all(field in data for field in required_fields)
 
                 if has_all_fields:
-                    self.results.append({
-                        "test_name": "API Integration - Stats Endpoint",
-                        "passed": True,
-                        "message": f"Stats API working, autonomy: {data.get('autonomy_level', 0):.0%}",
-                    })
+                    self.results.append(
+                        {
+                            "test_name": "API Integration - Stats Endpoint",
+                            "passed": True,
+                            "message": f"Stats API working, autonomy: {data.get('autonomy_level', 0):.0%}",
+                        }
+                    )
                     print("  ✓ Stats API working")
                     print(f"    Actions: {data.get('total_actions', 0)}")
                     print(f"    Autonomy: {data.get('autonomy_level', 0):.0%}")
                 else:
-                    self.results.append({
-                        "test_name": "API Integration - Stats Endpoint",
-                        "passed": False,
-                        "message": "Missing required fields in response",
-                    })
+                    self.results.append(
+                        {
+                            "test_name": "API Integration - Stats Endpoint",
+                            "passed": False,
+                            "message": "Missing required fields in response",
+                        }
+                    )
                     print("  ✗ Missing fields in response")
             else:
-                self.results.append({
-                    "test_name": "API Integration - Stats Endpoint",
-                    "passed": False,
-                    "message": f"HTTP {response.status_code}",
-                })
+                self.results.append(
+                    {
+                        "test_name": "API Integration - Stats Endpoint",
+                        "passed": False,
+                        "message": f"HTTP {response.status_code}",
+                    }
+                )
                 print(f"  ✗ HTTP {response.status_code}")
 
         except Exception as e:
-            self.results.append({
-                "test_name": "API Integration - Stats Endpoint",
-                "passed": False,
-                "message": str(e),
-            })
+            self.results.append(
+                {
+                    "test_name": "API Integration - Stats Endpoint",
+                    "passed": False,
+                    "message": str(e),
+                }
+            )
             print(f"  ✗ API error: {e}")
 
 
@@ -355,6 +396,7 @@ async def main():
 
     # Save results
     import json
+
     with open("validation_results_ai.json", "w") as f:
         json.dump(
             {
@@ -373,4 +415,5 @@ async def main():
 
 if __name__ == "__main__":
     import sys
+
     sys.exit(asyncio.run(main()))

@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 # Skip all tests in this module if RUN_DB_TESTS is not set
 pytestmark = pytest.mark.skipif(
     os.getenv("RUN_DB_TESTS") != "1",
-    reason="Integration tests require RUN_DB_TESTS=1 and database"
+    reason="Integration tests require RUN_DB_TESTS=1 and database",
 )
 
 
@@ -22,6 +22,7 @@ pytestmark = pytest.mark.skipif(
 def client():
     """Create a test client."""
     from app.main import app
+
     return TestClient(app)
 
 
@@ -39,10 +40,7 @@ def test_optimize_endpoint_has_lower_rate_limit(client):
     # Make 11 rapid requests to optimize endpoint
     responses = []
     for _i in range(11):
-        response = client.post(
-            "/api/v1/optimize",
-            json={"sql": "SELECT 1"}
-        )
+        response = client.post("/api/v1/optimize", json={"sql": "SELECT 1"})
         responses.append(response)
 
     # At least one should be rate limited (429)
@@ -70,10 +68,7 @@ def test_rate_limit_exceeded_response_format(client):
     """When rate limit is exceeded, response should be properly formatted."""
     # Make many rapid requests to trigger rate limit
     for i in range(15):
-        response = client.post(
-            "/api/v1/optimize",
-            json={"sql": f"SELECT {i}"}
-        )
+        response = client.post("/api/v1/optimize", json={"sql": f"SELECT {i}"})
 
         if response.status_code == 429:
             # Check response format
@@ -82,7 +77,9 @@ def test_rate_limit_exceeded_response_format(client):
             assert "rate limit" in data["detail"].lower()
 
             # Check headers
-            assert "Retry-After" in response.headers or "retry-after" in response.headers
+            assert (
+                "Retry-After" in response.headers or "retry-after" in response.headers
+            )
             break
 
 
@@ -113,10 +110,7 @@ def test_custom_rate_limit_handler_returns_correct_status(client):
     """Custom rate limit handler should return 429 status."""
     # Make requests until rate limited
     for i in range(20):
-        response = client.post(
-            "/api/v1/optimize",
-            json={"sql": f"SELECT {i}"}
-        )
+        response = client.post("/api/v1/optimize", json={"sql": f"SELECT {i}"})
 
         if response.status_code == 429:
             # Verify it's our custom handler format
@@ -141,10 +135,7 @@ def test_rate_limit_different_endpoints_independent(client):
 def test_rate_limit_headers_include_limit_info(client):
     """Rate limit response should include helpful headers."""
     for i in range(15):
-        response = client.post(
-            "/api/v1/optimize",
-            json={"sql": f"SELECT {i}"}
-        )
+        response = client.post("/api/v1/optimize", json={"sql": f"SELECT {i}"})
 
         if response.status_code == 429:
             # Should have rate limit info headers

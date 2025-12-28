@@ -150,7 +150,9 @@ class K6Parser:
                 "http_reqs_rate", http_reqs.get("values", {}).get("rate", 0), "req/s"
             )
             metrics["http_reqs_count"] = Metric(
-                "http_reqs_count", http_reqs.get("values", {}).get("count", 0), "requests"
+                "http_reqs_count",
+                http_reqs.get("values", {}).get("count", 0),
+                "requests",
             )
 
         # Error rate metrics
@@ -685,7 +687,8 @@ def main():
     elif args.compare:
         if not args.baseline or not args.current:
             print(
-                "Error: --baseline and --current required for --compare", file=sys.stderr
+                "Error: --baseline and --current required for --compare",
+                file=sys.stderr,
             )
             sys.exit(1)
 

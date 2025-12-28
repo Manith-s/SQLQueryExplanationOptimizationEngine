@@ -64,7 +64,9 @@ class SLOStatusResponse(BaseModel):
     timestamp: datetime
     mode: str
     error_budgets: Dict[str, ErrorBudgetResponse]
-    overall_health: float = Field(..., ge=0, le=1, description="Overall health score (0-1)")
+    overall_health: float = Field(
+        ..., ge=0, le=1, description="Overall health score (0-1)"
+    )
     can_deploy: bool
     alerts: List[str]
     recommendations: List[str]
@@ -192,7 +194,9 @@ async def get_error_budgets():
 @router.get("/report")
 @observe_request
 async def get_budget_report(
-    days: int = Query(7, ge=1, le=90, description="Number of days to include in report"),
+    days: int = Query(
+        7, ge=1, le=90, description="Number of days to include in report"
+    ),
 ):
     """
     Generate error budget report for the specified time period.
@@ -244,8 +248,7 @@ async def can_deploy():
         # Get current status for additional context
         status_response = await get_slo_status()
         min_budget = min(
-            b.error_budget_remaining_pct
-            for b in status_response.error_budgets.values()
+            b.error_budget_remaining_pct for b in status_response.error_budgets.values()
         )
 
         return CanDeployResponse(

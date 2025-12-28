@@ -400,8 +400,16 @@ def on_test_stop(environment, **kwargs):
         for endpoint, times in sorted(request_stats.items()):
             if times:
                 avg = sum(times) / len(times)
-                p95 = sorted(times)[int(len(times) * 0.95)] if len(times) > 20 else max(times)
-                p99 = sorted(times)[int(len(times) * 0.99)] if len(times) > 100 else max(times)
+                p95 = (
+                    sorted(times)[int(len(times) * 0.95)]
+                    if len(times) > 20
+                    else max(times)
+                )
+                p99 = (
+                    sorted(times)[int(len(times) * 0.99)]
+                    if len(times) > 100
+                    else max(times)
+                )
 
                 print(f"\n{endpoint}:")
                 print(f"  Requests: {len(times)}")
@@ -470,7 +478,9 @@ class SoakTestUser(HttpUser):
         time.sleep(2)
 
         self.client.post(
-            "/api/v1/explain", json={"sql": query, "analyze": False}, name="[SOAK] Explain"
+            "/api/v1/explain",
+            json={"sql": query, "analyze": False},
+            name="[SOAK] Explain",
         )
         time.sleep(3)
 
@@ -481,4 +491,6 @@ class SoakTestUser(HttpUser):
         )
         time.sleep(5)
 
-        self.client.get("/api/v1/schema", params={"schema": "public"}, name="[SOAK] Schema")
+        self.client.get(
+            "/api/v1/schema", params={"schema": "public"}, name="[SOAK] Schema"
+        )

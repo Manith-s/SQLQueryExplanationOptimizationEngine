@@ -48,7 +48,9 @@ def test_exists_rewrite_suggestion_present():
     stats = {"orders": {"rows": 50000, "indexes": []}, "users": {"rows": 100000}}
     options = {"min_index_rows": 10000, "max_index_cols": 3}
 
-    out = analyze(sql, ast_info, plan=None, schema=fake_schema(), stats=stats, options=options)
+    out = analyze(
+        sql, ast_info, plan=None, schema=fake_schema(), stats=stats, options=options
+    )
     titles = [s["title"] for s in out["suggestions"]]
     assert any("EXISTS".lower() in t.lower() or "Align ORDER BY" in t for t in titles)
 
@@ -69,7 +71,9 @@ def test_index_suggestion_for_filters_and_order():
     stats = {"orders": {"rows": 200000, "indexes": []}}
     options = {"min_index_rows": 10000, "max_index_cols": 3}
 
-    out = analyze(sql, ast_info, plan=None, schema=fake_schema(), stats=stats, options=options)
+    out = analyze(
+        sql, ast_info, plan=None, schema=fake_schema(), stats=stats, options=options
+    )
     idx = [s for s in out["suggestions"] if s["kind"] == "index"]
     assert idx, "expected at least one index suggestion"
     # Ensure column order begins with equality keys
@@ -94,10 +98,10 @@ def test_determinism():
     options = {"min_index_rows": 10000, "max_index_cols": 3}
 
     outs = [
-        analyze(sql, ast_info, plan=None, schema=fake_schema(), stats=stats, options=options)
+        analyze(
+            sql, ast_info, plan=None, schema=fake_schema(), stats=stats, options=options
+        )
         for _ in range(5)
     ]
     for o in outs[1:]:
         assert o == outs[0]
-
-

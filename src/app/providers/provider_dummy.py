@@ -12,6 +12,7 @@ from app.core.llm_adapter import LLMProvider
 
 _TEMPLATES: Dict[str, str] | None = None
 
+
 def _load_templates() -> Dict[str, str]:
     global _TEMPLATES
     if _TEMPLATES is not None:
@@ -33,19 +34,23 @@ def _load_templates() -> Dict[str, str]:
     _TEMPLATES = tmpl
     return tmpl
 
+
 def _walk_plan_nodes(plan: Dict[str, Any]) -> List[Dict[str, Any]]:
     nodes: List[Dict[str, Any]] = []
     if not isinstance(plan, dict):
         return nodes
     root = plan.get("Plan", plan)
+
     def _rec(n: Dict[str, Any]):
         nodes.append(n)
-        for ch in (n.get("Plans") or []):
+        for ch in n.get("Plans") or []:
             if isinstance(ch, dict):
                 _rec(ch)
+
     if isinstance(root, dict):
         _rec(root)
     return nodes
+
 
 class DummyLLMProvider(LLMProvider):
     """
@@ -82,7 +87,10 @@ class DummyLLMProvider(LLMProvider):
         prompt_lower = prompt.lower()
 
         # Check if a long/detailed explanation is requested
-        is_detailed = any(marker in prompt_lower for marker in ["long", "detailed", "verbose", "comprehensive"])
+        is_detailed = any(
+            marker in prompt_lower
+            for marker in ["long", "detailed", "verbose", "comprehensive"]
+        )
 
         if is_detailed or words > 100:
             # Return a longer, more detailed explanation

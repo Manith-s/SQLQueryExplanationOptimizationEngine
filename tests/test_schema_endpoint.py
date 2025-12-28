@@ -15,13 +15,15 @@ from app.main import app
 # Skip all tests unless RUN_DB_TESTS=1
 pytestmark = pytest.mark.skipif(
     os.getenv("RUN_DB_TESTS") != "1",
-    reason="Database tests disabled. Set RUN_DB_TESTS=1 to enable."
+    reason="Database tests disabled. Set RUN_DB_TESTS=1 to enable.",
 )
+
 
 @pytest.fixture
 def client():
     """Get FastAPI test client."""
     return TestClient(app)
+
 
 @pytest.fixture(autouse=True)
 def test_table():
@@ -38,15 +40,18 @@ def test_table():
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             # Create parent table
-            cur.execute("""
+            cur.execute(
+                """
                 CREATE TABLE tmp_cursor_phase2_users (
                     id SERIAL PRIMARY KEY,
                     username VARCHAR(50) NOT NULL UNIQUE
                 )
-            """)
+            """
+            )
 
             # Create main test table
-            cur.execute("""
+            cur.execute(
+                """
                 CREATE TABLE tmp_cursor_phase2 (
                     id SERIAL PRIMARY KEY,
                     user_id INTEGER REFERENCES tmp_cursor_phase2_users(id),
@@ -56,13 +61,16 @@ def test_table():
                     active BOOLEAN DEFAULT true,
                     metadata JSONB
                 )
-            """)
+            """
+            )
 
             # Create index
-            cur.execute("""
+            cur.execute(
+                """
                 CREATE INDEX idx_tmp_cursor_phase2_user_id
                 ON tmp_cursor_phase2(user_id)
-            """)
+            """
+            )
 
             conn.commit()
 
@@ -74,6 +82,7 @@ def test_table():
             cur.execute("DROP TABLE IF EXISTS tmp_cursor_phase2")
             cur.execute("DROP TABLE IF EXISTS tmp_cursor_phase2_users")
             conn.commit()
+
 
 def test_schema_list_tables(client):
     """Test schema endpoint returns all tables."""
@@ -88,6 +97,7 @@ def test_schema_list_tables(client):
     table_names = [t["name"] for t in data["schema"]["tables"]]
     assert "tmp_cursor_phase2" in table_names
     assert "tmp_cursor_phase2_users" in table_names
+
 
 def test_schema_single_table(client):
     """Test schema endpoint for a specific table."""
@@ -116,16 +126,16 @@ def test_schema_single_table(client):
 
     # Check index
     assert any(
-        idx["name"] == "idx_tmp_cursor_phase2_user_id"
-        for idx in table["indexes"]
+        idx["name"] == "idx_tmp_cursor_phase2_user_id" for idx in table["indexes"]
     )
 
     # Check foreign keys
     assert any(
-        fk["column_name"] == "user_id" and
-        fk["foreign_table"] == "tmp_cursor_phase2_users"
+        fk["column_name"] == "user_id"
+        and fk["foreign_table"] == "tmp_cursor_phase2_users"
         for fk in table["foreign_keys"]
     )
+
 
 def test_schema_column_details(client):
     """Test column metadata is correct."""
@@ -151,6 +161,7 @@ def test_schema_column_details(client):
     assert columns["created_at"]["nullable"]
     assert "current_timestamp" in columns["created_at"]["default"].lower()
 
+
 def test_schema_invalid_table(client):
     """Test schema endpoint with nonexistent table."""
     response = client.get("/api/v1/schema?table=nonexistent")
@@ -160,6 +171,7 @@ def test_schema_invalid_table(client):
     assert data["ok"] is True
     assert len(data["schema"]["tables"]) == 0
 
+
 def test_schema_invalid_schema(client):
     """Test schema endpoint with nonexistent schema."""
     response = client.get("/api/v1/schema?schema=nonexistent")
@@ -168,4 +180,3 @@ def test_schema_invalid_schema(client):
 
     assert data["ok"] is True
     assert len(data["schema"]["tables"]) == 0
-

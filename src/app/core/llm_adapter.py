@@ -31,6 +31,7 @@ class LLMProvider(ABC):
         """
         pass
 
+
 def get_llm() -> LLMProvider:
     """
     Get the configured LLM provider instance.
@@ -47,7 +48,7 @@ def get_llm() -> LLMProvider:
     """
     provider_map = {
         "dummy": "app.providers.provider_dummy",
-        "ollama": "app.providers.provider_ollama"
+        "ollama": "app.providers.provider_ollama",
     }
 
     # Always read from env at call time to respect test overrides
@@ -67,14 +68,18 @@ def get_llm() -> LLMProvider:
         provider_class = None
         for attr in dir(module):
             obj = getattr(module, attr)
-            if (isinstance(obj, type) and
-                issubclass(obj, LLMProvider) and
-                obj != LLMProvider):
+            if (
+                isinstance(obj, type)
+                and issubclass(obj, LLMProvider)
+                and obj != LLMProvider
+            ):
                 provider_class = obj
                 break
 
         if not provider_class:
-            raise ValueError(f"No LLMProvider implementation found in {provider_module}")
+            raise ValueError(
+                f"No LLMProvider implementation found in {provider_module}"
+            )
 
         # Instantiate the provider
         instance = provider_class()
@@ -83,12 +88,17 @@ def get_llm() -> LLMProvider:
         if provider_name == "ollama":
             try:
                 from app.providers.provider_ollama import OllamaLLMProvider as _OL
+
                 if hasattr(_OL, "is_available") and not _OL.is_available():
                     # fallback to dummy
                     module = importlib.import_module(provider_map["dummy"])
                     for attr in dir(module):
                         obj = getattr(module, attr)
-                        if (isinstance(obj, type) and issubclass(obj, LLMProvider) and obj != LLMProvider):
+                        if (
+                            isinstance(obj, type)
+                            and issubclass(obj, LLMProvider)
+                            and obj != LLMProvider
+                        ):
                             return obj()
             except Exception:
                 pass

@@ -39,12 +39,17 @@ def _plan_total_cost(plan: Dict[str, Any]) -> float:
 def _hypopg_available() -> bool:
     try:
         rows = db.run_sql("SELECT extname FROM pg_extension WHERE extname='hypopg'")
-        return any(r and r[0] == 'hypopg' for r in rows)
+        return any(r and r[0] == "hypopg" for r in rows)
     except Exception:
         return False
 
 
-def evaluate(sql: str, suggestions: List[Dict[str, Any]], timeout_ms: int, force_enabled: bool | None = None) -> Dict[str, Any]:
+def evaluate(
+    sql: str,
+    suggestions: List[Dict[str, Any]],
+    timeout_ms: int,
+    force_enabled: bool | None = None,
+) -> Dict[str, Any]:
     """Evaluate top-N index suggestions via HypoPG and return cost deltas.
 
     Returns dict with:
@@ -52,11 +57,18 @@ def evaluate(sql: str, suggestions: List[Dict[str, Any]], timeout_ms: int, force
       - whatIf: { enabled, available, trials, filteredByPct }
       - enriched suggestions (may include estCostBefore/After/Delta)
     """
-    enabled = bool(settings.WHATIF_ENABLED) if force_enabled is None else bool(force_enabled)
+    enabled = (
+        bool(settings.WHATIF_ENABLED) if force_enabled is None else bool(force_enabled)
+    )
     if not enabled:
         return {
             "ranking": "heuristic",
-            "whatIf": {"enabled": False, "available": False, "trials": 0, "filteredByPct": 0},
+            "whatIf": {
+                "enabled": False,
+                "available": False,
+                "trials": 0,
+                "filteredByPct": 0,
+            },
             "suggestions": suggestions,
         }
 
@@ -64,7 +76,12 @@ def evaluate(sql: str, suggestions: List[Dict[str, Any]], timeout_ms: int, force
     if not available:
         return {
             "ranking": "heuristic",
-            "whatIf": {"enabled": True, "available": False, "trials": 0, "filteredByPct": 0},
+            "whatIf": {
+                "enabled": True,
+                "available": False,
+                "trials": 0,
+                "filteredByPct": 0,
+            },
             "suggestions": suggestions,
         }
 
@@ -77,11 +94,17 @@ def evaluate(sql: str, suggestions: List[Dict[str, Any]], timeout_ms: int, force
     min_pct = float(settings.WHATIF_MIN_COST_REDUCTION_PCT)
     # Prioritize by candidate score if present, else by impact, then title
     cand_all = [s for s in suggestions if s.get("kind") == "index"]
+
     def _rank_cand(s: Dict[str, Any]):
         impact_rank = {"high": 3, "medium": 2, "low": 1}
-        return (-float(s.get("score") or 0.0), -impact_rank.get(s.get("impact"), 0), s.get("title") or "")
+        return (
+            -float(s.get("score") or 0.0),
+            -impact_rank.get(s.get("impact"), 0),
+            s.get("title") or "",
+        )
+
     cand_all.sort(key=_rank_cand)
-    candidates = cand_all[: max_trials]
+    candidates = cand_all[:max_trials]
 
     enriched: List[Dict[str, Any]] = []
     filtered = 0
@@ -92,7 +115,12 @@ def evaluate(sql: str, suggestions: List[Dict[str, Any]], timeout_ms: int, force
     if not candidates:
         return {
             "ranking": "heuristic",
-            "whatIf": {"enabled": True, "available": True, "trials": 0, "filteredByPct": 0},
+            "whatIf": {
+                "enabled": True,
+                "available": True,
+                "trials": 0,
+                "filteredByPct": 0,
+            },
             "suggestions": enriched,
         }
 
@@ -112,15 +140,26 @@ def evaluate(sql: str, suggestions: List[Dict[str, Any]], timeout_ms: int, force
         try:
             with db.get_conn() as conn:
                 with conn.cursor() as cur:
-                    cur.execute(f"SET LOCAL statement_timeout = {int(settings.WHATIF_TRIAL_TIMEOUT_MS)}")
+                    cur.execute(
+                        f"SET LOCAL statement_timeout = {int(settings.WHATIF_TRIAL_TIMEOUT_MS)}"
+                    )
                     cur.execute("SELECT hypopg_reset()")
-                    cur.execute("SELECT * FROM hypopg_create_index(%s)", (f"CREATE INDEX ON {table} ({', '.join(cols)})",))
+                    cur.execute(
+                        "SELECT * FROM hypopg_create_index(%s)",
+                        (f"CREATE INDEX ON {table} ({', '.join(cols)})",),
+                    )
                     t0 = time.time()
-                    plan = db.run_explain_costs(sql, timeout_ms=int(settings.WHATIF_TRIAL_TIMEOUT_MS))
+                    plan = db.run_explain_costs(
+                        sql, timeout_ms=int(settings.WHATIF_TRIAL_TIMEOUT_MS)
+                    )
                     observe_whatif_trial(time.time() - t0)
                     cur.execute("SELECT hypopg_reset()")
                     cost_after = _plan_total_cost(plan)
-                    return (cand.get("title") or "", cost_after, (time.time() - t0) * 1000.0)
+                    return (
+                        cand.get("title") or "",
+                        cost_after,
+                        (time.time() - t0) * 1000.0,
+                    )
         except Exception:
             return (cand.get("title") or "", base_cost, 0.0)
 
@@ -184,9 +223,11 @@ def evaluate(sql: str, suggestions: List[Dict[str, Any]], timeout_ms: int, force
 
     return {
         "ranking": "cost_based",
-        "whatIf": {"enabled": True, "available": True, "trials": trials, "filteredByPct": filtered},
+        "whatIf": {
+            "enabled": True,
+            "available": True,
+            "trials": trials,
+            "filteredByPct": filtered,
+        },
         "suggestions": out,
     }
-
-
-

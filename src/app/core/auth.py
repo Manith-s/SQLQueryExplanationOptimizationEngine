@@ -15,7 +15,9 @@ from app.core.config import settings
 security = HTTPBearer(auto_error=False)
 
 
-def verify_token(credentials: Optional[HTTPAuthorizationCredentials] = Security(security)) -> str:
+def verify_token(
+    credentials: Optional[HTTPAuthorizationCredentials] = Security(security),
+) -> str:
     """
     Verify the Bearer token against the configured API key.
 
@@ -36,7 +38,7 @@ def verify_token(credentials: Optional[HTTPAuthorizationCredentials] = Security(
     if credentials is None:
         raise HTTPException(
             status_code=403,
-            detail="Authentication required. Please provide a Bearer token."
+            detail="Authentication required. Please provide a Bearer token.",
         )
 
     token = credentials.credentials
@@ -44,13 +46,15 @@ def verify_token(credentials: Optional[HTTPAuthorizationCredentials] = Security(
     if token != settings.API_KEY:
         raise HTTPException(
             status_code=403,
-            detail="Invalid API key. Please provide a valid Bearer token."
+            detail="Invalid API key. Please provide a valid Bearer token.",
         )
 
     return token
 
 
-def get_optional_token(credentials: HTTPAuthorizationCredentials = Security(security)) -> str | None:
+def get_optional_token(
+    credentials: HTTPAuthorizationCredentials = Security(security),
+) -> str | None:
     """
     Get token if provided, but don't fail if missing (for optional auth).
 

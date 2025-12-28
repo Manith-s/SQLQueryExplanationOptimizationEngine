@@ -224,10 +224,16 @@ class AutonomousOpsAI:
             return True, f"High confidence ({action.confidence:.0%}) - auto-executing"
 
         elif action.confidence >= self.NOTIFY_THRESHOLD:
-            return True, f"Medium confidence ({action.confidence:.0%}) - executing with notification"
+            return (
+                True,
+                f"Medium confidence ({action.confidence:.0%}) - executing with notification",
+            )
 
         else:
-            return False, f"Low confidence ({action.confidence:.0%}) - escalating to human"
+            return (
+                False,
+                f"Low confidence ({action.confidence:.0%}) - escalating to human",
+            )
 
     def execute_action(self, action: Action, state: SystemState) -> ActionOutcome:
         """
@@ -312,9 +318,13 @@ class AutonomousOpsAI:
         latency_bucket = int(state.p95_latency_ms / 100) * 100
         error_bucket = int(state.error_rate_pct)
 
-        return f"cpu:{cpu_bucket},mem:{mem_bucket},lat:{latency_bucket},err:{error_bucket}"
+        return (
+            f"cpu:{cpu_bucket},mem:{mem_bucket},lat:{latency_bucket},err:{error_bucket}"
+        )
 
-    def _calculate_confidence(self, action_values: List[Tuple[float, ActionType]]) -> float:
+    def _calculate_confidence(
+        self, action_values: List[Tuple[float, ActionType]]
+    ) -> float:
         """
         Calculate confidence in top action based on Q-value distribution.
 
@@ -352,23 +362,27 @@ class AutonomousOpsAI:
     ) -> str:
         """Generate human-readable explanation for action."""
         explanations = {
-            (IncidentType.HIGH_LATENCY, ActionType.SCALE_UP):
-                f"P95 latency at {state.p95_latency_ms:.0f}ms (target: <1000ms). "
-                f"Current QPS: {state.qps}. Scaling up will add capacity to handle load.",
-
-            (IncidentType.MEMORY_LEAK, ActionType.RESTART_POD):
-                f"Memory usage at {state.memory_usage_pct:.0f}% (threshold: 90%). "
-                f"Restarting pod will clear leaked memory.",
-
-            (IncidentType.HIGH_ERROR_RATE, ActionType.ROLLBACK_DEPLOYMENT):
-                f"Error rate at {state.error_rate_pct:.1f}% (threshold: 5%). "
-                f"Recent deployment likely caused issue. Rolling back to last known good version.",
+            (
+                IncidentType.HIGH_LATENCY,
+                ActionType.SCALE_UP,
+            ): f"P95 latency at {state.p95_latency_ms:.0f}ms (target: <1000ms). "
+            f"Current QPS: {state.qps}. Scaling up will add capacity to handle load.",
+            (
+                IncidentType.MEMORY_LEAK,
+                ActionType.RESTART_POD,
+            ): f"Memory usage at {state.memory_usage_pct:.0f}% (threshold: 90%). "
+            f"Restarting pod will clear leaked memory.",
+            (
+                IncidentType.HIGH_ERROR_RATE,
+                ActionType.ROLLBACK_DEPLOYMENT,
+            ): f"Error rate at {state.error_rate_pct:.1f}% (threshold: 5%). "
+            f"Recent deployment likely caused issue. Rolling back to last known good version.",
         }
 
         key = (incident, action)
         return explanations.get(
             key,
-            f"Action {action.value} recommended for {incident.value} based on historical success rate"
+            f"Action {action.value} recommended for {incident.value} based on historical success rate",
         )
 
     def _estimate_impact(self, action: ActionType) -> str:
@@ -580,10 +594,12 @@ class AutonomousOpsAI:
             return 0.3  # Low autonomy initially
 
         # Calculate success rate
-        successful_actions = len([
-            o for o in self._experience_buffer if o.incident_resolved
-        ])
-        success_rate = successful_actions / min(self._total_actions, len(self._experience_buffer))
+        successful_actions = len(
+            [o for o in self._experience_buffer if o.incident_resolved]
+        )
+        success_rate = successful_actions / min(
+            self._total_actions, len(self._experience_buffer)
+        )
 
         # Factor in human override rate
         override_rate = self._human_overrides / self._total_actions

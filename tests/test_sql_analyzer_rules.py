@@ -111,7 +111,9 @@ def test_rule_unfiltered_large_table():
     ast_info = parse_sql(sql)
     result = lint_rules(ast_info)
 
-    unfiltered_issues = [i for i in result["issues"] if i["code"] == "UNFILTERED_LARGE_TABLE"]
+    unfiltered_issues = [
+        i for i in result["issues"] if i["code"] == "UNFILTERED_LARGE_TABLE"
+    ]
     assert len(unfiltered_issues) == 1
     assert unfiltered_issues[0]["severity"] == "warn"
 
@@ -120,7 +122,9 @@ def test_rule_unfiltered_large_table():
     ast_info = parse_sql(sql)
     result = lint_rules(ast_info)
 
-    unfiltered_issues = [i for i in result["issues"] if i["code"] == "UNFILTERED_LARGE_TABLE"]
+    unfiltered_issues = [
+        i for i in result["issues"] if i["code"] == "UNFILTERED_LARGE_TABLE"
+    ]
     assert len(unfiltered_issues) == 0
 
     # Test large table with LIMIT (should not trigger)
@@ -128,7 +132,9 @@ def test_rule_unfiltered_large_table():
     ast_info = parse_sql(sql)
     result = lint_rules(ast_info)
 
-    unfiltered_issues = [i for i in result["issues"] if i["code"] == "UNFILTERED_LARGE_TABLE"]
+    unfiltered_issues = [
+        i for i in result["issues"] if i["code"] == "UNFILTERED_LARGE_TABLE"
+    ]
     assert len(unfiltered_issues) == 0
 
     # Test normal table (should not trigger)
@@ -136,7 +142,9 @@ def test_rule_unfiltered_large_table():
     ast_info = parse_sql(sql)
     result = lint_rules(ast_info)
 
-    unfiltered_issues = [i for i in result["issues"] if i["code"] == "UNFILTERED_LARGE_TABLE"]
+    unfiltered_issues = [
+        i for i in result["issues"] if i["code"] == "UNFILTERED_LARGE_TABLE"
+    ]
     assert len(unfiltered_issues) == 0
 
 
@@ -147,7 +155,9 @@ def test_rule_implicit_cast_predicate():
     ast_info = parse_sql(sql)
     result = lint_rules(ast_info)
 
-    cast_issues = [i for i in result["issues"] if i["code"] == "IMPLICIT_CAST_PREDICATE"]
+    cast_issues = [
+        i for i in result["issues"] if i["code"] == "IMPLICIT_CAST_PREDICATE"
+    ]
     assert len(cast_issues) == 1
     assert cast_issues[0]["severity"] == "info"
 
@@ -156,7 +166,9 @@ def test_rule_implicit_cast_predicate():
     ast_info = parse_sql(sql)
     result = lint_rules(ast_info)
 
-    cast_issues = [i for i in result["issues"] if i["code"] == "IMPLICIT_CAST_PREDICATE"]
+    cast_issues = [
+        i for i in result["issues"] if i["code"] == "IMPLICIT_CAST_PREDICATE"
+    ]
     assert len(cast_issues) == 0
 
 

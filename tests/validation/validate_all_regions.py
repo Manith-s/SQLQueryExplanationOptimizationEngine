@@ -42,6 +42,7 @@ REGIONS = {
 @dataclass
 class ValidationResult:
     """Result of a validation test."""
+
     test_name: str
     passed: bool
     message: str
@@ -103,31 +104,40 @@ class RegionValidator:
                 duration_ms = (time.time() - start) * 1000
 
                 if response.status_code == 200:
-                    self.results.append(ValidationResult(
-                        test_name=f"Region Connectivity - {region}",
-                        passed=True,
-                        message=f"Successfully connected to {region}",
-                        duration_ms=duration_ms,
-                        details={"status_code": 200, "response_time_ms": duration_ms}
-                    ))
+                    self.results.append(
+                        ValidationResult(
+                            test_name=f"Region Connectivity - {region}",
+                            passed=True,
+                            message=f"Successfully connected to {region}",
+                            duration_ms=duration_ms,
+                            details={
+                                "status_code": 200,
+                                "response_time_ms": duration_ms,
+                            },
+                        )
+                    )
                     print(f"  ✓ {region}: Connected ({duration_ms:.0f}ms)")
                 else:
-                    self.results.append(ValidationResult(
-                        test_name=f"Region Connectivity - {region}",
-                        passed=False,
-                        message=f"HTTP {response.status_code}",
-                        duration_ms=duration_ms,
-                    ))
+                    self.results.append(
+                        ValidationResult(
+                            test_name=f"Region Connectivity - {region}",
+                            passed=False,
+                            message=f"HTTP {response.status_code}",
+                            duration_ms=duration_ms,
+                        )
+                    )
                     print(f"  ✗ {region}: HTTP {response.status_code}")
 
             except Exception as e:
                 duration_ms = (time.time() - start) * 1000
-                self.results.append(ValidationResult(
-                    test_name=f"Region Connectivity - {region}",
-                    passed=False,
-                    message=str(e),
-                    duration_ms=duration_ms,
-                ))
+                self.results.append(
+                    ValidationResult(
+                        test_name=f"Region Connectivity - {region}",
+                        passed=False,
+                        message=str(e),
+                        duration_ms=duration_ms,
+                    )
+                )
                 print(f"  ✗ {region}: {e}")
 
     async def test_api_health(self):
@@ -147,35 +157,41 @@ class RegionValidator:
                     data = response.json()
                     passed = data.get("status") == "healthy"
 
-                    self.results.append(ValidationResult(
-                        test_name=f"API Health - {region}",
-                        passed=passed,
-                        message=f"API is {data.get('status', 'unknown')}",
-                        duration_ms=duration_ms,
-                        details=data,
-                    ))
+                    self.results.append(
+                        ValidationResult(
+                            test_name=f"API Health - {region}",
+                            passed=passed,
+                            message=f"API is {data.get('status', 'unknown')}",
+                            duration_ms=duration_ms,
+                            details=data,
+                        )
+                    )
 
                     if passed:
                         print(f"  ✓ {region}: Healthy")
                     else:
                         print(f"  ✗ {region}: {data.get('status')}")
                 else:
-                    self.results.append(ValidationResult(
-                        test_name=f"API Health - {region}",
-                        passed=False,
-                        message=f"HTTP {response.status_code}",
-                        duration_ms=duration_ms,
-                    ))
+                    self.results.append(
+                        ValidationResult(
+                            test_name=f"API Health - {region}",
+                            passed=False,
+                            message=f"HTTP {response.status_code}",
+                            duration_ms=duration_ms,
+                        )
+                    )
                     print(f"  ✗ {region}: HTTP {response.status_code}")
 
             except Exception as e:
                 duration_ms = (time.time() - start) * 1000
-                self.results.append(ValidationResult(
-                    test_name=f"API Health - {region}",
-                    passed=False,
-                    message=str(e),
-                    duration_ms=duration_ms,
-                ))
+                self.results.append(
+                    ValidationResult(
+                        test_name=f"API Health - {region}",
+                        passed=False,
+                        message=str(e),
+                        duration_ms=duration_ms,
+                    )
+                )
                 print(f"  ✗ {region}: {e}")
 
     async def test_cockroachdb_replication(self):
@@ -202,18 +218,20 @@ class RegionValidator:
             cursor = conn.cursor()
 
             # Create test table if not exists
-            cursor.execute("""
+            cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS validation_test (
                     id TEXT PRIMARY KEY,
                     value TEXT,
                     created_at TIMESTAMP DEFAULT NOW()
                 )
-            """)
+            """
+            )
 
             # Insert test data
             cursor.execute(
                 "INSERT INTO validation_test (id, value) VALUES (%s, %s)",
-                (test_id, test_value)
+                (test_id, test_value),
             )
             conn.commit()
 
@@ -240,41 +258,48 @@ class RegionValidator:
 
                     read_cursor = read_conn.cursor()
                     read_cursor.execute(
-                        "SELECT value FROM validation_test WHERE id = %s",
-                        (test_id,)
+                        "SELECT value FROM validation_test WHERE id = %s", (test_id,)
                     )
                     result = read_cursor.fetchone()
 
                     read_duration = (time.time() - read_start) * 1000
 
                     if result and result[0] == test_value:
-                        self.results.append(ValidationResult(
-                            test_name=f"CockroachDB Replication - {region}",
-                            passed=True,
-                            message="Data replicated successfully",
-                            duration_ms=read_duration,
-                            details={"replication_lag_ms": read_duration - write_duration}
-                        ))
+                        self.results.append(
+                            ValidationResult(
+                                test_name=f"CockroachDB Replication - {region}",
+                                passed=True,
+                                message="Data replicated successfully",
+                                duration_ms=read_duration,
+                                details={
+                                    "replication_lag_ms": read_duration - write_duration
+                                },
+                            )
+                        )
                         print(f"  ✓ {region}: Replicated ({read_duration:.0f}ms)")
                     else:
-                        self.results.append(ValidationResult(
-                            test_name=f"CockroachDB Replication - {region}",
-                            passed=False,
-                            message="Data not found or mismatch",
-                            duration_ms=read_duration,
-                        ))
+                        self.results.append(
+                            ValidationResult(
+                                test_name=f"CockroachDB Replication - {region}",
+                                passed=False,
+                                message="Data not found or mismatch",
+                                duration_ms=read_duration,
+                            )
+                        )
                         print(f"  ✗ {region}: Replication failed")
 
                     read_conn.close()
 
                 except Exception as e:
                     read_duration = (time.time() - read_start) * 1000
-                    self.results.append(ValidationResult(
-                        test_name=f"CockroachDB Replication - {region}",
-                        passed=False,
-                        message=str(e),
-                        duration_ms=read_duration,
-                    ))
+                    self.results.append(
+                        ValidationResult(
+                            test_name=f"CockroachDB Replication - {region}",
+                            passed=False,
+                            message=str(e),
+                            duration_ms=read_duration,
+                        )
+                    )
                     print(f"  ✗ {region}: {e}")
 
             # Cleanup
@@ -284,12 +309,14 @@ class RegionValidator:
 
         except Exception as e:
             duration = (time.time() - start) * 1000
-            self.results.append(ValidationResult(
-                test_name="CockroachDB Replication - Write",
-                passed=False,
-                message=str(e),
-                duration_ms=duration,
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name="CockroachDB Replication - Write",
+                    passed=False,
+                    message=str(e),
+                    duration_ms=duration,
+                )
+            )
             print(f"  ✗ Primary write failed: {e}")
 
     async def test_cross_region_latency(self):
@@ -317,12 +344,14 @@ class RegionValidator:
 
                 passed = latency_ms < expected_max[region]
 
-                self.results.append(ValidationResult(
-                    test_name=f"Cross-Region Latency - {region}",
-                    passed=passed,
-                    message=f"Latency: {latency_ms:.0f}ms (max: {expected_max[region]}ms)",
-                    duration_ms=latency_ms,
-                ))
+                self.results.append(
+                    ValidationResult(
+                        test_name=f"Cross-Region Latency - {region}",
+                        passed=passed,
+                        message=f"Latency: {latency_ms:.0f}ms (max: {expected_max[region]}ms)",
+                        duration_ms=latency_ms,
+                    )
+                )
 
                 if passed:
                     print(f"  ✓ {region}: {latency_ms:.0f}ms")
@@ -330,12 +359,14 @@ class RegionValidator:
                     print(f"  ✗ {region}: {latency_ms:.0f}ms (exceeded threshold)")
 
             except Exception as e:
-                self.results.append(ValidationResult(
-                    test_name=f"Cross-Region Latency - {region}",
-                    passed=False,
-                    message=str(e),
-                    duration_ms=0,
-                ))
+                self.results.append(
+                    ValidationResult(
+                        test_name=f"Cross-Region Latency - {region}",
+                        passed=False,
+                        message=str(e),
+                        duration_ms=0,
+                    )
+                )
                 print(f"  ✗ {region}: {e}")
 
     async def test_data_residency(self):
@@ -362,30 +393,36 @@ class RegionValidator:
             routed_region = response.headers.get("X-Region", "unknown")
 
             if routed_region == "eu-west-1":
-                self.results.append(ValidationResult(
-                    test_name="Data Residency - GDPR Enforcement",
-                    passed=True,
-                    message=f"EU request correctly routed to {routed_region}",
-                    duration_ms=duration_ms,
-                ))
+                self.results.append(
+                    ValidationResult(
+                        test_name="Data Residency - GDPR Enforcement",
+                        passed=True,
+                        message=f"EU request correctly routed to {routed_region}",
+                        duration_ms=duration_ms,
+                    )
+                )
                 print("  ✓ GDPR: EU data stayed in EU region")
             else:
-                self.results.append(ValidationResult(
-                    test_name="Data Residency - GDPR Enforcement",
-                    passed=False,
-                    message=f"EU request routed to {routed_region} instead of eu-west-1",
-                    duration_ms=duration_ms,
-                ))
+                self.results.append(
+                    ValidationResult(
+                        test_name="Data Residency - GDPR Enforcement",
+                        passed=False,
+                        message=f"EU request routed to {routed_region} instead of eu-west-1",
+                        duration_ms=duration_ms,
+                    )
+                )
                 print(f"  ✗ GDPR: Routed to {routed_region} (expected eu-west-1)")
 
         except Exception as e:
             duration_ms = (time.time() - start) * 1000
-            self.results.append(ValidationResult(
-                test_name="Data Residency - GDPR Enforcement",
-                passed=False,
-                message=str(e),
-                duration_ms=duration_ms,
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name="Data Residency - GDPR Enforcement",
+                    passed=False,
+                    message=str(e),
+                    duration_ms=duration_ms,
+                )
+            )
             print(f"  ✗ GDPR test failed: {e}")
 
     async def test_failover_readiness(self):
@@ -412,13 +449,15 @@ class RegionValidator:
 
             passed = healthy_backups >= 1  # Need at least 1 backup
 
-            self.results.append(ValidationResult(
-                test_name="Failover Readiness",
-                passed=passed,
-                message=f"{healthy_backups}/{len(backup_regions)} backup regions healthy",
-                duration_ms=duration_ms,
-                details={"healthy_backups": healthy_backups}
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name="Failover Readiness",
+                    passed=passed,
+                    message=f"{healthy_backups}/{len(backup_regions)} backup regions healthy",
+                    duration_ms=duration_ms,
+                    details={"healthy_backups": healthy_backups},
+                )
+            )
 
             if passed:
                 print(f"  ✓ Failover ready: {healthy_backups} backup regions available")
@@ -427,12 +466,14 @@ class RegionValidator:
 
         except Exception as e:
             duration_ms = (time.time() - start) * 1000
-            self.results.append(ValidationResult(
-                test_name="Failover Readiness",
-                passed=False,
-                message=str(e),
-                duration_ms=duration_ms,
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name="Failover Readiness",
+                    passed=False,
+                    message=str(e),
+                    duration_ms=duration_ms,
+                )
+            )
             print(f"  ✗ Failover test failed: {e}")
 
 
@@ -443,6 +484,7 @@ async def main():
 
     # Save results
     import json
+
     with open("validation_results_regions.json", "w") as f:
         json.dump(
             {
@@ -457,7 +499,7 @@ async def main():
                         "details": r.details,
                     }
                     for r in results
-                ]
+                ],
             },
             f,
             indent=2,
@@ -470,4 +512,5 @@ async def main():
 
 if __name__ == "__main__":
     import sys
+
     sys.exit(asyncio.run(main()))

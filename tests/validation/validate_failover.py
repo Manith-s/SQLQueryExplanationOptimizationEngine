@@ -43,12 +43,13 @@ GLOBAL_API_URL = "https://api.qeo.example.com"
 
 # Recovery targets
 RTO_TARGET_SECONDS = 30  # Recovery Time Objective
-RPO_TARGET_MINUTES = 5   # Recovery Point Objective (data loss)
+RPO_TARGET_MINUTES = 5  # Recovery Point Objective (data loss)
 
 
 @dataclass
 class ValidationResult:
     """Result of a validation test."""
+
     test_name: str
     passed: bool
     message: str
@@ -122,13 +123,15 @@ class FailoverValidator:
 
                 is_healthy = response.status_code == 200
 
-                self.results.append(ValidationResult(
-                    test_name=f"Health Monitor - {region}",
-                    passed=is_healthy,
-                    message=f"Region is {'healthy' if is_healthy else 'unhealthy'}",
-                    duration_ms=duration_ms,
-                    details={"status_code": response.status_code}
-                ))
+                self.results.append(
+                    ValidationResult(
+                        test_name=f"Health Monitor - {region}",
+                        passed=is_healthy,
+                        message=f"Region is {'healthy' if is_healthy else 'unhealthy'}",
+                        duration_ms=duration_ms,
+                        details={"status_code": response.status_code},
+                    )
+                )
 
                 if is_healthy:
                     print(f"  ✓ {region}: Healthy")
@@ -137,12 +140,14 @@ class FailoverValidator:
 
             except Exception as e:
                 duration_ms = (time.time() - start) * 1000
-                self.results.append(ValidationResult(
-                    test_name=f"Health Monitor - {region}",
-                    passed=False,
-                    message=str(e),
-                    duration_ms=duration_ms,
-                ))
+                self.results.append(
+                    ValidationResult(
+                        test_name=f"Health Monitor - {region}",
+                        passed=False,
+                        message=str(e),
+                        duration_ms=duration_ms,
+                    )
+                )
                 print(f"  ✗ {region}: {e}")
 
     async def test_region_failure_detection(self):
@@ -157,14 +162,25 @@ class FailoverValidator:
         try:
             if not self.dry_run:
                 # Scale down deployment to 0
-                subprocess.run([
-                    "kubectl", "config", "use-context", config["k8s_context"]
-                ], check=True, capture_output=True)
+                subprocess.run(
+                    ["kubectl", "config", "use-context", config["k8s_context"]],
+                    check=True,
+                    capture_output=True,
+                )
 
-                subprocess.run([
-                    "kubectl", "scale", "deployment", "qeo-api",
-                    "-n", "qeo", "--replicas=0"
-                ], check=True, capture_output=True)
+                subprocess.run(
+                    [
+                        "kubectl",
+                        "scale",
+                        "deployment",
+                        "qeo-api",
+                        "-n",
+                        "qeo",
+                        "--replicas=0",
+                    ],
+                    check=True,
+                    capture_output=True,
+                )
 
                 print(f"  → Scaled down {test_region} to simulate failure")
                 await asyncio.sleep(5)  # Wait for propagation
@@ -184,13 +200,15 @@ class FailoverValidator:
             # Failure should be detected within 10 seconds
             passed = detected_failure and detection_time_ms < 10000
 
-            self.results.append(ValidationResult(
-                test_name=f"Failure Detection - {test_region}",
-                passed=passed,
-                message=f"Failure detected in {detection_time_ms:.0f}ms",
-                duration_ms=detection_time_ms,
-                details={"detection_time_ms": detection_time_ms}
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name=f"Failure Detection - {test_region}",
+                    passed=passed,
+                    message=f"Failure detected in {detection_time_ms:.0f}ms",
+                    duration_ms=detection_time_ms,
+                    details={"detection_time_ms": detection_time_ms},
+                )
+            )
 
             if passed:
                 print(f"  ✓ Failure detected in {detection_time_ms:.0f}ms")
@@ -199,21 +217,32 @@ class FailoverValidator:
 
         except Exception as e:
             duration_ms = (time.time() - start) * 1000
-            self.results.append(ValidationResult(
-                test_name=f"Failure Detection - {test_region}",
-                passed=False,
-                message=str(e),
-                duration_ms=duration_ms,
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name=f"Failure Detection - {test_region}",
+                    passed=False,
+                    message=str(e),
+                    duration_ms=duration_ms,
+                )
+            )
             print(f"  ✗ Failure detection test failed: {e}")
 
         finally:
             if not self.dry_run:
                 # Restore the region
-                subprocess.run([
-                    "kubectl", "scale", "deployment", "qeo-api",
-                    "-n", "qeo", "--replicas=3"
-                ], check=True, capture_output=True)
+                subprocess.run(
+                    [
+                        "kubectl",
+                        "scale",
+                        "deployment",
+                        "qeo-api",
+                        "-n",
+                        "qeo",
+                        "--replicas=3",
+                    ],
+                    check=True,
+                    capture_output=True,
+                )
                 print(f"  → Restored {test_region}")
 
     async def test_primary_region_failover(self):
@@ -236,25 +265,38 @@ class FailoverValidator:
                 baseline_healthy = False
 
             if not baseline_healthy:
-                self.results.append(ValidationResult(
-                    test_name="Primary Region Failover",
-                    passed=False,
-                    message="Global API unhealthy before test",
-                    duration_ms=0,
-                ))
+                self.results.append(
+                    ValidationResult(
+                        test_name="Primary Region Failover",
+                        passed=False,
+                        message="Global API unhealthy before test",
+                        duration_ms=0,
+                    )
+                )
                 print("  ✗ Global API unhealthy before test")
                 return
 
             if not self.dry_run:
                 # Simulate primary failure
-                subprocess.run([
-                    "kubectl", "config", "use-context", config["k8s_context"]
-                ], check=True, capture_output=True)
+                subprocess.run(
+                    ["kubectl", "config", "use-context", config["k8s_context"]],
+                    check=True,
+                    capture_output=True,
+                )
 
-                subprocess.run([
-                    "kubectl", "scale", "deployment", "qeo-api",
-                    "-n", "qeo", "--replicas=0"
-                ], check=True, capture_output=True)
+                subprocess.run(
+                    [
+                        "kubectl",
+                        "scale",
+                        "deployment",
+                        "qeo-api",
+                        "-n",
+                        "qeo",
+                        "--replicas=0",
+                    ],
+                    check=True,
+                    capture_output=True,
+                )
 
                 print(f"  → Simulated {primary_region} failure")
 
@@ -286,17 +328,19 @@ class FailoverValidator:
 
             passed = recovered and recovery_time < (RTO_TARGET_SECONDS * 1000)
 
-            self.results.append(ValidationResult(
-                test_name="Primary Region Failover",
-                passed=passed,
-                message=f"Recovered in {recovery_time:.0f}ms (target: <{RTO_TARGET_SECONDS}s)",
-                duration_ms=recovery_time,
-                details={
-                    "recovered": recovered,
-                    "recovery_time_ms": recovery_time,
-                    "attempts": recovery_attempts,
-                }
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name="Primary Region Failover",
+                    passed=passed,
+                    message=f"Recovered in {recovery_time:.0f}ms (target: <{RTO_TARGET_SECONDS}s)",
+                    duration_ms=recovery_time,
+                    details={
+                        "recovered": recovered,
+                        "recovery_time_ms": recovery_time,
+                        "attempts": recovery_attempts,
+                    },
+                )
+            )
 
             if passed:
                 print(f"  ✓ Failover successful: {recovery_time:.0f}ms")
@@ -305,21 +349,32 @@ class FailoverValidator:
 
         except Exception as e:
             duration_ms = (time.time() - start) * 1000
-            self.results.append(ValidationResult(
-                test_name="Primary Region Failover",
-                passed=False,
-                message=str(e),
-                duration_ms=duration_ms,
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name="Primary Region Failover",
+                    passed=False,
+                    message=str(e),
+                    duration_ms=duration_ms,
+                )
+            )
             print(f"  ✗ Primary failover test failed: {e}")
 
         finally:
             if not self.dry_run:
                 # Restore primary
-                subprocess.run([
-                    "kubectl", "scale", "deployment", "qeo-api",
-                    "-n", "qeo", "--replicas=3"
-                ], check=True, capture_output=True)
+                subprocess.run(
+                    [
+                        "kubectl",
+                        "scale",
+                        "deployment",
+                        "qeo-api",
+                        "-n",
+                        "qeo",
+                        "--replicas=3",
+                    ],
+                    check=True,
+                    capture_output=True,
+                )
                 print(f"  → Restored {primary_region}")
                 await asyncio.sleep(10)  # Wait for recovery
 
@@ -334,14 +389,25 @@ class FailoverValidator:
         try:
             if not self.dry_run:
                 # Scale down secondary
-                subprocess.run([
-                    "kubectl", "config", "use-context", config["k8s_context"]
-                ], check=True, capture_output=True)
+                subprocess.run(
+                    ["kubectl", "config", "use-context", config["k8s_context"]],
+                    check=True,
+                    capture_output=True,
+                )
 
-                subprocess.run([
-                    "kubectl", "scale", "deployment", "qeo-api",
-                    "-n", "qeo", "--replicas=0"
-                ], check=True, capture_output=True)
+                subprocess.run(
+                    [
+                        "kubectl",
+                        "scale",
+                        "deployment",
+                        "qeo-api",
+                        "-n",
+                        "qeo",
+                        "--replicas=0",
+                    ],
+                    check=True,
+                    capture_output=True,
+                )
 
                 print(f"  → Simulated {secondary_region} failure")
 
@@ -361,35 +427,54 @@ class FailoverValidator:
 
             passed = global_healthy
 
-            self.results.append(ValidationResult(
-                test_name=f"Secondary Region Failover - {secondary_region}",
-                passed=passed,
-                message="Global service maintained" if passed else "Global service impacted",
-                duration_ms=duration_ms,
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name=f"Secondary Region Failover - {secondary_region}",
+                    passed=passed,
+                    message=(
+                        "Global service maintained"
+                        if passed
+                        else "Global service impacted"
+                    ),
+                    duration_ms=duration_ms,
+                )
+            )
 
             if passed:
-                print(f"  ✓ Global service maintained despite {secondary_region} failure")
+                print(
+                    f"  ✓ Global service maintained despite {secondary_region} failure"
+                )
             else:
                 print(f"  ✗ Global service impacted by {secondary_region} failure")
 
         except Exception as e:
             duration_ms = (time.time() - start) * 1000
-            self.results.append(ValidationResult(
-                test_name=f"Secondary Region Failover - {secondary_region}",
-                passed=False,
-                message=str(e),
-                duration_ms=duration_ms,
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name=f"Secondary Region Failover - {secondary_region}",
+                    passed=False,
+                    message=str(e),
+                    duration_ms=duration_ms,
+                )
+            )
             print(f"  ✗ Secondary failover test failed: {e}")
 
         finally:
             if not self.dry_run:
                 # Restore secondary
-                subprocess.run([
-                    "kubectl", "scale", "deployment", "qeo-api",
-                    "-n", "qeo", "--replicas=3"
-                ], check=True, capture_output=True)
+                subprocess.run(
+                    [
+                        "kubectl",
+                        "scale",
+                        "deployment",
+                        "qeo-api",
+                        "-n",
+                        "qeo",
+                        "--replicas=3",
+                    ],
+                    check=True,
+                    capture_output=True,
+                )
                 print(f"  → Restored {secondary_region}")
 
     async def test_database_failover(self):
@@ -413,12 +498,14 @@ class FailoverValidator:
 
             db_accessible = response.status_code == 200
 
-            self.results.append(ValidationResult(
-                test_name="Database Failover",
-                passed=db_accessible,
-                message="Database accessible via global API",
-                duration_ms=duration_ms,
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name="Database Failover",
+                    passed=db_accessible,
+                    message="Database accessible via global API",
+                    duration_ms=duration_ms,
+                )
+            )
 
             if db_accessible:
                 print("  ✓ Database accessible (multi-region CockroachDB)")
@@ -427,12 +514,14 @@ class FailoverValidator:
 
         except Exception as e:
             duration_ms = (time.time() - start) * 1000
-            self.results.append(ValidationResult(
-                test_name="Database Failover",
-                passed=False,
-                message=str(e),
-                duration_ms=duration_ms,
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name="Database Failover",
+                    passed=False,
+                    message=str(e),
+                    duration_ms=duration_ms,
+                )
+            )
             print(f"  ✗ Database failover test failed: {e}")
 
     async def test_geodns_failover(self):
@@ -445,24 +534,22 @@ class FailoverValidator:
             import socket
 
             # Resolve global domain
-            ips = socket.getaddrinfo(
-                "api.qeo.example.com",
-                80,
-                socket.AF_INET
-            )
+            ips = socket.getaddrinfo("api.qeo.example.com", 80, socket.AF_INET)
 
             duration_ms = (time.time() - start) * 1000
 
             # Should resolve to at least one IP
             passed = len(ips) > 0
 
-            self.results.append(ValidationResult(
-                test_name="GeoDNS Failover Routing",
-                passed=passed,
-                message=f"Resolved to {len(ips)} IP(s)",
-                duration_ms=duration_ms,
-                details={"ip_count": len(ips)}
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name="GeoDNS Failover Routing",
+                    passed=passed,
+                    message=f"Resolved to {len(ips)} IP(s)",
+                    duration_ms=duration_ms,
+                    details={"ip_count": len(ips)},
+                )
+            )
 
             if passed:
                 print(f"  ✓ GeoDNS resolving to {len(ips)} healthy region(s)")
@@ -471,12 +558,14 @@ class FailoverValidator:
 
         except Exception as e:
             duration_ms = (time.time() - start) * 1000
-            self.results.append(ValidationResult(
-                test_name="GeoDNS Failover Routing",
-                passed=False,
-                message=str(e),
-                duration_ms=duration_ms,
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name="GeoDNS Failover Routing",
+                    passed=False,
+                    message=str(e),
+                    duration_ms=duration_ms,
+                )
+            )
             print(f"  ✗ GeoDNS test failed: {e}")
 
     async def test_data_consistency(self):
@@ -498,12 +587,14 @@ class FailoverValidator:
             write_success = response.status_code == 200
 
             if not write_success:
-                self.results.append(ValidationResult(
-                    test_name="Data Consistency",
-                    passed=False,
-                    message="Failed to write test data",
-                    duration_ms=0,
-                ))
+                self.results.append(
+                    ValidationResult(
+                        test_name="Data Consistency",
+                        passed=False,
+                        message="Failed to write test data",
+                        duration_ms=0,
+                    )
+                )
                 print("  ✗ Failed to write test data")
                 return
 
@@ -530,12 +621,18 @@ class FailoverValidator:
 
             duration_ms = (time.time() - start) * 1000
 
-            self.results.append(ValidationResult(
-                test_name="Data Consistency",
-                passed=consistent,
-                message="Data consistent across regions" if consistent else "Data inconsistency detected",
-                duration_ms=duration_ms,
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name="Data Consistency",
+                    passed=consistent,
+                    message=(
+                        "Data consistent across regions"
+                        if consistent
+                        else "Data inconsistency detected"
+                    ),
+                    duration_ms=duration_ms,
+                )
+            )
 
             if consistent:
                 print("  ✓ Data consistent across all regions")
@@ -544,12 +641,14 @@ class FailoverValidator:
 
         except Exception as e:
             duration_ms = (time.time() - start) * 1000
-            self.results.append(ValidationResult(
-                test_name="Data Consistency",
-                passed=False,
-                message=str(e),
-                duration_ms=duration_ms,
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name="Data Consistency",
+                    passed=False,
+                    message=str(e),
+                    duration_ms=duration_ms,
+                )
+            )
             print(f"  ✗ Data consistency test failed: {e}")
 
     async def test_automatic_recovery(self):
@@ -580,13 +679,18 @@ class FailoverValidator:
             total_regions = len(REGIONS)
             passed = healthy_count == total_regions
 
-            self.results.append(ValidationResult(
-                test_name="Automatic Recovery",
-                passed=passed,
-                message=f"{healthy_count}/{total_regions} regions recovered",
-                duration_ms=duration_ms,
-                details={"healthy_regions": healthy_count, "total_regions": total_regions}
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name="Automatic Recovery",
+                    passed=passed,
+                    message=f"{healthy_count}/{total_regions} regions recovered",
+                    duration_ms=duration_ms,
+                    details={
+                        "healthy_regions": healthy_count,
+                        "total_regions": total_regions,
+                    },
+                )
+            )
 
             if passed:
                 print(f"  ✓ All {total_regions} regions recovered")
@@ -595,12 +699,14 @@ class FailoverValidator:
 
         except Exception as e:
             duration_ms = (time.time() - start) * 1000
-            self.results.append(ValidationResult(
-                test_name="Automatic Recovery",
-                passed=False,
-                message=str(e),
-                duration_ms=duration_ms,
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name="Automatic Recovery",
+                    passed=False,
+                    message=str(e),
+                    duration_ms=duration_ms,
+                )
+            )
             print(f"  ✗ Automatic recovery test failed: {e}")
 
 
@@ -616,6 +722,7 @@ async def main():
 
     # Save results
     import json
+
     with open("validation_results_failover.json", "w") as f:
         json.dump(
             {
@@ -631,7 +738,7 @@ async def main():
                         "details": r.details,
                     }
                     for r in results
-                ]
+                ],
             },
             f,
             indent=2,
@@ -644,4 +751,5 @@ async def main():
 
 if __name__ == "__main__":
     import sys
+
     sys.exit(asyncio.run(main()))

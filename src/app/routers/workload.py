@@ -42,7 +42,9 @@ def _cache_result(cache_key: str, result: Dict[str, Any]) -> None:
     # Simple cache size limit (keep only last 50 entries)
     if len(_workload_cache) > 50:
         # Remove oldest entries
-        oldest_keys = sorted(_cache_timestamps.keys(), key=lambda k: _cache_timestamps[k])[:10]
+        oldest_keys = sorted(
+            _cache_timestamps.keys(), key=lambda k: _cache_timestamps[k]
+        )[:10]
         for key in oldest_keys:
             _workload_cache.pop(key, None)
             _cache_timestamps.pop(key, None)
@@ -78,11 +80,7 @@ async def workload(req: WorkloadRequest) -> WorkloadResponse:
     cached_result = _get_cached_result(cache_key)
 
     if cached_result:
-        return WorkloadResponse(
-            ok=True,
-            cached=True,
-            **cached_result
-        )
+        return WorkloadResponse(ok=True, cached=True, **cached_result)
 
     # Perform analysis
     res = analyze_workload(req.sqls, top_k=int(req.top_k), what_if=bool(req.what_if))
@@ -100,15 +98,3 @@ async def workload(req: WorkloadRequest) -> WorkloadResponse:
         groupedQueries=res.get("groupedQueries", []),
         workloadRecommendations=res.get("workloadRecommendations", []),
     )
-
-
-
-
-
-
-
-
-
-
-
-

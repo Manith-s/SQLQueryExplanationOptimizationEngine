@@ -113,6 +113,7 @@ def time_db_explain(func):
             raise
         finally:
             _h_db_explain.observe(max(time.time() - start, 0.0))
+
     return wrapper
 
 
@@ -141,5 +142,3 @@ def metrics_exposition() -> tuple[bytes, str]:
         return (b"metrics disabled", CONTENT_TYPE_LATEST)
     data = generate_latest(_registry)
     return (data, CONTENT_TYPE_LATEST)
-
-

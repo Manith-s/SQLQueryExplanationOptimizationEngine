@@ -34,15 +34,3 @@ def test_rewrite_decorrelate_and_topn():
     titles = [r.title for r in rewrites]
     assert any("de-correlating" in t.lower() for t in titles)
     assert any("Align ORDER BY" in t for t in titles)
-
-
-
-
-
-
-
-
-
-
-
-

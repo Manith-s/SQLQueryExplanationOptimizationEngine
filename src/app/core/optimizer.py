@@ -22,6 +22,7 @@ from app.core.config import settings
 
 # ---------- Public types ----------
 
+
 @dataclass(frozen=True)
 class Suggestion:
     """Single optimization suggestion.
@@ -46,6 +47,7 @@ class Suggestion:
 
 # ---------- Helpers ----------
 
+
 def _normalize_table_name(name: str) -> str:
     s = (name or "").strip()
     if not s:
@@ -54,7 +56,9 @@ def _normalize_table_name(name: str) -> str:
     return s.replace('"', "")
 
 
-def _extract_eq_and_range_filters(filters: List[str]) -> Tuple[List[Tuple[str, str]], List[Tuple[str, str]]]:
+def _extract_eq_and_range_filters(
+    filters: List[str],
+) -> Tuple[List[Tuple[str, str]], List[Tuple[str, str]]]:
     """Extract equality and range predicates in a simple, deterministic way.
 
     Returns:
@@ -71,7 +75,9 @@ def _extract_eq_and_range_filters(filters: List[str]) -> Tuple[List[Tuple[str, s
         ):
             eq.append((tbl, col))
         # column = literal (unqualified)
-        for col, _q in re.findall(r"\b([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(['\"]?)[^\s)]+\2", s):
+        for col, _q in re.findall(
+            r"\b([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(['\"]?)[^\s)]+\2", s
+        ):
             eq.append(("", col))
 
         # Range predicates: try to detect a left-hand column
@@ -102,7 +108,7 @@ def _extract_eq_and_range_filters(filters: List[str]) -> Tuple[List[Tuple[str, s
 def _extract_join_keys(joins: List[Dict[str, Any]]) -> List[Tuple[str, str]]:
     keys: List[Tuple[str, str]] = []
     for j in joins or []:
-        cond = (j.get("condition") or "")
+        cond = j.get("condition") or ""
         for m in re.findall(
             r"\b([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)",
             cond,
@@ -140,7 +146,10 @@ def _table_rows(stats: Dict[str, Any], table: str) -> Optional[float]:
 
 # ---------- Rewrites ----------
 
-def suggest_rewrites(ast_info: Dict[str, Any], schema: Dict[str, Any]) -> List[Suggestion]:
+
+def suggest_rewrites(
+    ast_info: Dict[str, Any], schema: Dict[str, Any]
+) -> List[Suggestion]:
     suggestions: List[Suggestion] = []
 
     # SELECT * -> explicit projection
@@ -177,9 +186,11 @@ def suggest_rewrites(ast_info: Dict[str, Any], schema: Dict[str, Any]) -> List[S
         )
 
     # IN (subquery) -> EXISTS
-    for f in (ast_info.get("filters") or []):
+    for f in ast_info.get("filters") or []:
         if re.search(r"\bIN\s*\(\s*SELECT\b", f or "", re.IGNORECASE):
-            alt = re.sub(r"\bIN\s*\(\s*SELECT\b", "EXISTS (SELECT", f or "", flags=re.IGNORECASE)
+            alt = re.sub(
+                r"\bIN\s*\(\s*SELECT\b", "EXISTS (SELECT", f or "", flags=re.IGNORECASE
+            )
             suggestions.append(
                 Suggestion(
                     kind="rewrite",
@@ -193,7 +204,7 @@ def suggest_rewrites(ast_info: Dict[str, Any], schema: Dict[str, Any]) -> List[S
             )
 
     # De-correlate simple subqueries (advice only)
-    for f in (ast_info.get("filters") or []):
+    for f in ast_info.get("filters") or []:
         if re.search(r"\bEXISTS\s*\(\s*SELECT\b", f or "", re.IGNORECASE):
             suggestions.append(
                 Suggestion(
@@ -242,7 +253,9 @@ def suggest_rewrites(ast_info: Dict[str, Any], schema: Dict[str, Any]) -> List[S
     for f in filters:
         f_str = f or ""
         # Detect correlated subquery in WHERE clause
-        if re.search(r'WHERE\s+[^=<>!]+\s*=\s*\(SELECT\s+\w+\s+FROM', f_str, re.IGNORECASE):
+        if re.search(
+            r"WHERE\s+[^=<>!]+\s*=\s*\(SELECT\s+\w+\s+FROM", f_str, re.IGNORECASE
+        ):
             suggestions.append(
                 Suggestion(
                     kind="rewrite",
@@ -324,7 +337,9 @@ def suggest_rewrites(ast_info: Dict[str, Any], schema: Dict[str, Any]) -> List[S
     # COUNT(*) vs COUNT(column)
     for col in columns:
         col_str = str(col.get("name") or col)
-        if re.search(r'COUNT\s*\(\s*\w+\s*\)', col_str, re.IGNORECASE) and not re.search(r'COUNT\s*\(\s*\*\s*\)', col_str, re.IGNORECASE):
+        if re.search(
+            r"COUNT\s*\(\s*\w+\s*\)", col_str, re.IGNORECASE
+        ) and not re.search(r"COUNT\s*\(\s*\*\s*\)", col_str, re.IGNORECASE):
             suggestions.append(
                 Suggestion(
                     kind="rewrite",
@@ -355,7 +370,9 @@ def suggest_rewrites(ast_info: Dict[str, Any], schema: Dict[str, Any]) -> List[S
     for f in filters:
         f_str = f or ""
         # Detect pattern: col = val1 OR col = val2 OR col = val3
-        or_pattern = r'(\w+)\s*=\s*([^\s]+)\s+OR\s+\1\s*=\s*([^\s]+)\s+OR\s+\1\s*=\s*([^\s]+)'
+        or_pattern = (
+            r"(\w+)\s*=\s*([^\s]+)\s+OR\s+\1\s*=\s*([^\s]+)\s+OR\s+\1\s*=\s*([^\s]+)"
+        )
         if re.search(or_pattern, f_str, re.IGNORECASE):
             suggestions.append(
                 Suggestion(
@@ -372,7 +389,7 @@ def suggest_rewrites(ast_info: Dict[str, Any], schema: Dict[str, Any]) -> List[S
     # NOT IN vs NOT EXISTS
     for f in filters:
         f_str = f or ""
-        if re.search(r'\bNOT\s+IN\s*\(', f_str, re.IGNORECASE):
+        if re.search(r"\bNOT\s+IN\s*\(", f_str, re.IGNORECASE):
             suggestions.append(
                 Suggestion(
                     kind="rewrite",
@@ -394,7 +411,7 @@ def suggest_rewrites(ast_info: Dict[str, Any], schema: Dict[str, Any]) -> List[S
         for f in filters:
             f_str = f or ""
             # Pattern: table1.col = table2.col
-            if re.search(r'\w+\.\w+\s*=\s*\w+\.\w+', f_str):
+            if re.search(r"\w+\.\w+\s*=\s*\w+\.\w+", f_str):
                 join_conditions.append(f_str)
 
         if join_conditions:
@@ -415,6 +432,7 @@ def suggest_rewrites(ast_info: Dict[str, Any], schema: Dict[str, Any]) -> List[S
 
 # ---------- Index Advisor ----------
 
+
 def suggest_indexes(
     ast_info: Dict[str, Any],
     schema: Dict[str, Any],
@@ -431,7 +449,7 @@ def suggest_indexes(
 
     # Build existing indexes map
     existing_by_table: Dict[str, List[Dict[str, Any]]] = {}
-    for t in (schema.get("tables") or []):
+    for t in schema.get("tables") or []:
         existing_by_table[t.get("name")] = t.get("indexes") or []
 
     eq_keys, range_keys = _extract_eq_and_range_filters(ast_info.get("filters") or [])
@@ -463,10 +481,12 @@ def suggest_indexes(
 
         # Order/group columns (strip direction keywords) -> just collect identifiers
         def _norm_dir(expr: str) -> Optional[str]:
-            m = re.search(r"\b([A-Za-z_][A-Za-z0-9_]*)\.?([A-Za-z_][A-Za-z0-9_]*)?\b", expr)
+            m = re.search(
+                r"\b([A-Za-z_][A-Za-z0-9_]*)\.?([A-Za-z_][A-Za-z0-9_]*)?\b", expr
+            )
             if not m:
                 return None
-            return (m.group(2) or m.group(1))
+            return m.group(2) or m.group(1)
 
         order_cols = [c for c in (_norm_dir(e) for e in order_by) if c]
         group_cols = [c for c in (_norm_dir(e) for e in group_by) if c]
@@ -485,7 +505,7 @@ def suggest_indexes(
 
         if not ordered_cols:
             continue
-        ordered_cols = ordered_cols[: max_cols]
+        ordered_cols = ordered_cols[:max_cols]
 
         # Skip if an existing index already covers this prefix
         existing = existing_by_table.get(norm) or []
@@ -515,7 +535,9 @@ def suggest_indexes(
         # Width penalty
         width_penalty = 1.0
         if est_width > 0:
-            width_penalty = max(0.1, (settings.OPT_INDEX_MAX_WIDTH_BYTES / max(est_width, 1)) ** 0.5)
+            width_penalty = max(
+                0.1, (settings.OPT_INDEX_MAX_WIDTH_BYTES / max(est_width, 1)) ** 0.5
+            )
         score = base_score * width_penalty
         # Estimated reduction percent (heuristic & deterministic)
         est_pct = 0.0
@@ -529,11 +551,11 @@ def suggest_indexes(
 
         ix_name = _index_name(norm, ordered_cols)
         stmt = (
-            f"CREATE INDEX CONCURRENTLY {ix_name} ON {norm} (" + ", ".join(ordered_cols) + ")"
+            f"CREATE INDEX CONCURRENTLY {ix_name} ON {norm} ("
+            + ", ".join(ordered_cols)
+            + ")"
         )  # suggestion only; do not execute
-        reason = (
-            f"Boosts equality({len(eq_cols)}), range({len(rng_cols)}), order/group({len(order_cols)+len(group_cols)})"
-        )
+        reason = f"Boosts equality({len(eq_cols)}), range({len(rng_cols)}), order/group({len(order_cols)+len(group_cols)})"
 
         suggestions.append(
             Suggestion(
@@ -608,10 +630,22 @@ def analyze(
                 "alt_sql": s.alt_sql,
                 "safety_notes": s.safety_notes,
                 # Extended fields (optional to preserve backwards compatibility)
-                "score": _round3(float(getattr(s, 'score', 0.0))) if getattr(s, 'score', None) is not None else None,
-                "reason": getattr(s, 'reason', None),
-                "estReductionPct": _round3(float(getattr(s, 'estReductionPct', 0.0))) if getattr(s, 'estReductionPct', None) is not None else None,
-                "estIndexWidthBytes": int(getattr(s, 'estIndexWidthBytes', 0)) if getattr(s, 'estIndexWidthBytes', None) is not None else None,
+                "score": (
+                    _round3(float(getattr(s, "score", 0.0)))
+                    if getattr(s, "score", None) is not None
+                    else None
+                ),
+                "reason": getattr(s, "reason", None),
+                "estReductionPct": (
+                    _round3(float(getattr(s, "estReductionPct", 0.0)))
+                    if getattr(s, "estReductionPct", None) is not None
+                    else None
+                ),
+                "estIndexWidthBytes": (
+                    int(getattr(s, "estIndexWidthBytes", 0))
+                    if getattr(s, "estIndexWidthBytes", None) is not None
+                    else None
+                ),
             }
         )
 
@@ -619,5 +653,3 @@ def analyze(
         "suggestions": out_suggestions,
         "summary": summarize(suggestions),
     }
-
-

@@ -77,7 +77,9 @@ class Forecast:
 
     metric_name: str
     forecast_horizon_hours: int
-    predictions: List[Tuple[datetime, float, float, float]]  # (time, value, lower, upper)
+    predictions: List[
+        Tuple[datetime, float, float, float]
+    ]  # (time, value, lower, upper)
     confidence: float  # 0-1
     method: str  # "prophet", "arima", "linear"
     generated_at: datetime
@@ -172,7 +174,9 @@ class PredictionEngine:
             Forecast object or None if unable to forecast
         """
         if len(history) < 100:
-            logger.warning(f"Insufficient data for forecasting {metric_name}: {len(history)} points")
+            logger.warning(
+                f"Insufficient data for forecasting {metric_name}: {len(history)} points"
+            )
             return None
 
         try:
@@ -241,11 +245,14 @@ class PredictionEngine:
             )
 
             import pandas as pd
+
             df = pd.DataFrame(df_data)
             model.fit(df)
 
             # Generate future dates
-            future = model.make_future_dataframe(periods=horizon_hours * 12, freq="5T")  # 5min intervals
+            future = model.make_future_dataframe(
+                periods=horizon_hours * 12, freq="5T"
+            )  # 5min intervals
             forecast_df = model.predict(future)
 
             # Extract predictions for future only
@@ -257,21 +264,27 @@ class PredictionEngine:
                 if pred_time <= last_history_time:
                     continue
 
-                predictions.append((
-                    pred_time,
-                    float(row["yhat"]),
-                    float(row["yhat_lower"]),
-                    float(row["yhat_upper"]),
-                ))
+                predictions.append(
+                    (
+                        pred_time,
+                        float(row["yhat"]),
+                        float(row["yhat_lower"]),
+                        float(row["yhat_upper"]),
+                    )
+                )
 
                 if len(predictions) >= horizon_hours * 12:  # 5min resolution
                     break
 
             # Calculate confidence based on prediction interval width
-            avg_interval_width = np.mean([
-                (upper - lower) / value if value != 0 else 0
-                for _, value, lower, upper in predictions[:min(100, len(predictions))]
-            ])
+            avg_interval_width = np.mean(
+                [
+                    (upper - lower) / value if value != 0 else 0
+                    for _, value, lower, upper in predictions[
+                        : min(100, len(predictions))
+                    ]
+                ]
+            )
             confidence = max(0.0, min(1.0, 1.0 - avg_interval_width))
 
             return Forecast(
@@ -314,7 +327,9 @@ class PredictionEngine:
 
             # Project forward
             last_value = smoothed[-1]
-            trend = (smoothed[-1] - smoothed[-50]) / 50  # Average trend over last 50 points
+            trend = (
+                smoothed[-1] - smoothed[-50]
+            ) / 50  # Average trend over last 50 points
 
             predictions = []
             last_time = history[-1][0]
@@ -325,15 +340,19 @@ class PredictionEngine:
                 pred_value = last_value + trend * i
 
                 # Estimate uncertainty (increases with distance)
-                std_dev = np.std(values[-100:]) if len(values) >= 100 else np.std(values)
+                std_dev = (
+                    np.std(values[-100:]) if len(values) >= 100 else np.std(values)
+                )
                 uncertainty = std_dev * (1 + i / 100)  # Grows with forecast horizon
 
-                predictions.append((
-                    pred_time,
-                    float(f"{pred_value:.3f}"),
-                    float(f"{pred_value - 1.96 * uncertainty:.3f}"),
-                    float(f"{pred_value + 1.96 * uncertainty:.3f}"),
-                ))
+                predictions.append(
+                    (
+                        pred_time,
+                        float(f"{pred_value:.3f}"),
+                        float(f"{pred_value - 1.96 * uncertainty:.3f}"),
+                        float(f"{pred_value + 1.96 * uncertainty:.3f}"),
+                    )
+                )
 
             return Forecast(
                 metric_name=metric_name,
@@ -379,6 +398,7 @@ class PredictionEngine:
             # Try Isolation Forest if sklearn available
             try:
                 import importlib.util
+
                 if importlib.util.find_spec("sklearn.ensemble") is not None:
                     iso_anomalies = self._detect_isolation_forest_anomalies(
                         metric_name, history, window_size
@@ -391,7 +411,10 @@ class PredictionEngine:
             unique_anomalies = {}
             for anomaly in anomalies:
                 key = (anomaly.metric_name, anomaly.timestamp)
-                if key not in unique_anomalies or anomaly.severity > unique_anomalies[key].severity:
+                if (
+                    key not in unique_anomalies
+                    or anomaly.severity > unique_anomalies[key].severity
+                ):
                     unique_anomalies[key] = anomaly
 
             result = list(unique_anomalies.values())
@@ -446,18 +469,20 @@ class PredictionEngine:
 
                 severity = min(1.0, z_score / 10)  # Cap at 1.0
 
-                anomalies.append(Anomaly(
-                    metric_name=metric_name,
-                    timestamp=history[i][0],
-                    value=float(f"{current_value:.3f}"),
-                    expected_range=(
-                        float(f"{mean - 2 * std:.3f}"),
-                        float(f"{mean + 2 * std:.3f}"),
-                    ),
-                    anomaly_type=anomaly_type,
-                    severity=float(f"{severity:.3f}"),
-                    context=f"Value {current_value:.3f} is {z_score:.1f} std devs from mean {mean:.3f}",
-                ))
+                anomalies.append(
+                    Anomaly(
+                        metric_name=metric_name,
+                        timestamp=history[i][0],
+                        value=float(f"{current_value:.3f}"),
+                        expected_range=(
+                            float(f"{mean - 2 * std:.3f}"),
+                            float(f"{mean + 2 * std:.3f}"),
+                        ),
+                        anomaly_type=anomaly_type,
+                        severity=float(f"{severity:.3f}"),
+                        context=f"Value {current_value:.3f} is {z_score:.1f} std devs from mean {mean:.3f}",
+                    )
+                )
 
         return anomalies
 
@@ -479,11 +504,15 @@ class PredictionEngine:
             prev_value = history[i - 1][1]
             rolling_mean = np.mean([v for _, v in history[i - window_size : i]])
 
-            features.append([
-                value,
-                value - prev_value,  # Rate of change
-                value / rolling_mean if rolling_mean != 0 else 1.0,  # Deviation from mean
-            ])
+            features.append(
+                [
+                    value,
+                    value - prev_value,  # Rate of change
+                    (
+                        value / rolling_mean if rolling_mean != 0 else 1.0
+                    ),  # Deviation from mean
+                ]
+            )
 
         if len(features) < 10:
             return []
@@ -509,18 +538,22 @@ class PredictionEngine:
                 mean = np.mean(recent_values)
                 std = np.std(recent_values)
 
-                anomalies.append(Anomaly(
-                    metric_name=metric_name,
-                    timestamp=history[idx][0],
-                    value=float(f"{value:.3f}"),
-                    expected_range=(
-                        float(f"{mean - 2 * std:.3f}"),
-                        float(f"{mean + 2 * std:.3f}"),
-                    ),
-                    anomaly_type=AnomalyType.SPIKE if value > mean else AnomalyType.DROP,
-                    severity=0.7,  # Fixed severity for ML-detected anomalies
-                    context=f"ML-detected anomaly: value {value:.3f} deviates from pattern",
-                ))
+                anomalies.append(
+                    Anomaly(
+                        metric_name=metric_name,
+                        timestamp=history[idx][0],
+                        value=float(f"{value:.3f}"),
+                        expected_range=(
+                            float(f"{mean - 2 * std:.3f}"),
+                            float(f"{mean + 2 * std:.3f}"),
+                        ),
+                        anomaly_type=(
+                            AnomalyType.SPIKE if value > mean else AnomalyType.DROP
+                        ),
+                        severity=0.7,  # Fixed severity for ML-detected anomalies
+                        context=f"ML-detected anomaly: value {value:.3f} deviates from pattern",
+                    )
+                )
 
         return anomalies
 
@@ -541,8 +574,8 @@ class PredictiveMonitor:
         "availability": "qeo:sli:availability:ratio_rate5m",
         "latency_p95": "qeo:http_request_duration:p95",
         "error_rate": "qeo:http_error_ratio:rate5m",
-        "cpu_usage": "rate(container_cpu_usage_seconds_total{pod=~\"qeo-api-.*\"}[5m])",
-        "memory_usage": "container_memory_usage_bytes{pod=~\"qeo-api-.*\"} / 1024 / 1024 / 1024",
+        "cpu_usage": 'rate(container_cpu_usage_seconds_total{pod=~"qeo-api-.*"}[5m])',
+        "memory_usage": 'container_memory_usage_bytes{pod=~"qeo-api-.*"} / 1024 / 1024 / 1024',
     }
 
     def __init__(self, prometheus_url: str = "http://prometheus:9090"):
@@ -570,7 +603,9 @@ class PredictiveMonitor:
                     continue
 
                 # Generate 24-hour forecast
-                forecast = self.engine.forecast_metric(metric_name, history, horizon_hours=24)
+                forecast = self.engine.forecast_metric(
+                    metric_name, history, horizon_hours=24
+                )
 
                 if forecast:
                     forecasts[metric_name] = forecast
@@ -578,7 +613,9 @@ class PredictiveMonitor:
                     self._last_update[metric_name] = datetime.utcnow()
 
             except Exception as e:
-                logger.error(f"Error updating forecast for {metric_name}: {e}", exc_info=True)
+                logger.error(
+                    f"Error updating forecast for {metric_name}: {e}", exc_info=True
+                )
 
         logger.info(f"Updated forecasts for {len(forecasts)} metrics")
         return forecasts
@@ -616,22 +653,31 @@ class PredictiveMonitor:
                 is_breach = False
                 if metric_name == "availability" and pred_value < threshold:
                     is_breach = True
-                elif metric_name in ["latency_p95", "error_rate"] and pred_value > threshold:
+                elif (
+                    metric_name in ["latency_p95", "error_rate"]
+                    and pred_value > threshold
+                ):
                     is_breach = True
 
                 if is_breach:
-                    alerts.append({
-                        "metric": metric_name,
-                        "predicted_breach_time": pred_time.isoformat(),
-                        "predicted_value": float(f"{pred_value:.3f}"),
-                        "threshold": threshold,
-                        "minutes_until_breach": int((pred_time - now).total_seconds() / 60),
-                        "confidence": forecast.confidence,
-                        "recommendation": f"Take preventive action now to avoid SLO breach in {int((pred_time - now).total_seconds() / 60)} minutes",
-                    })
+                    alerts.append(
+                        {
+                            "metric": metric_name,
+                            "predicted_breach_time": pred_time.isoformat(),
+                            "predicted_value": float(f"{pred_value:.3f}"),
+                            "threshold": threshold,
+                            "minutes_until_breach": int(
+                                (pred_time - now).total_seconds() / 60
+                            ),
+                            "confidence": forecast.confidence,
+                            "recommendation": f"Take preventive action now to avoid SLO breach in {int((pred_time - now).total_seconds() / 60)} minutes",
+                        }
+                    )
 
                     slo_breach_predicted.labels(sli=metric_name).inc()
-                    logger.warning(f"Predicted SLO breach for {metric_name} at {pred_time}")
+                    logger.warning(
+                        f"Predicted SLO breach for {metric_name} at {pred_time}"
+                    )
 
         return alerts
 
@@ -654,14 +700,18 @@ class PredictiveMonitor:
                 if not history:
                     continue
 
-                anomalies = self.engine.detect_anomalies(metric_name, history, window_size=100)
+                anomalies = self.engine.detect_anomalies(
+                    metric_name, history, window_size=100
+                )
 
                 if anomalies:
                     all_anomalies[metric_name] = anomalies
                     logger.info(f"Found {len(anomalies)} anomalies for {metric_name}")
 
             except Exception as e:
-                logger.error(f"Error detecting anomalies for {metric_name}: {e}", exc_info=True)
+                logger.error(
+                    f"Error detecting anomalies for {metric_name}: {e}", exc_info=True
+                )
 
         return all_anomalies
 

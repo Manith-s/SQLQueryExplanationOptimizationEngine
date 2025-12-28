@@ -14,7 +14,11 @@ def _schema():
                     {"column_name": "created_at"},
                 ],
                 "indexes": [
-                    {"name": "orders_user_id_created_at", "unique": False, "columns": ["user_id", "created_at"]}
+                    {
+                        "name": "orders_user_id_created_at",
+                        "unique": False,
+                        "columns": ["user_id", "created_at"],
+                    }
                 ],
             }
         ],
@@ -57,7 +61,9 @@ def test_index_dedup_when_existing_covers_prefix():
     options = {"min_index_rows": 10000, "max_index_cols": 3}
     out = analyze(sql, ast_info, None, _schema(), stats, options)
     assert not [
-        s for s in out["suggestions"] if s["kind"] == "index" and "user_id, created_at" in s["title"].replace(":", "")
+        s
+        for s in out["suggestions"]
+        if s["kind"] == "index" and "user_id, created_at" in s["title"].replace(":", "")
     ], "existing index should prevent duplicate suggestion"
 
 
@@ -78,7 +84,7 @@ def test_rounding_confidence_three_decimals():
     options = {"min_index_rows": 10000, "max_index_cols": 3}
     out = analyze(sql, ast_info, None, _schema(), stats, options)
     for s in out["suggestions"]:
-        assert (isinstance(s["confidence"], float))
+        assert isinstance(s["confidence"], float)
         # check decimal places by string repr
         assert len(f"{s['confidence']:.3f}".split(".")[-1]) == 3
 
@@ -101,15 +107,3 @@ def test_topk_ordering_stable():
     out = analyze(sql, ast_info, None, _schema(), stats, options)
     titles = [s["title"] for s in out["suggestions"]]
     assert titles == sorted(titles, key=lambda t: t)
-
-
-
-
-
-
-
-
-
-
-
-

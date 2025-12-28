@@ -30,6 +30,7 @@ def enable_auth():
 
     # Force reload of settings
     from app.core import config
+
     config.settings.AUTH_ENABLED = True
     config.settings.API_KEY = "test-key-12345"
 
@@ -101,9 +102,7 @@ def test_explain_endpoint_with_valid_token(client):
     """Test that explain endpoint accepts valid tokens."""
     headers = {"Authorization": "Bearer test-key-12345"}
     response = client.post(
-        "/api/v1/explain",
-        json={"sql": "SELECT * FROM orders LIMIT 1"},
-        headers=headers
+        "/api/v1/explain", json={"sql": "SELECT * FROM orders LIMIT 1"}, headers=headers
     )
     assert response.status_code == 200
     data = response.json()
@@ -116,7 +115,7 @@ def test_optimize_endpoint_with_valid_token(client):
     response = client.post(
         "/api/v1/optimize",
         json={"sql": "SELECT * FROM orders LIMIT 1"},
-        headers=headers
+        headers=headers,
     )
     assert response.status_code == 200
 
@@ -132,9 +131,7 @@ def test_workload_endpoint_with_valid_token(client):
     """Test that workload endpoint accepts valid tokens."""
     headers = {"Authorization": "Bearer test-key-12345"}
     response = client.post(
-        "/api/v1/workload",
-        json={"sqls": ["SELECT 1"]},
-        headers=headers
+        "/api/v1/workload", json={"sqls": ["SELECT 1"]}, headers=headers
     )
     assert response.status_code == 200
 
@@ -158,6 +155,7 @@ def test_auth_disabled_allows_all_requests():
     # Temporarily disable auth
     os.environ["AUTH_ENABLED"] = "false"
     from app.core import config
+
     config.settings.AUTH_ENABLED = False
 
     client = TestClient(app)

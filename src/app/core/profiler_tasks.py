@@ -71,9 +71,7 @@ class ProfilerBackgroundTasks:
         try:
             # Get all query summaries from last 24 hours
             summaries = await asyncio.to_thread(
-                self.profiler.get_all_query_summaries,
-                hours=24,
-                limit=100
+                self.profiler.get_all_query_summaries, hours=24, limit=100
             )
 
             analysis_batch = []
@@ -84,24 +82,25 @@ class ProfilerBackgroundTasks:
                     stats = await asyncio.to_thread(
                         self.profiler.get_query_statistics,
                         query_hash=summary["query_hash"],
-                        hours=24
+                        hours=24,
                     )
 
                     # Analyze and generate recommendations
                     recommendations = self._generate_recommendations(summary, stats)
 
                     if recommendations:
-                        analysis_batch.append({
-                            "query_hash": summary["query_hash"],
-                            "query_text": summary["query_text"],
-                            "analysis_time": datetime.now().isoformat(),
-                            "recommendations": recommendations
-                        })
+                        analysis_batch.append(
+                            {
+                                "query_hash": summary["query_hash"],
+                                "query_text": summary["query_text"],
+                                "analysis_time": datetime.now().isoformat(),
+                                "recommendations": recommendations,
+                            }
+                        )
 
                         # Store recommendations in database
                         await self._store_recommendations(
-                            summary["query_hash"],
-                            recommendations
+                            summary["query_hash"], recommendations
                         )
 
                 except Exception as e:
@@ -113,8 +112,7 @@ class ProfilerBackgroundTasks:
             # Clean up old data
             if datetime.now().hour == 2:  # Run cleanup at 2 AM
                 deleted = await asyncio.to_thread(
-                    self.profiler.cleanup_old_data,
-                    days=settings.PROFILER_CLEANUP_DAYS
+                    self.profiler.cleanup_old_data, days=settings.PROFILER_CLEANUP_DAYS
                 )
                 logger.info(f"Cleaned up {deleted} old profiling records")
 
@@ -122,9 +120,7 @@ class ProfilerBackgroundTasks:
             logger.error(f"Error in periodic analysis: {e}", exc_info=True)
 
     def _generate_recommendations(
-        self,
-        summary: Dict[str, Any],
-        stats: Dict[str, Any]
+        self, summary: Dict[str, Any], stats: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
         """
         Generate optimization recommendations based on query statistics.
@@ -140,14 +136,16 @@ class ProfilerBackgroundTasks:
 
         # Check for high execution time
         if summary.get("avg_time_ms", 0) > 1000:
-            recommendations.append({
-                "type": "performance",
-                "priority": 3,
-                "title": "High Average Execution Time",
-                "description": f"Query has an average execution time of {summary['avg_time_ms']:.2f}ms, "
-                               f"which exceeds the recommended threshold of 1000ms.",
-                "action": "Consider adding indexes on frequently filtered columns or rewriting the query for better performance."
-            })
+            recommendations.append(
+                {
+                    "type": "performance",
+                    "priority": 3,
+                    "title": "High Average Execution Time",
+                    "description": f"Query has an average execution time of {summary['avg_time_ms']:.2f}ms, "
+                    f"which exceeds the recommended threshold of 1000ms.",
+                    "action": "Consider adding indexes on frequently filtered columns or rewriting the query for better performance.",
+                }
+            )
 
         # Check for high variance (inconsistent performance)
         exec_time = stats.get("execution_time", {})
@@ -158,51 +156,62 @@ class ProfilerBackgroundTasks:
             if std_dev and mean:
                 cv = (std_dev / mean) * 100  # Coefficient of variation
                 if cv > 50:  # More than 50% variation
-                    recommendations.append({
-                        "type": "stability",
-                        "priority": 2,
-                        "title": "Inconsistent Performance",
-                        "description": f"Query execution time varies significantly (coefficient of variation: {cv:.1f}%). "
-                                       f"This suggests cache effects or resource contention.",
-                        "action": "Investigate database cache behavior, concurrent query load, and consider query optimization."
-                    })
+                    recommendations.append(
+                        {
+                            "type": "stability",
+                            "priority": 2,
+                            "title": "Inconsistent Performance",
+                            "description": f"Query execution time varies significantly (coefficient of variation: {cv:.1f}%). "
+                            f"This suggests cache effects or resource contention.",
+                            "action": "Investigate database cache behavior, concurrent query load, and consider query optimization.",
+                        }
+                    )
 
         # Check for degrading performance trend
         trend = stats.get("trend", {})
-        if trend.get("direction") == "degrading" and abs(trend.get("change_pct", 0)) > 20:
-            recommendations.append({
-                "type": "degradation",
-                "priority": 3,
-                "title": "Performance Degradation Detected",
-                "description": f"Query performance has degraded by {trend['change_pct']:.1f}% recently. "
-                               f"This may indicate growing data volume or changing execution plans.",
-                "action": "Review recent data growth, analyze execution plan changes, and consider index maintenance (VACUUM, ANALYZE)."
-            })
+        if (
+            trend.get("direction") == "degrading"
+            and abs(trend.get("change_pct", 0)) > 20
+        ):
+            recommendations.append(
+                {
+                    "type": "degradation",
+                    "priority": 3,
+                    "title": "Performance Degradation Detected",
+                    "description": f"Query performance has degraded by {trend['change_pct']:.1f}% recently. "
+                    f"This may indicate growing data volume or changing execution plans.",
+                    "action": "Review recent data growth, analyze execution plan changes, and consider index maintenance (VACUUM, ANALYZE).",
+                }
+            )
 
         # Check for cache inefficiency
         cache_stats = stats.get("cache_hit_rate", {})
         if cache_stats:
             mean_cache_rate = cache_stats.get("mean")
             if mean_cache_rate and mean_cache_rate < 80:
-                recommendations.append({
-                    "type": "cache",
-                    "priority": 2,
-                    "title": "Low Cache Hit Rate",
-                    "description": f"Average cache hit rate is only {mean_cache_rate:.1f}%. "
-                                   f"This suggests inefficient buffer usage.",
-                    "action": "Consider increasing shared_buffers, optimizing query to reduce data scanned, or adding covering indexes."
-                })
+                recommendations.append(
+                    {
+                        "type": "cache",
+                        "priority": 2,
+                        "title": "Low Cache Hit Rate",
+                        "description": f"Average cache hit rate is only {mean_cache_rate:.1f}%. "
+                        f"This suggests inefficient buffer usage.",
+                        "action": "Consider increasing shared_buffers, optimizing query to reduce data scanned, or adding covering indexes.",
+                    }
+                )
 
         # Check for high execution count (potential caching candidate)
         if summary.get("execution_count", 0) > 100:
-            recommendations.append({
-                "type": "optimization",
-                "priority": 1,
-                "title": "Frequently Executed Query",
-                "description": f"Query has been executed {summary['execution_count']} times in 24 hours. "
-                               f"Consider application-level caching.",
-                "action": "Implement application-level caching (Redis, Memcached) for this frequently accessed query."
-            })
+            recommendations.append(
+                {
+                    "type": "optimization",
+                    "priority": 1,
+                    "title": "Frequently Executed Query",
+                    "description": f"Query has been executed {summary['execution_count']} times in 24 hours. "
+                    f"Consider application-level caching.",
+                    "action": "Implement application-level caching (Redis, Memcached) for this frequently accessed query.",
+                }
+            )
 
         # Sort by priority (higher first)
         recommendations.sort(key=lambda r: r["priority"], reverse=True)
@@ -210,9 +219,7 @@ class ProfilerBackgroundTasks:
         return recommendations
 
     async def _store_recommendations(
-        self,
-        query_hash: str,
-        recommendations: List[Dict[str, Any]]
+        self, query_hash: str, recommendations: List[Dict[str, Any]]
     ):
         """
         Store recommendations in the profiler database.
@@ -229,29 +236,34 @@ class ProfilerBackgroundTasks:
                     # Check if similar recommendation already exists (within last 24 hours)
                     cutoff = (datetime.now() - timedelta(hours=24)).isoformat()
 
-                    existing = conn.execute("""
+                    existing = conn.execute(
+                        """
                         SELECT id FROM optimization_recommendations
                         WHERE query_hash = ?
                           AND recommendation_type = ?
                           AND created_at > ?
-                    """, (query_hash, rec["type"], cutoff)).fetchone()
+                    """,
+                        (query_hash, rec["type"], cutoff),
+                    ).fetchone()
 
                     if not existing:
-                        conn.execute("""
+                        conn.execute(
+                            """
                             INSERT INTO optimization_recommendations (
                                 query_hash, recommendation_type, description,
                                 priority, metrics
                             ) VALUES (?, ?, ?, ?, ?)
-                        """, (
-                            query_hash,
-                            rec["type"],
-                            f"{rec['title']}: {rec['description']} Action: {rec['action']}",
-                            rec["priority"],
-                            json.dumps({
-                                "title": rec["title"],
-                                "action": rec["action"]
-                            })
-                        ))
+                        """,
+                            (
+                                query_hash,
+                                rec["type"],
+                                f"{rec['title']}: {rec['description']} Action: {rec['action']}",
+                                rec["priority"],
+                                json.dumps(
+                                    {"title": rec["title"], "action": rec["action"]}
+                                ),
+                            ),
+                        )
                         conn.commit()
 
         except Exception as e:
@@ -283,32 +295,23 @@ class ProfilerBackgroundTasks:
             stats = await asyncio.to_thread(
                 self.profiler.get_query_statistics,
                 query_hash=query_hash,
-                hours=168  # 1 week
+                hours=168,  # 1 week
             )
 
             if stats.get("sample_count", 0) == 0:
-                return {
-                    "status": "error",
-                    "message": "No data found for this query"
-                }
+                return {"status": "error", "message": "No data found for this query"}
 
             # Get summary info
             summaries = await asyncio.to_thread(
-                self.profiler.get_all_query_summaries,
-                hours=168,
-                limit=1000
+                self.profiler.get_all_query_summaries, hours=168, limit=1000
             )
 
             summary = next(
-                (s for s in summaries if s["query_hash"] == query_hash),
-                None
+                (s for s in summaries if s["query_hash"] == query_hash), None
             )
 
             if not summary:
-                return {
-                    "status": "error",
-                    "message": "Query not found in summaries"
-                }
+                return {"status": "error", "message": "Query not found in summaries"}
 
             # Generate recommendations
             recommendations = self._generate_recommendations(summary, stats)
@@ -321,15 +324,12 @@ class ProfilerBackgroundTasks:
                 "query_hash": query_hash,
                 "analysis_time": datetime.now().isoformat(),
                 "statistics": stats,
-                "recommendations": recommendations
+                "recommendations": recommendations,
             }
 
         except Exception as e:
             logger.error(f"Error in manual analysis: {e}", exc_info=True)
-            return {
-                "status": "error",
-                "message": str(e)
-            }
+            return {"status": "error", "message": str(e)}
 
 
 # Global background tasks instance

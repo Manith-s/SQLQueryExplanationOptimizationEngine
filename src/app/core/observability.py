@@ -35,7 +35,7 @@ from prometheus_client import (
 from app.core.config import settings
 
 # Correlation ID context variable
-correlation_id_ctx: ContextVar[str] = ContextVar('correlation_id', default='')
+correlation_id_ctx: ContextVar[str] = ContextVar("correlation_id", default="")
 
 
 class StructuredLogger:
@@ -53,7 +53,9 @@ class StructuredLogger:
             name: Logger name (typically __name__)
         """
         self.logger = logging.getLogger(name)
-        self.logger.setLevel(getattr(logging, getattr(settings, 'LOG_LEVEL', 'INFO').upper()))
+        self.logger.setLevel(
+            getattr(logging, getattr(settings, "LOG_LEVEL", "INFO").upper())
+        )
 
         # Add JSON formatter
         if not self.logger.handlers:
@@ -67,32 +69,32 @@ class StructuredLogger:
         correlation_id = correlation_id_ctx.get()
 
         extra = {
-            'correlation_id': correlation_id,
-            'timestamp': datetime.utcnow().isoformat(),
-            **kwargs
+            "correlation_id": correlation_id,
+            "timestamp": datetime.utcnow().isoformat(),
+            **kwargs,
         }
 
         getattr(self.logger, level)(message, extra=extra)
 
     def debug(self, message: str, **kwargs):
         """Log debug message."""
-        self._log('debug', message, **kwargs)
+        self._log("debug", message, **kwargs)
 
     def info(self, message: str, **kwargs):
         """Log info message."""
-        self._log('info', message, **kwargs)
+        self._log("info", message, **kwargs)
 
     def warning(self, message: str, **kwargs):
         """Log warning message."""
-        self._log('warning', message, **kwargs)
+        self._log("warning", message, **kwargs)
 
     def error(self, message: str, **kwargs):
         """Log error message."""
-        self._log('error', message, **kwargs)
+        self._log("error", message, **kwargs)
 
     def critical(self, message: str, **kwargs):
         """Log critical message."""
-        self._log('critical', message, **kwargs)
+        self._log("critical", message, **kwargs)
 
 
 class JSONFormatter(logging.Formatter):
@@ -101,31 +103,49 @@ class JSONFormatter(logging.Formatter):
     def format(self, record):
         """Format log record as JSON."""
         log_data = {
-            'timestamp': datetime.utcfromtimestamp(record.created).isoformat(),
-            'level': record.levelname,
-            'logger': record.name,
-            'message': record.getMessage(),
-            'module': record.module,
-            'function': record.funcName,
-            'line': record.lineno,
+            "timestamp": datetime.utcfromtimestamp(record.created).isoformat(),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+            "module": record.module,
+            "function": record.funcName,
+            "line": record.lineno,
         }
 
         # Add correlation ID if present
-        if hasattr(record, 'correlation_id'):
-            log_data['correlation_id'] = record.correlation_id
+        if hasattr(record, "correlation_id"):
+            log_data["correlation_id"] = record.correlation_id
 
         # Add extra fields
         for key, value in record.__dict__.items():
-            if key not in ['name', 'msg', 'args', 'created', 'filename', 'funcName',
-                          'levelname', 'levelno', 'lineno', 'module', 'msecs',
-                          'message', 'pathname', 'process', 'processName',
-                          'relativeCreated', 'thread', 'threadName', 'exc_info',
-                          'exc_text', 'stack_info']:
+            if key not in [
+                "name",
+                "msg",
+                "args",
+                "created",
+                "filename",
+                "funcName",
+                "levelname",
+                "levelno",
+                "lineno",
+                "module",
+                "msecs",
+                "message",
+                "pathname",
+                "process",
+                "processName",
+                "relativeCreated",
+                "thread",
+                "threadName",
+                "exc_info",
+                "exc_text",
+                "stack_info",
+            ]:
                 log_data[key] = value
 
         # Add exception info if present
         if record.exc_info:
-            log_data['exception'] = self.formatException(record.exc_info)
+            log_data["exception"] = self.formatException(record.exc_info)
 
         return json.dumps(log_data)
 
@@ -148,188 +168,173 @@ class PrometheusMetrics:
 
         # Application info
         self.app_info = Info(
-            'qeo_application',
-            'Application information',
-            registry=self.registry
+            "qeo_application", "Application information", registry=self.registry
         )
-        self.app_info.info({
-            'version': getattr(settings, 'VERSION', '0.7.0'),
-            'environment': getattr(settings, 'ENVIRONMENT', 'production')
-        })
+        self.app_info.info(
+            {
+                "version": getattr(settings, "VERSION", "0.7.0"),
+                "environment": getattr(settings, "ENVIRONMENT", "production"),
+            }
+        )
 
         # HTTP metrics
         self.http_requests_total = Counter(
-            'qeo_http_requests_total',
-            'Total HTTP requests',
-            ['method', 'endpoint', 'status_code'],
-            registry=self.registry
+            "qeo_http_requests_total",
+            "Total HTTP requests",
+            ["method", "endpoint", "status_code"],
+            registry=self.registry,
         )
 
         self.http_request_duration = Histogram(
-            'qeo_http_request_duration_seconds',
-            'HTTP request duration',
-            ['method', 'endpoint'],
+            "qeo_http_request_duration_seconds",
+            "HTTP request duration",
+            ["method", "endpoint"],
             buckets=[0.01, 0.05, 0.1, 0.5, 1.0, 2.5, 5.0, 10.0],
-            registry=self.registry
+            registry=self.registry,
         )
 
         # Query execution metrics
         self.query_executions_total = Counter(
-            'qeo_query_executions_total',
-            'Total query executions',
-            ['query_type', 'success'],
-            registry=self.registry
+            "qeo_query_executions_total",
+            "Total query executions",
+            ["query_type", "success"],
+            registry=self.registry,
         )
 
         self.query_execution_duration = Histogram(
-            'qeo_query_execution_duration_seconds',
-            'Query execution duration',
-            ['query_type'],
+            "qeo_query_execution_duration_seconds",
+            "Query execution duration",
+            ["query_type"],
             buckets=[0.01, 0.05, 0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0],
-            registry=self.registry
+            registry=self.registry,
         )
 
         # Optimization metrics
         self.optimization_suggestions_total = Counter(
-            'qeo_optimization_suggestions_total',
-            'Total optimization suggestions generated',
-            ['suggestion_type'],
-            registry=self.registry
+            "qeo_optimization_suggestions_total",
+            "Total optimization suggestions generated",
+            ["suggestion_type"],
+            registry=self.registry,
         )
 
         self.optimization_success_rate = Gauge(
-            'qeo_optimization_success_rate',
-            'Optimization success rate (0-1)',
-            registry=self.registry
+            "qeo_optimization_success_rate",
+            "Optimization success rate (0-1)",
+            registry=self.registry,
         )
 
         # Cache metrics
         self.cache_operations_total = Counter(
-            'qeo_cache_operations_total',
-            'Total cache operations',
-            ['operation', 'result'],
-            registry=self.registry
+            "qeo_cache_operations_total",
+            "Total cache operations",
+            ["operation", "result"],
+            registry=self.registry,
         )
 
         self.cache_hit_rate = Gauge(
-            'qeo_cache_hit_rate',
-            'Cache hit rate (0-1)',
-            registry=self.registry
+            "qeo_cache_hit_rate", "Cache hit rate (0-1)", registry=self.registry
         )
 
         self.cache_size_bytes = Gauge(
-            'qeo_cache_size_bytes',
-            'Cache size in bytes',
-            registry=self.registry
+            "qeo_cache_size_bytes", "Cache size in bytes", registry=self.registry
         )
 
         # Database connection pool metrics
         self.db_connections_active = Gauge(
-            'qeo_db_connections_active',
-            'Active database connections',
-            registry=self.registry
+            "qeo_db_connections_active",
+            "Active database connections",
+            registry=self.registry,
         )
 
         self.db_connections_idle = Gauge(
-            'qeo_db_connections_idle',
-            'Idle database connections',
-            registry=self.registry
+            "qeo_db_connections_idle",
+            "Idle database connections",
+            registry=self.registry,
         )
 
         self.db_query_duration = Histogram(
-            'qeo_db_query_duration_seconds',
-            'Database query duration',
-            ['operation'],
+            "qeo_db_query_duration_seconds",
+            "Database query duration",
+            ["operation"],
             buckets=[0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0],
-            registry=self.registry
+            registry=self.registry,
         )
 
         # Index management metrics
         self.index_recommendations_total = Counter(
-            'qeo_index_recommendations_total',
-            'Total index recommendations',
-            ['action'],
-            registry=self.registry
+            "qeo_index_recommendations_total",
+            "Total index recommendations",
+            ["action"],
+            registry=self.registry,
         )
 
         self.index_health_score = Gauge(
-            'qeo_index_health_score',
-            'Overall index health score (0-100)',
-            registry=self.registry
+            "qeo_index_health_score",
+            "Overall index health score (0-100)",
+            registry=self.registry,
         )
 
         # Prefetch metrics
         self.prefetch_attempts_total = Counter(
-            'qeo_prefetch_attempts_total',
-            'Total prefetch attempts',
-            ['result'],
-            registry=self.registry
+            "qeo_prefetch_attempts_total",
+            "Total prefetch attempts",
+            ["result"],
+            registry=self.registry,
         )
 
         self.prefetch_success_rate = Gauge(
-            'qeo_prefetch_success_rate',
-            'Prefetch success rate (0-1)',
-            registry=self.registry
+            "qeo_prefetch_success_rate",
+            "Prefetch success rate (0-1)",
+            registry=self.registry,
         )
 
         # Circuit breaker metrics
         self.circuit_breaker_state = Gauge(
-            'qeo_circuit_breaker_state',
-            'Circuit breaker state (0=closed, 1=half-open, 2=open)',
-            ['circuit'],
-            registry=self.registry
+            "qeo_circuit_breaker_state",
+            "Circuit breaker state (0=closed, 1=half-open, 2=open)",
+            ["circuit"],
+            registry=self.registry,
         )
 
         self.circuit_breaker_failures = Counter(
-            'qeo_circuit_breaker_failures_total',
-            'Circuit breaker failures',
-            ['circuit'],
-            registry=self.registry
+            "qeo_circuit_breaker_failures_total",
+            "Circuit breaker failures",
+            ["circuit"],
+            registry=self.registry,
         )
 
         # Resource usage metrics
         self.memory_usage_bytes = Gauge(
-            'qeo_memory_usage_bytes',
-            'Memory usage in bytes',
-            registry=self.registry
+            "qeo_memory_usage_bytes", "Memory usage in bytes", registry=self.registry
         )
 
         self.cpu_usage_percent = Gauge(
-            'qeo_cpu_usage_percent',
-            'CPU usage percentage',
-            registry=self.registry
+            "qeo_cpu_usage_percent", "CPU usage percentage", registry=self.registry
         )
 
-    def observe_http_request(self, method: str, endpoint: str, status_code: int, duration: float):
+    def observe_http_request(
+        self, method: str, endpoint: str, status_code: int, duration: float
+    ):
         """Record HTTP request metrics."""
         self.http_requests_total.labels(
-            method=method,
-            endpoint=endpoint,
-            status_code=status_code
+            method=method, endpoint=endpoint, status_code=status_code
         ).inc()
 
-        self.http_request_duration.labels(
-            method=method,
-            endpoint=endpoint
-        ).observe(duration)
+        self.http_request_duration.labels(method=method, endpoint=endpoint).observe(
+            duration
+        )
 
     def observe_query_execution(self, query_type: str, duration: float, success: bool):
         """Record query execution metrics."""
         self.query_executions_total.labels(
-            query_type=query_type,
-            success='true' if success else 'false'
+            query_type=query_type, success="true" if success else "false"
         ).inc()
 
-        self.query_execution_duration.labels(
-            query_type=query_type
-        ).observe(duration)
+        self.query_execution_duration.labels(query_type=query_type).observe(duration)
 
     def observe_cache_operation(self, operation: str, result: str):
         """Record cache operation metrics."""
-        self.cache_operations_total.labels(
-            operation=operation,
-            result=result
-        ).inc()
+        self.cache_operations_total.labels(operation=operation, result=result).inc()
 
 
 class OpenTelemetryTracer:
@@ -342,17 +347,21 @@ class OpenTelemetryTracer:
     def __init__(self):
         """Initialize OpenTelemetry tracer."""
         # Create resource
-        resource = Resource.create({
-            SERVICE_NAME: "qeo-api",
-            SERVICE_VERSION: getattr(settings, 'VERSION', '0.7.0')
-        })
+        resource = Resource.create(
+            {
+                SERVICE_NAME: "qeo-api",
+                SERVICE_VERSION: getattr(settings, "VERSION", "0.7.0"),
+            }
+        )
 
         # Setup tracer provider
         tracer_provider = TracerProvider(resource=resource)
 
         # Add OTLP exporter if configured
-        if getattr(settings, 'TRACING_ENABLED', False):
-            otlp_endpoint = getattr(settings, 'OTEL_EXPORTER_OTLP_ENDPOINT', 'http://localhost:4317')
+        if getattr(settings, "TRACING_ENABLED", False):
+            otlp_endpoint = getattr(
+                settings, "OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"
+            )
             otlp_exporter = OTLPSpanExporter(endpoint=otlp_endpoint, insecure=True)
             span_processor = BatchSpanProcessor(otlp_exporter)
             tracer_provider.add_span_processor(span_processor)
@@ -370,6 +379,7 @@ class OpenTelemetryTracer:
         Returns:
             Decorated function
         """
+
         def decorator(func: Callable) -> Callable:
             @wraps(func)
             def wrapper(*args, **kwargs):
@@ -377,11 +387,11 @@ class OpenTelemetryTracer:
                     # Add correlation ID
                     correlation_id = correlation_id_ctx.get()
                     if correlation_id:
-                        span.set_attribute('correlation_id', correlation_id)
+                        span.set_attribute("correlation_id", correlation_id)
 
                     # Add function details
-                    span.set_attribute('function.name', func.__name__)
-                    span.set_attribute('function.module', func.__module__)
+                    span.set_attribute("function.name", func.__name__)
+                    span.set_attribute("function.module", func.__module__)
 
                     try:
                         result = func(*args, **kwargs)
@@ -393,6 +403,7 @@ class OpenTelemetryTracer:
                         raise
 
             return wrapper
+
         return decorator
 
     def start_span(self, name: str, attributes: Optional[Dict[str, Any]] = None):
@@ -415,7 +426,7 @@ class OpenTelemetryTracer:
         # Add correlation ID
         correlation_id = correlation_id_ctx.get()
         if correlation_id:
-            span.set_attribute('correlation_id', correlation_id)
+            span.set_attribute("correlation_id", correlation_id)
 
         return span
 
@@ -467,6 +478,7 @@ def get_observability() -> Observability:
 
 # Convenience decorators
 
+
 def trace_operation(operation_name: str):
     """
     Trace an operation.
@@ -491,6 +503,7 @@ def log_execution(logger: Optional[StructuredLogger] = None):
     Returns:
         Decorator
     """
+
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -506,7 +519,7 @@ def log_execution(logger: Optional[StructuredLogger] = None):
                     f"Completed {func.__name__}",
                     function=func.__name__,
                     duration_seconds=duration,
-                    success=True
+                    success=True,
                 )
                 return result
             except Exception as e:
@@ -516,11 +529,12 @@ def log_execution(logger: Optional[StructuredLogger] = None):
                     function=func.__name__,
                     duration_seconds=duration,
                     success=False,
-                    error=str(e)
+                    error=str(e),
                 )
                 raise
 
         return wrapper
+
     return decorator
 
 
@@ -535,6 +549,7 @@ def measure_time(metric_name: str, labels: Optional[Dict[str, str]] = None):
     Returns:
         Decorator
     """
+
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -552,7 +567,7 @@ def measure_time(metric_name: str, labels: Optional[Dict[str, str]] = None):
                     f"Metric: {metric_name}",
                     metric=metric_name,
                     duration=duration,
-                    labels=labels or {}
+                    labels=labels or {},
                 )
 
                 return result
@@ -561,4 +576,5 @@ def measure_time(metric_name: str, labels: Optional[Dict[str, str]] = None):
                 raise
 
         return wrapper
+
     return decorator

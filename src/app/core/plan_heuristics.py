@@ -27,15 +27,18 @@ def _walk(node: Dict[str, Any]) -> List[Dict[str, Any]]:
 
     return nodes
 
+
 def _get_node_type(node: Dict[str, Any]) -> str:
     """Extract node type, handling version differences."""
     return node.get("Node Type", node.get("node_type", "Unknown"))
+
 
 def _get_rows(node: Dict[str, Any], actual: bool = False) -> Optional[float]:
     """Extract row count, handling version differences."""
     if actual:
         return node.get("Actual Rows", node.get("actual_rows"))
     return node.get("Plan Rows", node.get("plan_rows"))
+
 
 def analyze(plan_root: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     """
@@ -58,7 +61,7 @@ def analyze(plan_root: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], Dict[str, 
     metrics = {
         "planning_time_ms": plan_root.get("Planning Time", 0),
         "execution_time_ms": plan_root.get("Execution Time", 0),
-        "node_count": len(nodes)
+        "node_count": len(nodes),
     }
 
     # Track tables seen for NO_INDEX_FILTER analysis
@@ -75,12 +78,14 @@ def analyze(plan_root: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], Dict[str, 
             rows = actual_rows if actual_rows is not None else plan_rows
 
             if rows and rows >= 100000:
-                warnings.append({
-                    "code": "SEQ_SCAN_LARGE",
-                    "level": "warn",
-                    "detail": f"Sequential scan on {node.get('Relation Name', 'table')} "
-                             f"with {rows:,.0f} rows"
-                })
+                warnings.append(
+                    {
+                        "code": "SEQ_SCAN_LARGE",
+                        "level": "warn",
+                        "detail": f"Sequential scan on {node.get('Relation Name', 'table')} "
+                        f"with {rows:,.0f} rows",
+                    }
+                )
 
             # Track for NO_INDEX_FILTER analysis
             if "Filter" in node:
@@ -94,22 +99,26 @@ def analyze(plan_root: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], Dict[str, 
         if node_type == "Nested Loop" and "Plans" in node:
             inner_plan = node["Plans"][1]  # Second plan is inner
             if _get_node_type(inner_plan) == "Seq Scan":
-                warnings.append({
-                    "code": "NESTED_LOOP_SEQ_INNER",
-                    "level": "warn",
-                    "detail": f"Nested loop joins with sequential scan inner side on "
-                             f"{inner_plan.get('Relation Name', 'table')}"
-                })
+                warnings.append(
+                    {
+                        "code": "NESTED_LOOP_SEQ_INNER",
+                        "level": "warn",
+                        "detail": f"Nested loop joins with sequential scan inner side on "
+                        f"{inner_plan.get('Relation Name', 'table')}",
+                    }
+                )
 
         # SORT_SPILL: Sort spilling to disk
         if "Sort" in node_type:
             sort_method = node.get("Sort Method", "")
             if "Disk" in sort_method or "External" in sort_method:
-                warnings.append({
-                    "code": "SORT_SPILL",
-                    "level": "warn",
-                    "detail": f"Sort spilled to disk using {sort_method}"
-                })
+                warnings.append(
+                    {
+                        "code": "SORT_SPILL",
+                        "level": "warn",
+                        "detail": f"Sort spilled to disk using {sort_method}",
+                    }
+                )
 
         # ESTIMATE_MISMATCH: Actual vs planned rows mismatch
         plan_rows = _get_rows(node, actual=False)
@@ -117,33 +126,40 @@ def analyze(plan_root: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], Dict[str, 
         if plan_rows is not None and actual_rows is not None:
             error = abs(actual_rows - plan_rows) / (plan_rows + 1)
             if error >= 0.5:  # 50% or more error
-                warnings.append({
-                    "code": "ESTIMATE_MISMATCH",
-                    "level": "warn",
-                    "detail": f"Row estimate error in {node_type}: "
-                             f"Expected {plan_rows:,.0f}, got {actual_rows:,.0f} "
-                             f"({error:.1%} error)"
-                })
+                warnings.append(
+                    {
+                        "code": "ESTIMATE_MISMATCH",
+                        "level": "warn",
+                        "detail": f"Row estimate error in {node_type}: "
+                        f"Expected {plan_rows:,.0f}, got {actual_rows:,.0f} "
+                        f"({error:.1%} error)",
+                    }
+                )
 
     # NO_INDEX_FILTER: Tables with seq scan + filter but no index scans
     for table in tables_with_seqscan - tables_with_indexscan:
-        warnings.append({
-            "code": "NO_INDEX_FILTER",
-            "level": "warn",
-            "detail": f"Table {table} has Filter clause but no Index Scan alternatives"
-        })
+        warnings.append(
+            {
+                "code": "NO_INDEX_FILTER",
+                "level": "warn",
+                "detail": f"Table {table} has Filter clause but no Index Scan alternatives",
+            }
+        )
 
     # PARALLEL_OFF: Large operation but no parallel nodes
-    total_rows = sum(_get_rows(n, actual=True) or _get_rows(n, actual=False) or 0
-                    for n in nodes)
+    total_rows = sum(
+        _get_rows(n, actual=True) or _get_rows(n, actual=False) or 0 for n in nodes
+    )
     has_parallel = any("Parallel" in _get_node_type(n) for n in nodes)
 
     if total_rows >= 100000 and not has_parallel:
-        warnings.append({
-            "code": "PARALLEL_OFF",
-            "level": "warn",
-            "detail": f"Query processes {total_rows:,.0f} rows but uses no parallel nodes"
-        })
+        warnings.append(
+            {
+                "code": "PARALLEL_OFF",
+                "level": "warn",
+                "detail": f"Query processes {total_rows:,.0f} rows but uses no parallel nodes",
+            }
+        )
 
     return warnings, metrics
 

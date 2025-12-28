@@ -15,7 +15,9 @@ class ProductionSettings:
 
     # Security settings
     ALLOWED_HOSTS: List[str] = os.getenv("ALLOWED_HOSTS", "*").split(",")
-    CORS_ORIGINS: List[str] = os.getenv("CORS_ORIGINS", "").split(",") if os.getenv("CORS_ORIGINS") else []
+    CORS_ORIGINS: List[str] = (
+        os.getenv("CORS_ORIGINS", "").split(",") if os.getenv("CORS_ORIGINS") else []
+    )
     SECURE_HEADERS: bool = os.getenv("SECURE_HEADERS", "true").lower() == "true"
 
     # Performance settings
@@ -31,8 +33,7 @@ class ProductionSettings:
     # Logging
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     LOG_FORMAT: str = os.getenv(
-        "LOG_FORMAT",
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        "LOG_FORMAT", "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
     LOG_JSON: bool = os.getenv("LOG_JSON", "false").lower() == "true"
 
@@ -87,7 +88,11 @@ def get_cors_config() -> Dict[str, Any]:
         "allow_credentials": True,
         "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["*"],
-        "expose_headers": ["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
+        "expose_headers": [
+            "X-RateLimit-Limit",
+            "X-RateLimit-Remaining",
+            "X-RateLimit-Reset",
+        ],
     }
 
 

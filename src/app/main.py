@@ -43,6 +43,7 @@ app = FastAPI(
 limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
 app.state.limiter = limiter
 
+
 # Custom rate limit exceeded handler with headers
 @app.exception_handler(RateLimitExceeded)
 async def custom_rate_limit_handler(request: Request, exc: RateLimitExceeded):
@@ -52,13 +53,20 @@ async def custom_rate_limit_handler(request: Request, exc: RateLimitExceeded):
         status_code=429,
         headers={
             "Content-Type": "application/json",
-            "X-RateLimit-Limit": str(exc.detail.split()[0]) if exc.detail else "Unknown",
+            "X-RateLimit-Limit": (
+                str(exc.detail.split()[0]) if exc.detail else "Unknown"
+            ),
             "X-RateLimit-Reset": "60",  # seconds
-            "Retry-After": "60"
-        }
+            "Retry-After": "60",
+        },
     )
 
-allow_origins = (settings.__dict__.get("CORS_ALLOW_ORIGINS") or "*").split(",") if hasattr(settings, "CORS_ALLOW_ORIGINS") else ["*"]
+
+allow_origins = (
+    (settings.__dict__.get("CORS_ALLOW_ORIGINS") or "*").split(",")
+    if hasattr(settings, "CORS_ALLOW_ORIGINS")
+    else ["*"]
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allow_origins,
@@ -83,7 +91,9 @@ async def logging_middleware(request: Request, call_next):
         except Exception:
             route_tmpl = request.url.path
         try:
-            observe_request(route_tmpl, request.method, response.status_code, duration_ms / 1000.0)
+            observe_request(
+                route_tmpl, request.method, response.status_code, duration_ms / 1000.0
+            )
         except Exception:
             pass
         print(
@@ -111,6 +121,7 @@ async def logging_middleware(request: Request, call_next):
         )
         raise
 
+
 # Initialize metrics once on startup
 init_metrics()
 
@@ -121,6 +132,7 @@ async def startup_event():
     """Start background tasks on application startup."""
     if settings.PROFILER_ENABLED:
         from app.core.profiler_tasks import get_background_tasks
+
         tasks = get_background_tasks()
         await tasks.start()
         print({"lvl": "info", "msg": "Profiler background tasks started"})
@@ -131,6 +143,7 @@ async def shutdown_event():
     """Stop background tasks on application shutdown."""
     if settings.PROFILER_ENABLED:
         from app.core.profiler_tasks import get_background_tasks
+
         tasks = get_background_tasks()
         await tasks.stop()
         print({"lvl": "info", "msg": "Profiler background tasks stopped"})
@@ -143,27 +156,61 @@ async def metrics():
     data, content_type = metrics_exposition()
     return Response(content=data, media_type=content_type)
 
+
 # Mount routers
 # Health endpoint is public (no auth required)
 app.include_router(health.router, tags=["health"])
 
 # Apply authentication to all API routes (verify_token checks AUTH_ENABLED dynamically)
-app.include_router(lint.router, prefix="/api/v1", tags=["lint"], dependencies=[Depends(verify_token)])
-app.include_router(correct.router, prefix="/api/v1", tags=["correct"], dependencies=[Depends(verify_token)])
-app.include_router(explain.router, prefix="/api/v1", tags=["explain"], dependencies=[Depends(verify_token)])
-app.include_router(optimize.router, prefix="/api/v1", tags=["optimize"], dependencies=[Depends(verify_token)])
-app.include_router(schema.router, prefix="/api/v1", tags=["schema"], dependencies=[Depends(verify_token)])
-app.include_router(workload.router, prefix="/api/v1", tags=["workload"], dependencies=[Depends(verify_token)])
+app.include_router(
+    lint.router, prefix="/api/v1", tags=["lint"], dependencies=[Depends(verify_token)]
+)
+app.include_router(
+    correct.router,
+    prefix="/api/v1",
+    tags=["correct"],
+    dependencies=[Depends(verify_token)],
+)
+app.include_router(
+    explain.router,
+    prefix="/api/v1",
+    tags=["explain"],
+    dependencies=[Depends(verify_token)],
+)
+app.include_router(
+    optimize.router,
+    prefix="/api/v1",
+    tags=["optimize"],
+    dependencies=[Depends(verify_token)],
+)
+app.include_router(
+    schema.router,
+    prefix="/api/v1",
+    tags=["schema"],
+    dependencies=[Depends(verify_token)],
+)
+app.include_router(
+    workload.router,
+    prefix="/api/v1",
+    tags=["workload"],
+    dependencies=[Depends(verify_token)],
+)
 
 # Profiler router (conditionally enabled)
 if settings.PROFILER_ENABLED:
-    app.include_router(profile.router, tags=["profiler"], dependencies=[Depends(verify_token)])
+    app.include_router(
+        profile.router, tags=["profiler"], dependencies=[Depends(verify_token)]
+    )
 
 # Catalog and query builder router
-app.include_router(catalog.router, tags=["catalog"], dependencies=[Depends(verify_token)])
+app.include_router(
+    catalog.router, tags=["catalog"], dependencies=[Depends(verify_token)]
+)
 
 # Index management and self-healing router
-app.include_router(index.router, tags=["index-management"], dependencies=[Depends(verify_token)])
+app.include_router(
+    index.router, tags=["index-management"], dependencies=[Depends(verify_token)]
+)
 
 # Cache management router
 app.include_router(cache.router, tags=["cache"], dependencies=[Depends(verify_token)])
@@ -184,7 +231,7 @@ async def root():
             "version": "0.7.0",
             "status": "running",
             "docs": "/docs",
-            "ui": "Web UI not found. Access API docs at /docs"
+            "ui": "Web UI not found. Access API docs at /docs",
         }
 
 
@@ -195,7 +242,7 @@ async def profiler_ui():
         return Response(
             content='{"detail": "Profiler is disabled"}',
             status_code=503,
-            media_type="application/json"
+            media_type="application/json",
         )
 
     static_dir = Path(__file__).parent / "static"
@@ -207,7 +254,7 @@ async def profiler_ui():
         return Response(
             content='{"detail": "Profiler UI not found"}',
             status_code=404,
-            media_type="application/json"
+            media_type="application/json",
         )
 
 
@@ -223,7 +270,7 @@ async def query_builder_ui():
         return Response(
             content='{"detail": "Query Builder UI not found"}',
             status_code=404,
-            media_type="application/json"
+            media_type="application/json",
         )
 
 
@@ -239,7 +286,7 @@ async def plan_visualizer_ui():
         return Response(
             content='{"detail": "Plan Visualizer UI not found"}',
             status_code=404,
-            media_type="application/json"
+            media_type="application/json",
         )
 
 
@@ -255,8 +302,8 @@ async def api_info():
             "main": "/",
             "query_builder": "/query-builder",
             "plan_visualizer": "/plan-visualizer",
-            "profiler": "/profiler" if settings.PROFILER_ENABLED else None
-        }
+            "profiler": "/profiler" if settings.PROFILER_ENABLED else None,
+        },
     }
 
 
@@ -264,4 +311,3 @@ async def api_info():
 static_dir = Path(__file__).parent / "static"
 if static_dir.exists():
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
-

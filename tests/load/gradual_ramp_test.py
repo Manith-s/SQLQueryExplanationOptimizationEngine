@@ -22,6 +22,7 @@ import aiohttp
 @dataclass
 class LoadTestResult:
     """Result of load test at specific RPS."""
+
     timestamp: str
     target_rps: int
     actual_rps: float
@@ -95,10 +96,14 @@ class GradualRampTest:
 
             # Check if system is degrading
             if result.error_rate_pct > 5.0:
-                print(f"⚠️  High error rate ({result.error_rate_pct:.2f}%). System under stress.")
+                print(
+                    f"⚠️  High error rate ({result.error_rate_pct:.2f}%). System under stress."
+                )
 
             if result.p99_latency_ms > 2000:
-                print(f"⚠️  High P99 latency ({result.p99_latency_ms:.0f}ms). Consider stopping test.")
+                print(
+                    f"⚠️  High P99 latency ({result.p99_latency_ms:.0f}ms). Consider stopping test."
+                )
 
         # Generate summary report
         self._generate_report()
@@ -109,13 +114,17 @@ class GradualRampTest:
         """Check if API is healthy before starting test."""
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(f"{self.target_url}/health", timeout=10) as response:
+                async with session.get(
+                    f"{self.target_url}/health", timeout=10
+                ) as response:
                     return response.status == 200
         except Exception as e:
             print(f"Health check error: {e}")
             return False
 
-    async def _run_stage(self, target_rps: int, duration_seconds: int) -> LoadTestResult:
+    async def _run_stage(
+        self, target_rps: int, duration_seconds: int
+    ) -> LoadTestResult:
         """Run a single load test stage."""
         start_time = time.time()
         end_time = start_time + duration_seconds
@@ -188,16 +197,14 @@ class GradualRampTest:
 
         query = random.choice(self.queries)
 
-        payload = {
-            "sql": query
-        }
+        payload = {"sql": query}
 
         start = time.time()
         try:
             async with session.post(
                 f"{self.target_url}/api/v1/lint",
                 json=payload,
-                timeout=aiohttp.ClientTimeout(total=10)
+                timeout=aiohttp.ClientTimeout(total=10),
             ) as response:
                 await response.text()  # Read response
                 latency_ms = (time.time() - start) * 1000
@@ -211,8 +218,12 @@ class GradualRampTest:
     def _print_stage_result(self, result: LoadTestResult):
         """Print results for a single stage."""
         print(f"  Actual RPS: {result.actual_rps:.1f}")
-        print(f"  Latency - P50: {result.p50_latency_ms:.0f}ms, P95: {result.p95_latency_ms:.0f}ms, P99: {result.p99_latency_ms:.0f}ms")
-        print(f"  Success: {result.successful_requests}/{result.total_requests} ({100 - result.error_rate_pct:.2f}%)")
+        print(
+            f"  Latency - P50: {result.p50_latency_ms:.0f}ms, P95: {result.p95_latency_ms:.0f}ms, P99: {result.p99_latency_ms:.0f}ms"
+        )
+        print(
+            f"  Success: {result.successful_requests}/{result.total_requests} ({100 - result.error_rate_pct:.2f}%)"
+        )
         print()
 
     def _generate_report(self):
@@ -227,7 +238,9 @@ class GradualRampTest:
         total_successful = sum(r.successful_requests for r in self.results)
         total_failed = sum(r.failed_requests for r in self.results)
 
-        overall_error_rate = (total_failed / total_requests * 100) if total_requests > 0 else 0
+        overall_error_rate = (
+            (total_failed / total_requests * 100) if total_requests > 0 else 0
+        )
 
         print(f"Total Requests: {total_requests:,}")
         print(f"Successful: {total_successful:,} ({100 - overall_error_rate:.2f}%)")
@@ -249,7 +262,9 @@ class GradualRampTest:
         print("RPS    | P50    | P95    | P99    | Error Rate")
         print("-" * 60)
         for result in self.results:
-            print(f"{result.target_rps:6d} | {result.p50_latency_ms:6.0f} | {result.p95_latency_ms:6.0f} | {result.p99_latency_ms:6.0f} | {result.error_rate_pct:6.2f}%")
+            print(
+                f"{result.target_rps:6d} | {result.p50_latency_ms:6.0f} | {result.p95_latency_ms:6.0f} | {result.p99_latency_ms:6.0f} | {result.error_rate_pct:6.2f}%"
+            )
 
         print()
 
@@ -258,22 +273,28 @@ class GradualRampTest:
 
         if passed:
             print("✅ TEST PASSED")
-            print(f"   - System sustained {max_sustainable_rps} RPS with <1% error rate")
+            print(
+                f"   - System sustained {max_sustainable_rps} RPS with <1% error rate"
+            )
             print(f"   - Overall error rate: {overall_error_rate:.2f}%")
         else:
             print("❌ TEST FAILED")
             if overall_error_rate >= 1.0:
                 print(f"   - Overall error rate too high: {overall_error_rate:.2f}%")
             if max_sustainable_rps < 5000:
-                print(f"   - Maximum sustainable RPS below target: {max_sustainable_rps} < 5000")
+                print(
+                    f"   - Maximum sustainable RPS below target: {max_sustainable_rps} < 5000"
+                )
 
         print()
         print("=" * 80)
 
         # Save results to file
-        report_file = f"gradual_ramp_test_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        report_file = (
+            f"gradual_ramp_test_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        )
 
-        with open(report_file, 'w') as f:
+        with open(report_file, "w") as f:
             json.dump(
                 {
                     "test_info": {
@@ -290,10 +311,10 @@ class GradualRampTest:
                         "max_sustainable_rps": max_sustainable_rps,
                         "test_passed": passed,
                     },
-                    "stages": [asdict(r) for r in self.results]
+                    "stages": [asdict(r) for r in self.results],
                 },
                 f,
-                indent=2
+                indent=2,
             )
 
         print(f"Report saved to: {report_file}")
@@ -303,23 +324,18 @@ async def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(description="QEO Gradual Ramp Load Test")
     parser.add_argument(
-        "--target-url",
-        default="http://localhost:8000",
-        help="Target API URL"
+        "--target-url", default="http://localhost:8000", help="Target API URL"
     )
     parser.add_argument(
         "--duration",
         type=int,
         default=30,
-        help="Test duration in minutes (default: 30)"
+        help="Test duration in minutes (default: 30)",
     )
 
     args = parser.parse_args()
 
-    test = GradualRampTest(
-        target_url=args.target_url,
-        duration_minutes=args.duration
-    )
+    test = GradualRampTest(target_url=args.target_url, duration_minutes=args.duration)
 
     success = await test.run()
 
@@ -328,4 +344,5 @@ async def main():
 
 if __name__ == "__main__":
     import sys
+
     sys.exit(asyncio.run(main()))

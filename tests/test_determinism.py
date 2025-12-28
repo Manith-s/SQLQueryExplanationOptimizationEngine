@@ -29,15 +29,3 @@ def test_optimizer_determinism_repeat_5x():
     outs = [analyze(sql, ast_info, None, _schema(), stats, options) for _ in range(5)]
     for o in outs[1:]:
         assert o == outs[0]
-
-
-
-
-
-
-
-
-
-
-
-

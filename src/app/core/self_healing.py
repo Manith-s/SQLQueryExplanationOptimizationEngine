@@ -20,6 +20,7 @@ from app.core.index_manager import IndexRecommendation, get_index_manager
 
 class ActionStatus(Enum):
     """Status of automated actions."""
+
     PENDING = "pending"
     APPROVED = "approved"
     EXECUTING = "executing"
@@ -30,15 +31,17 @@ class ActionStatus(Enum):
 
 class PerformanceThreshold(Enum):
     """Performance degradation severity levels."""
+
     CRITICAL = "critical"  # >50% degradation
-    WARNING = "warning"    # 25-50% degradation
-    INFO = "info"          # 10-25% degradation
-    OK = "ok"              # <10% degradation
+    WARNING = "warning"  # 25-50% degradation
+    INFO = "info"  # 10-25% degradation
+    OK = "ok"  # <10% degradation
 
 
 @dataclass
 class PerformanceMetric:
     """Performance metric snapshot."""
+
     timestamp: datetime
     metric_name: str
     value: float
@@ -49,6 +52,7 @@ class PerformanceMetric:
 @dataclass
 class HealingAction:
     """Represents a self-healing action."""
+
     action_id: str
     timestamp: datetime
     status: ActionStatus
@@ -75,7 +79,7 @@ class SelfHealingManager:
         self,
         schema: str = "public",
         auto_approve: bool = False,
-        dry_run_default: bool = True
+        dry_run_default: bool = True,
     ):
         self.schema = schema
         self.auto_approve = auto_approve
@@ -94,8 +98,7 @@ class SelfHealingManager:
         self._load_action_history()
 
     def monitor_query_performance(
-        self,
-        time_window_minutes: int = 60
+        self, time_window_minutes: int = 60
     ) -> Tuple[PerformanceThreshold, Dict[str, Any]]:
         """
         Monitor recent query performance and detect degradation.
@@ -162,7 +165,7 @@ class SelfHealingManager:
                 "slow_queries": len(slow_queries),
                 "avg_execution_time_ms": float(f"{avg_time:.2f}"),
                 "queries_analyzed": total_queries,
-                "recommendations": []
+                "recommendations": [],
             }
 
             # Add slow query details
@@ -170,9 +173,11 @@ class SelfHealingManager:
                 summary["slowest_queries"] = [
                     {
                         "query_id": str(r[0]),
-                        "query_preview": r[1][:100] + "..." if len(r[1]) > 100 else r[1],
+                        "query_preview": (
+                            r[1][:100] + "..." if len(r[1]) > 100 else r[1]
+                        ),
                         "calls": r[2],
-                        "mean_time_ms": float(f"{r[4]:.2f}")
+                        "mean_time_ms": float(f"{r[4]:.2f}"),
                     }
                     for r in slow_queries[:5]
                 ]
@@ -200,14 +205,16 @@ class SelfHealingManager:
         # Factor in variance (high stddev indicates inconsistent performance)
         high_variance = sum(1 for r in query_stats if r[5] and r[5] > r[4] * 0.5)
 
-        degradation = (slow_count / total_count) * 0.7 + (high_variance / total_count) * 0.3
+        degradation = (slow_count / total_count) * 0.7 + (
+            high_variance / total_count
+        ) * 0.3
         return float(f"{degradation:.3f}")
 
     def trigger_healing_action(
         self,
         reason: str,
         dry_run: Optional[bool] = None,
-        query_patterns: Optional[List[Dict[str, Any]]] = None
+        query_patterns: Optional[List[Dict[str, Any]]] = None,
     ) -> HealingAction:
         """
         Trigger a self-healing action based on detected issues.
@@ -235,7 +242,7 @@ class SelfHealingManager:
             trigger_reason=reason,
             recommendations=recommendations,
             dry_run=dry_run if dry_run is not None else self.dry_run_default,
-            approval_required=not self.auto_approve
+            approval_required=not self.auto_approve,
         )
 
         # Store in history
@@ -250,9 +257,7 @@ class SelfHealingManager:
         return action
 
     def execute_healing_action(
-        self,
-        action_id: str,
-        approved_by: Optional[str] = None
+        self, action_id: str, approved_by: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Execute a healing action.
@@ -265,7 +270,9 @@ class SelfHealingManager:
             Execution result summary
         """
         # Find action
-        action = next((a for a in self.action_history if a.action_id == action_id), None)
+        action = next(
+            (a for a in self.action_history if a.action_id == action_id), None
+        )
         if not action:
             return {"success": False, "error": "Action not found"}
 
@@ -295,7 +302,7 @@ class SelfHealingManager:
             "action_id": action.action_id,
             "recommendations_count": len(action.recommendations),
             "estimated_impact": {},
-            "ddl_statements": []
+            "ddl_statements": [],
         }
 
         total_benefit = 0.0
@@ -303,13 +310,15 @@ class SelfHealingManager:
 
         for rec in action.recommendations:
             ddl = rec.to_ddl(self.schema)
-            results["ddl_statements"].append({
-                "action": rec.action,
-                "table": rec.table_name,
-                "priority": rec.priority,
-                "sql": ddl,
-                "rationale": rec.rationale
-            })
+            results["ddl_statements"].append(
+                {
+                    "action": rec.action,
+                    "table": rec.table_name,
+                    "priority": rec.priority,
+                    "sql": ddl,
+                    "rationale": rec.rationale,
+                }
+            )
 
             total_benefit += rec.estimated_benefit
             total_cost += rec.estimated_cost_bytes
@@ -317,7 +326,7 @@ class SelfHealingManager:
         results["estimated_impact"] = {
             "total_benefit_score": float(f"{total_benefit:.2f}"),
             "total_cost_bytes": total_cost,
-            "total_cost_mb": float(f"{total_cost / (1024 * 1024):.2f}")
+            "total_cost_mb": float(f"{total_cost / (1024 * 1024):.2f}"),
         }
 
         action.status = ActionStatus.COMPLETED
@@ -340,7 +349,7 @@ class SelfHealingManager:
             "action_id": action.action_id,
             "executed_recommendations": [],
             "failed_recommendations": [],
-            "rollback_sql": []
+            "rollback_sql": [],
         }
 
         rollback_statements = []
@@ -354,31 +363,39 @@ class SelfHealingManager:
 
                             # Generate rollback SQL
                             if rec.action == "create":
-                                idx_name = ddl.split("IF NOT EXISTS")[1].split("ON")[0].strip()
+                                idx_name = (
+                                    ddl.split("IF NOT EXISTS")[1].split("ON")[0].strip()
+                                )
                                 rollback = f"DROP INDEX CONCURRENTLY IF EXISTS {self.schema}.{idx_name}"
                                 rollback_statements.append(rollback)
                             elif rec.action == "drop":
                                 # For drops, would need to store the original definition
-                                rollback_statements.append(f"-- Cannot rollback DROP: {rec.columns[0]}")
+                                rollback_statements.append(
+                                    f"-- Cannot rollback DROP: {rec.columns[0]}"
+                                )
 
                             # Execute DDL
                             cur.execute(ddl)
                             conn.commit()
 
-                            results["executed_recommendations"].append({
-                                "action": rec.action,
-                                "table": rec.table_name,
-                                "sql": ddl,
-                                "status": "success"
-                            })
+                            results["executed_recommendations"].append(
+                                {
+                                    "action": rec.action,
+                                    "table": rec.table_name,
+                                    "sql": ddl,
+                                    "status": "success",
+                                }
+                            )
 
                         except Exception as e:
                             conn.rollback()
-                            results["failed_recommendations"].append({
-                                "action": rec.action,
-                                "table": rec.table_name,
-                                "error": str(e)
-                            })
+                            results["failed_recommendations"].append(
+                                {
+                                    "action": rec.action,
+                                    "table": rec.table_name,
+                                    "error": str(e),
+                                }
+                            )
 
             action.status = ActionStatus.COMPLETED
             action.rollback_sql = rollback_statements
@@ -405,12 +422,17 @@ class SelfHealingManager:
         Returns:
             Rollback result summary
         """
-        action = next((a for a in self.action_history if a.action_id == action_id), None)
+        action = next(
+            (a for a in self.action_history if a.action_id == action_id), None
+        )
         if not action:
             return {"success": False, "error": "Action not found"}
 
         if action.status != ActionStatus.COMPLETED:
-            return {"success": False, "error": "Only completed actions can be rolled back"}
+            return {
+                "success": False,
+                "error": "Only completed actions can be rolled back",
+            }
 
         if not action.rollback_sql:
             return {"success": False, "error": "No rollback SQL available"}
@@ -419,7 +441,7 @@ class SelfHealingManager:
             "success": True,
             "action_id": action_id,
             "rollback_statements_executed": [],
-            "errors": []
+            "errors": [],
         }
 
         try:
@@ -432,10 +454,7 @@ class SelfHealingManager:
                             results["rollback_statements_executed"].append(sql)
                         except Exception as e:
                             conn.rollback()
-                            results["errors"].append({
-                                "sql": sql,
-                                "error": str(e)
-                            })
+                            results["errors"].append({"sql": sql, "error": str(e)})
 
             if not results["errors"]:
                 action.status = ActionStatus.ROLLED_BACK
@@ -450,9 +469,7 @@ class SelfHealingManager:
         return results
 
     def get_action_history(
-        self,
-        limit: int = 50,
-        status_filter: Optional[ActionStatus] = None
+        self, limit: int = 50, status_filter: Optional[ActionStatus] = None
     ) -> List[Dict[str, Any]]:
         """Get history of healing actions."""
         filtered = self.action_history
@@ -460,7 +477,9 @@ class SelfHealingManager:
             filtered = [a for a in filtered if a.status == status_filter]
 
         # Sort by timestamp (most recent first)
-        sorted_actions = sorted(filtered, key=lambda x: x.timestamp, reverse=True)[:limit]
+        sorted_actions = sorted(filtered, key=lambda x: x.timestamp, reverse=True)[
+            :limit
+        ]
 
         return [
             {
@@ -472,7 +491,7 @@ class SelfHealingManager:
                 "dry_run": a.dry_run,
                 "approved_by": a.approved_by,
                 "executed_at": a.executed_at.isoformat() if a.executed_at else None,
-                "result_summary": a.result_summary
+                "result_summary": a.result_summary,
             }
             for a in sorted_actions
         ]
@@ -495,9 +514,11 @@ class SelfHealingManager:
             "dry_run": action.dry_run,
             "approval_required": action.approval_required,
             "approved_by": action.approved_by,
-            "executed_at": action.executed_at.isoformat() if action.executed_at else None,
+            "executed_at": (
+                action.executed_at.isoformat() if action.executed_at else None
+            ),
             "result_summary": action.result_summary,
-            "error_message": action.error_message
+            "error_message": action.error_message,
         }
 
         # Could write to file or database here
@@ -528,14 +549,12 @@ class SelfHealingManager:
             "recent_actions": len(recent_actions),
             "failed_actions": len(failed_actions),
             "auto_healing_enabled": not self.dry_run_default,
-            "last_check": datetime.utcnow().isoformat()
+            "last_check": datetime.utcnow().isoformat(),
         }
 
 
 def get_self_healing_manager(
-    schema: str = "public",
-    auto_approve: bool = False,
-    dry_run: bool = True
+    schema: str = "public", auto_approve: bool = False, dry_run: bool = True
 ) -> SelfHealingManager:
     """Factory function to get self-healing manager instance."""
     return SelfHealingManager(schema, auto_approve, dry_run)

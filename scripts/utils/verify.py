@@ -24,13 +24,7 @@ else:
 
 # Check 2: Required directories
 print("\n✓ Checking directories...")
-dirs_to_check = [
-    "src",
-    "src/app",
-    "src/app/static",
-    "src/app/routers",
-    "src/app/core"
-]
+dirs_to_check = ["src", "src/app", "src/app/static", "src/app/routers", "src/app/core"]
 for d in dirs_to_check:
     if not Path(d).exists():
         errors.append(f"Missing directory: {d}")
@@ -44,7 +38,7 @@ files_to_check = [
     "src/app/main.py",
     "simple_server.py",
     "docker-compose.yml",
-    ".env"
+    ".env",
 ]
 for f in files_to_check:
     path = Path(f)
@@ -58,7 +52,7 @@ for f in files_to_check:
 print("\n✓ Checking web UI...")
 index_path = Path("src/app/static/index.html")
 if index_path.exists():
-    content = index_path.read_text(encoding='utf-8')
+    content = index_path.read_text(encoding="utf-8")
     if "SQL Query Optimizer" in content:
         print("  Web UI HTML looks good")
     else:
@@ -68,12 +62,7 @@ if index_path.exists():
 
 # Check 5: Required Python packages
 print("\n✓ Checking Python packages...")
-required_packages = [
-    "fastapi",
-    "uvicorn",
-    "sqlglot",
-    "psycopg2"
-]
+required_packages = ["fastapi", "uvicorn", "sqlglot", "psycopg2"]
 for pkg in required_packages:
     try:
         __import__(pkg)

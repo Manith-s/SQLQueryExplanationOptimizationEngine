@@ -46,7 +46,9 @@ class PostMortem:
     impact_metrics: Dict[str, any]
     similar_incidents: List[str]  # Similar incident IDs
     prevention_recommendations: List[str]
-    action_items: List[Dict[str, str]]  # [{"owner": "...", "task": "...", "deadline": "..."}]
+    action_items: List[
+        Dict[str, str]
+    ]  # [{"owner": "...", "task": "...", "deadline": "..."}]
     generated_at: datetime
 
 
@@ -129,10 +131,12 @@ class PostMortemGenerator:
         # Add metric anomalies
         if incident.metrics_snapshot:
             for metric, value in incident.metrics_snapshot.items():
-                timeline.append((
-                    incident.started_at + timedelta(minutes=5),
-                    f"📊 {metric} spike detected: {value:.2f}",
-                ))
+                timeline.append(
+                    (
+                        incident.started_at + timedelta(minutes=5),
+                        f"📊 {metric} spike detected: {value:.2f}",
+                    )
+                )
 
         # Add resolution steps
         step_time = incident.started_at + timedelta(minutes=10)
@@ -163,9 +167,9 @@ class PostMortemGenerator:
         # In production, use proper embedding models (sentence-transformers)
 
         incident_keywords = set(
-            incident.title.lower().split() +
-            incident.affected_services +
-            (incident.root_cause or "").lower().split()
+            incident.title.lower().split()
+            + incident.affected_services
+            + (incident.root_cause or "").lower().split()
         )
 
         similarities = []
@@ -174,9 +178,9 @@ class PostMortemGenerator:
                 continue
 
             past_keywords = set(
-                past_incident.title.lower().split() +
-                past_incident.affected_services +
-                (past_incident.root_cause or "").lower().split()
+                past_incident.title.lower().split()
+                + past_incident.affected_services
+                + (past_incident.root_cause or "").lower().split()
             )
 
             # Jaccard similarity
@@ -207,7 +211,9 @@ class PostMortemGenerator:
         """
         duration_minutes = 0
         if incident.resolved_at:
-            duration_minutes = (incident.resolved_at - incident.started_at).total_seconds() / 60
+            duration_minutes = (
+                incident.resolved_at - incident.started_at
+            ).total_seconds() / 60
 
         # Estimate users affected (simplified)
         # In production, integrate with analytics
@@ -215,12 +221,16 @@ class PostMortemGenerator:
         users_affected = int(traffic_drop_pct * 10000)  # Assume 10k users normally
 
         # SLO impact
-        availability_impact_pct = (duration_minutes / (28 * 24 * 60)) * 100  # % of 28-day window
+        availability_impact_pct = (
+            duration_minutes / (28 * 24 * 60)
+        ) * 100  # % of 28-day window
 
         return {
             "duration_minutes": float(f"{duration_minutes:.1f}"),
             "users_affected_estimate": users_affected,
-            "revenue_impact_usd": float(f"{users_affected * 0.50:.2f}"),  # $0.50 per user
+            "revenue_impact_usd": float(
+                f"{users_affected * 0.50:.2f}"
+            ),  # $0.50 per user
             "slo_budget_consumed_pct": float(f"{availability_impact_pct:.3f}"),
             "mttr_minutes": float(f"{duration_minutes:.1f}"),
         }
@@ -266,11 +276,13 @@ class PostMortemGenerator:
             )
 
         # General best practices
-        recommendations.extend([
-            "Add synthetic monitoring for early detection",
-            "Create runbook for this incident pattern",
-            "Schedule blameless post-mortem review meeting",
-        ])
+        recommendations.extend(
+            [
+                "Add synthetic monitoring for early detection",
+                "Create runbook for this incident pattern",
+                "Schedule blameless post-mortem review meeting",
+            ]
+        )
 
         return recommendations
 
@@ -283,28 +295,40 @@ class PostMortemGenerator:
         action_items = []
 
         # Critical items (1 week deadline)
-        action_items.append({
-            "owner": "SRE Team",
-            "task": "Implement monitoring for this failure mode",
-            "deadline": (datetime.utcnow() + timedelta(days=7)).strftime("%Y-%m-%d"),
-            "priority": "high",
-        })
+        action_items.append(
+            {
+                "owner": "SRE Team",
+                "task": "Implement monitoring for this failure mode",
+                "deadline": (datetime.utcnow() + timedelta(days=7)).strftime(
+                    "%Y-%m-%d"
+                ),
+                "priority": "high",
+            }
+        )
 
         # Medium priority (2 weeks)
-        action_items.append({
-            "owner": "Engineering",
-            "task": "Implement automated remediation for this incident type",
-            "deadline": (datetime.utcnow() + timedelta(days=14)).strftime("%Y-%m-%d"),
-            "priority": "medium",
-        })
+        action_items.append(
+            {
+                "owner": "Engineering",
+                "task": "Implement automated remediation for this incident type",
+                "deadline": (datetime.utcnow() + timedelta(days=14)).strftime(
+                    "%Y-%m-%d"
+                ),
+                "priority": "medium",
+            }
+        )
 
         # Documentation (1 week)
-        action_items.append({
-            "owner": "On-Call Rotation",
-            "task": "Create/update runbook with lessons learned",
-            "deadline": (datetime.utcnow() + timedelta(days=7)).strftime("%Y-%m-%d"),
-            "priority": "high",
-        })
+        action_items.append(
+            {
+                "owner": "On-Call Rotation",
+                "task": "Create/update runbook with lessons learned",
+                "deadline": (datetime.utcnow() + timedelta(days=7)).strftime(
+                    "%Y-%m-%d"
+                ),
+                "priority": "high",
+            }
+        )
 
         return action_items
 
@@ -324,7 +348,9 @@ class PostMortemGenerator:
         # Add context from similar incidents
         if similar_incidents:
             analysis += "## Historical Context\n\n"
-            analysis += f"Found {len(similar_incidents)} similar incidents in the past:\n\n"
+            analysis += (
+                f"Found {len(similar_incidents)} similar incidents in the past:\n\n"
+            )
 
             for sim_inc in similar_incidents[:3]:
                 analysis += f"- **{sim_inc.started_at.strftime('%Y-%m-%d')}**: {sim_inc.title}\n"
@@ -332,7 +358,9 @@ class PostMortemGenerator:
                     analysis += f"  - Root cause: {sim_inc.root_cause}\n"
 
             analysis += "\n**Pattern Analysis:** This appears to be a recurring issue. "
-            analysis += "Consider implementing systemic fixes rather than one-off solutions.\n"
+            analysis += (
+                "Consider implementing systemic fixes rather than one-off solutions.\n"
+            )
 
         return analysis
 

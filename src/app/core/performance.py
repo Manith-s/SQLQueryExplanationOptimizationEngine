@@ -77,7 +77,7 @@ class PerformanceMetrics:
                     "max_ms": 0.0,
                     "p50_ms": 0.0,
                     "p95_ms": 0.0,
-                    "p99_ms": 0.0
+                    "p99_ms": 0.0,
                 }
 
             sorted_times = sorted(times)
@@ -90,7 +90,7 @@ class PerformanceMetrics:
                 "max_ms": round(sorted_times[-1], 2),
                 "p50_ms": round(sorted_times[int(count * 0.50)], 2),
                 "p95_ms": round(sorted_times[int(count * 0.95)], 2),
-                "p99_ms": round(sorted_times[int(count * 0.99)], 2)
+                "p99_ms": round(sorted_times[int(count * 0.99)], 2),
             }
 
     def get_endpoint_stats(self, endpoint: str) -> Dict[str, Any]:
@@ -103,7 +103,7 @@ class PerformanceMetrics:
                     "avg_ms": 0.0,
                     "min_ms": 0.0,
                     "max_ms": 0.0,
-                    "p95_ms": 0.0
+                    "p95_ms": 0.0,
                 }
 
             sorted_times = sorted(times)
@@ -114,20 +114,18 @@ class PerformanceMetrics:
                 "avg_ms": round(sum(sorted_times) / count, 2),
                 "min_ms": round(sorted_times[0], 2),
                 "max_ms": round(sorted_times[-1], 2),
-                "p95_ms": round(sorted_times[int(count * 0.95)], 2)
+                "p95_ms": round(sorted_times[int(count * 0.95)], 2),
             }
 
     def get_all_stats(self) -> Dict[str, Any]:
         """Get all performance statistics."""
         with self._lock:
             query_stats = {
-                qt: self.get_query_stats(qt)
-                for qt in self._query_times.keys()
+                qt: self.get_query_stats(qt) for qt in self._query_times.keys()
             }
 
             endpoint_stats = {
-                ep: self.get_endpoint_stats(ep)
-                for ep in self._endpoint_times.keys()
+                ep: self.get_endpoint_stats(ep) for ep in self._endpoint_times.keys()
             }
 
             return {
@@ -135,7 +133,7 @@ class PerformanceMetrics:
                 "endpoints": endpoint_stats,
                 "errors": dict(self._error_counts),
                 "total_queries": sum(self._query_counts.values()),
-                "total_errors": sum(self._error_counts.values())
+                "total_errors": sum(self._error_counts.values()),
             }
 
     def reset(self) -> None:
@@ -207,11 +205,14 @@ def time_query(query_type: str):
     Args:
         query_type: Type of query (explain, optimize, etc.)
     """
+
     def decorator(func):
         def wrapper(*args, **kwargs):
             with Timer("query", query_type):
                 return func(*args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
@@ -222,9 +223,12 @@ def time_endpoint(endpoint_path: str):
     Args:
         endpoint_path: Endpoint path
     """
+
     def decorator(func):
         def wrapper(*args, **kwargs):
             with Timer("endpoint", endpoint_path):
                 return func(*args, **kwargs)
+
         return wrapper
+
     return decorator

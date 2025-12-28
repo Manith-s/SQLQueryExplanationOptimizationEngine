@@ -49,6 +49,7 @@ CACHE_HIT_RATE_TARGET = 0.85  # 85%
 @dataclass
 class ValidationResult:
     """Result of a validation test."""
+
     test_name: str
     passed: bool
     message: str
@@ -112,31 +113,42 @@ class EdgeWorkersValidator:
                 duration_ms = (time.time() - start) * 1000
 
                 if response.status_code == 200:
-                    self.results.append(ValidationResult(
-                        test_name=f"Edge Connectivity - {location['city']}",
-                        passed=True,
-                        message=f"Connected to {location['city']}",
-                        duration_ms=duration_ms,
-                        details={"code": location["code"], "region": location["region"]}
-                    ))
-                    print(f"  ✓ {location['city']} ({location['code']}): {duration_ms:.0f}ms")
+                    self.results.append(
+                        ValidationResult(
+                            test_name=f"Edge Connectivity - {location['city']}",
+                            passed=True,
+                            message=f"Connected to {location['city']}",
+                            duration_ms=duration_ms,
+                            details={
+                                "code": location["code"],
+                                "region": location["region"],
+                            },
+                        )
+                    )
+                    print(
+                        f"  ✓ {location['city']} ({location['code']}): {duration_ms:.0f}ms"
+                    )
                 else:
-                    self.results.append(ValidationResult(
-                        test_name=f"Edge Connectivity - {location['city']}",
-                        passed=False,
-                        message=f"HTTP {response.status_code}",
-                        duration_ms=duration_ms,
-                    ))
+                    self.results.append(
+                        ValidationResult(
+                            test_name=f"Edge Connectivity - {location['city']}",
+                            passed=False,
+                            message=f"HTTP {response.status_code}",
+                            duration_ms=duration_ms,
+                        )
+                    )
                     print(f"  ✗ {location['city']}: HTTP {response.status_code}")
 
             except Exception as e:
                 duration_ms = (time.time() - start) * 1000
-                self.results.append(ValidationResult(
-                    test_name=f"Edge Connectivity - {location['city']}",
-                    passed=False,
-                    message=str(e),
-                    duration_ms=duration_ms,
-                ))
+                self.results.append(
+                    ValidationResult(
+                        test_name=f"Edge Connectivity - {location['city']}",
+                        passed=False,
+                        message=str(e),
+                        duration_ms=duration_ms,
+                    )
+                )
                 print(f"  ✗ {location['city']}: {e}")
 
     async def test_edge_latency(self):
@@ -175,23 +187,27 @@ class EdgeWorkersValidator:
 
                 passed = p99 < P99_TARGET_MS
 
-                self.results.append(ValidationResult(
-                    test_name=f"Edge Latency - {location['city']}",
-                    passed=passed,
-                    message=f"P50: {p50:.0f}ms, P95: {p95:.0f}ms, P99: {p99:.0f}ms (target: <{P99_TARGET_MS}ms)",
-                    duration_ms=p99,
-                    details={
-                        "p50": p50,
-                        "p95": p95,
-                        "p99": p99,
-                        "samples": len(latencies),
-                    }
-                ))
+                self.results.append(
+                    ValidationResult(
+                        test_name=f"Edge Latency - {location['city']}",
+                        passed=passed,
+                        message=f"P50: {p50:.0f}ms, P95: {p95:.0f}ms, P99: {p99:.0f}ms (target: <{P99_TARGET_MS}ms)",
+                        duration_ms=p99,
+                        details={
+                            "p50": p50,
+                            "p95": p95,
+                            "p99": p99,
+                            "samples": len(latencies),
+                        },
+                    )
+                )
 
                 if passed:
                     print(f"  ✓ {location['city']}: P99 {p99:.0f}ms")
                 else:
-                    print(f"  ✗ {location['city']}: P99 {p99:.0f}ms (exceeded {P99_TARGET_MS}ms)")
+                    print(
+                        f"  ✗ {location['city']}: P99 {p99:.0f}ms (exceeded {P99_TARGET_MS}ms)"
+                    )
 
         # Global latency percentiles
         if all_latencies:
@@ -201,26 +217,30 @@ class EdgeWorkersValidator:
             global_p99 = all_latencies[int(len(all_latencies) * 0.99)]
 
             global_passed = (
-                global_p50 < P50_TARGET_MS and
-                global_p95 < P95_TARGET_MS and
-                global_p99 < P99_TARGET_MS
+                global_p50 < P50_TARGET_MS
+                and global_p95 < P95_TARGET_MS
+                and global_p99 < P99_TARGET_MS
             )
 
-            self.results.append(ValidationResult(
-                test_name="Global Edge Latency",
-                passed=global_passed,
-                message=f"P50: {global_p50:.0f}ms, P95: {global_p95:.0f}ms, P99: {global_p99:.0f}ms",
-                duration_ms=global_p99,
-                details={
-                    "p50": global_p50,
-                    "p95": global_p95,
-                    "p99": global_p99,
-                    "samples": len(all_latencies),
-                }
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name="Global Edge Latency",
+                    passed=global_passed,
+                    message=f"P50: {global_p50:.0f}ms, P95: {global_p95:.0f}ms, P99: {global_p99:.0f}ms",
+                    duration_ms=global_p99,
+                    details={
+                        "p50": global_p50,
+                        "p95": global_p95,
+                        "p99": global_p99,
+                        "samples": len(all_latencies),
+                    },
+                )
+            )
 
             if global_passed:
-                print(f"  ✓ Global: P50 {global_p50:.0f}ms, P95 {global_p95:.0f}ms, P99 {global_p99:.0f}ms")
+                print(
+                    f"  ✓ Global: P50 {global_p50:.0f}ms, P95 {global_p95:.0f}ms, P99 {global_p99:.0f}ms"
+                )
             else:
                 print("  ✗ Global latency exceeded targets")
 
@@ -256,16 +276,18 @@ class EdgeWorkersValidator:
 
             cache_hit = cache_status2 in ["HIT", "REVALIDATED"]
 
-            self.results.append(ValidationResult(
-                test_name="Edge Cache Functionality",
-                passed=cache_hit,
-                message=f"Request 1: {cache_status1}, Request 2: {cache_status2}",
-                duration_ms=duration_ms,
-                details={
-                    "cache_status_1": cache_status1,
-                    "cache_status_2": cache_status2,
-                }
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name="Edge Cache Functionality",
+                    passed=cache_hit,
+                    message=f"Request 1: {cache_status1}, Request 2: {cache_status2}",
+                    duration_ms=duration_ms,
+                    details={
+                        "cache_status_1": cache_status1,
+                        "cache_status_2": cache_status2,
+                    },
+                )
+            )
 
             if cache_hit:
                 print(f"  ✓ Cache working: {cache_status1} → {cache_status2}")
@@ -274,12 +296,14 @@ class EdgeWorkersValidator:
 
         except Exception as e:
             duration_ms = (time.time() - start) * 1000
-            self.results.append(ValidationResult(
-                test_name="Edge Cache Functionality",
-                passed=False,
-                message=str(e),
-                duration_ms=duration_ms,
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name="Edge Cache Functionality",
+                    passed=False,
+                    message=str(e),
+                    duration_ms=duration_ms,
+                )
+            )
             print(f"  ✗ Cache test failed: {e}")
 
     async def test_geographic_routing(self):
@@ -310,13 +334,15 @@ class EdgeWorkersValidator:
                 # Verify routing (simplified - actual implementation would check colo mapping)
                 passed = response.status_code == 200
 
-                self.results.append(ValidationResult(
-                    test_name=f"Geographic Routing - {test['from']}",
-                    passed=passed,
-                    message=f"Routed to colo: {colo}",
-                    duration_ms=duration_ms,
-                    details={"colo": colo}
-                ))
+                self.results.append(
+                    ValidationResult(
+                        test_name=f"Geographic Routing - {test['from']}",
+                        passed=passed,
+                        message=f"Routed to colo: {colo}",
+                        duration_ms=duration_ms,
+                        details={"colo": colo},
+                    )
+                )
 
                 if passed:
                     print(f"  ✓ {test['from']}: Routed to {colo}")
@@ -325,12 +351,14 @@ class EdgeWorkersValidator:
 
             except Exception as e:
                 duration_ms = (time.time() - start) * 1000
-                self.results.append(ValidationResult(
-                    test_name=f"Geographic Routing - {test['from']}",
-                    passed=False,
-                    message=str(e),
-                    duration_ms=duration_ms,
-                ))
+                self.results.append(
+                    ValidationResult(
+                        test_name=f"Geographic Routing - {test['from']}",
+                        passed=False,
+                        message=str(e),
+                        duration_ms=duration_ms,
+                    )
+                )
                 print(f"  ✗ {test['from']}: {e}")
 
     async def test_rate_limiting(self):
@@ -359,30 +387,36 @@ class EdgeWorkersValidator:
             # Should have ~100 successes and ~10 rate limited
             passed = rate_limited_count > 0 and success_count <= 105
 
-            self.results.append(ValidationResult(
-                test_name="Edge Rate Limiting",
-                passed=passed,
-                message=f"Success: {success_count}, Rate limited: {rate_limited_count}",
-                duration_ms=duration_ms,
-                details={
-                    "success": success_count,
-                    "rate_limited": rate_limited_count,
-                }
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name="Edge Rate Limiting",
+                    passed=passed,
+                    message=f"Success: {success_count}, Rate limited: {rate_limited_count}",
+                    duration_ms=duration_ms,
+                    details={
+                        "success": success_count,
+                        "rate_limited": rate_limited_count,
+                    },
+                )
+            )
 
             if passed:
-                print(f"  ✓ Rate limiting working: {rate_limited_count} requests blocked")
+                print(
+                    f"  ✓ Rate limiting working: {rate_limited_count} requests blocked"
+                )
             else:
                 print("  ✗ Rate limiting not working properly")
 
         except Exception as e:
             duration_ms = (time.time() - start) * 1000
-            self.results.append(ValidationResult(
-                test_name="Edge Rate Limiting",
-                passed=False,
-                message=str(e),
-                duration_ms=duration_ms,
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name="Edge Rate Limiting",
+                    passed=False,
+                    message=str(e),
+                    duration_ms=duration_ms,
+                )
+            )
             print(f"  ✗ Rate limit test failed: {e}")
 
     async def test_ddos_protection(self):
@@ -424,31 +458,37 @@ class EdgeWorkersValidator:
             # DDoS protection should block some suspicious patterns
             passed = blocked_requests > 0 or malformed_handled
 
-            self.results.append(ValidationResult(
-                test_name="DDoS Protection",
-                passed=passed,
-                message=f"Suspicious: {suspicious_requests}, Blocked: {blocked_requests}",
-                duration_ms=duration_ms,
-                details={
-                    "suspicious": suspicious_requests,
-                    "blocked": blocked_requests,
-                    "malformed_handled": malformed_handled,
-                }
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name="DDoS Protection",
+                    passed=passed,
+                    message=f"Suspicious: {suspicious_requests}, Blocked: {blocked_requests}",
+                    duration_ms=duration_ms,
+                    details={
+                        "suspicious": suspicious_requests,
+                        "blocked": blocked_requests,
+                        "malformed_handled": malformed_handled,
+                    },
+                )
+            )
 
             if passed:
-                print(f"  ✓ DDoS protection active: {blocked_requests} suspicious requests blocked")
+                print(
+                    f"  ✓ DDoS protection active: {blocked_requests} suspicious requests blocked"
+                )
             else:
                 print("  ✗ DDoS protection may not be working")
 
         except Exception as e:
             duration_ms = (time.time() - start) * 1000
-            self.results.append(ValidationResult(
-                test_name="DDoS Protection",
-                passed=False,
-                message=str(e),
-                duration_ms=duration_ms,
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name="DDoS Protection",
+                    passed=False,
+                    message=str(e),
+                    duration_ms=duration_ms,
+                )
+            )
             print(f"  ✗ DDoS test failed: {e}")
 
 
@@ -459,6 +499,7 @@ async def main():
 
     # Save results
     import json
+
     with open("validation_results_edge.json", "w") as f:
         json.dump(
             {
@@ -473,7 +514,7 @@ async def main():
                         "details": r.details,
                     }
                     for r in results
-                ]
+                ],
             },
             f,
             indent=2,
@@ -486,4 +527,5 @@ async def main():
 
 if __name__ == "__main__":
     import sys
+
     sys.exit(asyncio.run(main()))

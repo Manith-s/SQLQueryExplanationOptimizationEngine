@@ -24,6 +24,7 @@ from app.core.observability import get_observability
 
 class CircuitState(Enum):
     """Circuit breaker states."""
+
     CLOSED = "closed"  # Normal operation
     OPEN = "open"  # Failing, rejecting requests
     HALF_OPEN = "half_open"  # Testing if service recovered
@@ -32,6 +33,7 @@ class CircuitState(Enum):
 @dataclass
 class CircuitBreakerConfig:
     """Configuration for circuit breaker."""
+
     failure_threshold: int = 5  # Failures before opening
     success_threshold: int = 2  # Successes before closing from half-open
     timeout_seconds: float = 60.0  # Time to wait before trying again
@@ -42,6 +44,7 @@ class CircuitBreakerConfig:
 @dataclass
 class RetryConfig:
     """Configuration for retry logic."""
+
     max_attempts: int = 3
     base_delay_seconds: float = 1.0
     max_delay_seconds: float = 60.0
@@ -53,6 +56,7 @@ class RetryConfig:
 @dataclass
 class BulkheadConfig:
     """Configuration for bulkhead pattern."""
+
     max_concurrent: int = 10
     max_waiting: int = 20
     timeout_seconds: float = 30.0
@@ -116,20 +120,22 @@ class CircuitBreaker:
                     self.half_open_calls = 0
                     self.obs.logger.info(
                         f"Circuit breaker {self.name} transitioning to HALF_OPEN",
-                        circuit=self.name
+                        circuit=self.name,
                     )
                     self._update_state_metric()
                 else:
                     self.obs.logger.warning(
                         f"Circuit breaker {self.name} is OPEN, rejecting call",
-                        circuit=self.name
+                        circuit=self.name,
                     )
                     raise CircuitBreakerOpenError(f"Circuit {self.name} is open")
 
             # Check half-open call limit
             if self.state == CircuitState.HALF_OPEN:
                 if self.half_open_calls >= self.config.half_open_max_calls:
-                    raise CircuitBreakerOpenError(f"Circuit {self.name} half-open call limit reached")
+                    raise CircuitBreakerOpenError(
+                        f"Circuit {self.name} half-open call limit reached"
+                    )
                 self.half_open_calls += 1
 
         # Execute function
@@ -145,7 +151,7 @@ class CircuitBreaker:
     def _record_success(self, duration: float):
         """Record successful call."""
         with self.lock:
-            self.call_history.append(('success', duration, datetime.utcnow()))
+            self.call_history.append(("success", duration, datetime.utcnow()))
 
             if self.state == CircuitState.HALF_OPEN:
                 self.success_count += 1
@@ -156,7 +162,7 @@ class CircuitBreaker:
                     self.success_count = 0
                     self.obs.logger.info(
                         f"Circuit breaker {self.name} CLOSED after recovery",
-                        circuit=self.name
+                        circuit=self.name,
                     )
                     self._update_state_metric()
 
@@ -167,7 +173,7 @@ class CircuitBreaker:
     def _record_failure(self, duration: float):
         """Record failed call."""
         with self.lock:
-            self.call_history.append(('failure', duration, datetime.utcnow()))
+            self.call_history.append(("failure", duration, datetime.utcnow()))
             self.failure_count += 1
             self.last_failure_time = datetime.utcnow()
 
@@ -180,7 +186,7 @@ class CircuitBreaker:
                     self.obs.logger.error(
                         f"Circuit breaker {self.name} OPENED after {self.failure_count} failures",
                         circuit=self.name,
-                        failure_count=self.failure_count
+                        failure_count=self.failure_count,
                     )
                     self._update_state_metric()
 
@@ -189,7 +195,7 @@ class CircuitBreaker:
                 self.success_count = 0
                 self.obs.logger.error(
                     f"Circuit breaker {self.name} reopened after failure in HALF_OPEN",
-                    circuit=self.name
+                    circuit=self.name,
                 )
                 self._update_state_metric()
 
@@ -206,10 +212,12 @@ class CircuitBreaker:
         state_value = {
             CircuitState.CLOSED: 0,
             CircuitState.HALF_OPEN: 1,
-            CircuitState.OPEN: 2
+            CircuitState.OPEN: 2,
         }[self.state]
 
-        self.obs.metrics.circuit_breaker_state.labels(circuit=self.name).set(state_value)
+        self.obs.metrics.circuit_breaker_state.labels(circuit=self.name).set(
+            state_value
+        )
 
     def get_state(self) -> CircuitState:
         """Get current circuit state."""
@@ -221,8 +229,8 @@ class CircuitBreaker:
         with self.lock:
             recent_calls = list(self.call_history)
 
-            successes = sum(1 for call in recent_calls if call[0] == 'success')
-            failures = sum(1 for call in recent_calls if call[0] == 'failure')
+            successes = sum(1 for call in recent_calls if call[0] == "success")
+            failures = sum(1 for call in recent_calls if call[0] == "failure")
 
             return {
                 "name": self.name,
@@ -232,12 +240,13 @@ class CircuitBreaker:
                 "recent_calls": len(recent_calls),
                 "recent_successes": successes,
                 "recent_failures": failures,
-                "success_rate": successes / len(recent_calls) if recent_calls else 0.0
+                "success_rate": successes / len(recent_calls) if recent_calls else 0.0,
             }
 
 
 class CircuitBreakerOpenError(Exception):
     """Raised when circuit breaker is open."""
+
     pass
 
 
@@ -285,7 +294,7 @@ class Retry:
                     self.obs.logger.error(
                         f"All {self.config.max_attempts} retry attempts failed",
                         function=func.__name__,
-                        error=str(e)
+                        error=str(e),
                     )
                     raise
 
@@ -297,7 +306,7 @@ class Retry:
                     function=func.__name__,
                     attempt=attempt,
                     delay=delay,
-                    error=str(e)
+                    error=str(e),
                 )
 
                 time.sleep(delay)
@@ -318,8 +327,9 @@ class Retry:
         """
         # Exponential backoff
         delay = min(
-            self.config.base_delay_seconds * (self.config.exponential_base ** (attempt - 1)),
-            self.config.max_delay_seconds
+            self.config.base_delay_seconds
+            * (self.config.exponential_base ** (attempt - 1)),
+            self.config.max_delay_seconds,
         )
 
         # Add jitter to avoid thundering herd
@@ -385,7 +395,7 @@ class Bulkhead:
                 f"Bulkhead {self.name} waiting queue full, rejecting call",
                 bulkhead=self.name,
                 active=self.active_calls,
-                waiting=self.waiting_calls
+                waiting=self.waiting_calls,
             )
             raise BulkheadFullError(f"Bulkhead {self.name} waiting queue full")
 
@@ -404,7 +414,7 @@ class Bulkhead:
                 self.obs.logger.warning(
                     f"Bulkhead {self.name} timeout waiting for slot",
                     bulkhead=self.name,
-                    timeout=self.config.timeout_seconds
+                    timeout=self.config.timeout_seconds,
                 )
                 raise BulkheadTimeoutError(f"Bulkhead {self.name} timeout")
 
@@ -435,17 +445,23 @@ class Bulkhead:
                 "waiting_calls": self.waiting_calls,
                 "total_calls": self.total_calls,
                 "rejected_calls": self.rejected_calls,
-                "rejection_rate": self.rejected_calls / self.total_calls if self.total_calls > 0 else 0.0
+                "rejection_rate": (
+                    self.rejected_calls / self.total_calls
+                    if self.total_calls > 0
+                    else 0.0
+                ),
             }
 
 
 class BulkheadFullError(Exception):
     """Raised when bulkhead is full."""
+
     pass
 
 
 class BulkheadTimeoutError(Exception):
     """Raised when bulkhead times out."""
+
     pass
 
 
@@ -460,13 +476,7 @@ class Fallback:
         """Initialize fallback mechanism."""
         self.obs = get_observability()
 
-    def execute(
-        self,
-        primary: Callable,
-        fallback: Callable,
-        *args,
-        **kwargs
-    ) -> Any:
+    def execute(self, primary: Callable, fallback: Callable, *args, **kwargs) -> Any:
         """
         Execute with fallback.
 
@@ -486,7 +496,7 @@ class Fallback:
                 "Primary function failed, using fallback",
                 primary=primary.__name__,
                 fallback=fallback.__name__,
-                error=str(e)
+                error=str(e),
             )
 
             try:
@@ -497,7 +507,7 @@ class Fallback:
                     primary=primary.__name__,
                     fallback=fallback.__name__,
                     primary_error=str(e),
-                    fallback_error=str(fallback_error)
+                    fallback_error=str(fallback_error),
                 )
                 raise
 
@@ -508,7 +518,9 @@ _bulkheads: Dict[str, Bulkhead] = {}
 _lock = Lock()
 
 
-def get_circuit_breaker(name: str, config: Optional[CircuitBreakerConfig] = None) -> CircuitBreaker:
+def get_circuit_breaker(
+    name: str, config: Optional[CircuitBreakerConfig] = None
+) -> CircuitBreaker:
     """
     Get or create circuit breaker.
 
@@ -544,6 +556,7 @@ def get_bulkhead(name: str, config: Optional[BulkheadConfig] = None) -> Bulkhead
 
 # Convenience decorators
 
+
 def circuit_breaker(name: str, config: Optional[CircuitBreakerConfig] = None):
     """
     Circuit breaker decorator.
@@ -555,6 +568,7 @@ def circuit_breaker(name: str, config: Optional[CircuitBreakerConfig] = None):
     Returns:
         Decorator
     """
+
     def decorator(func: Callable) -> Callable:
         cb = get_circuit_breaker(name, config)
 
@@ -563,6 +577,7 @@ def circuit_breaker(name: str, config: Optional[CircuitBreakerConfig] = None):
             return cb.call(func, *args, **kwargs)
 
         return wrapper
+
     return decorator
 
 
@@ -576,6 +591,7 @@ def retry(config: Optional[RetryConfig] = None):
     Returns:
         Decorator
     """
+
     def decorator(func: Callable) -> Callable:
         retry_instance = Retry(config)
 
@@ -584,6 +600,7 @@ def retry(config: Optional[RetryConfig] = None):
             return retry_instance.execute(func, *args, **kwargs)
 
         return wrapper
+
     return decorator
 
 
@@ -598,6 +615,7 @@ def bulkhead(name: str, config: Optional[BulkheadConfig] = None):
     Returns:
         Decorator
     """
+
     def decorator(func: Callable) -> Callable:
         bh = get_bulkhead(name, config)
 
@@ -606,6 +624,7 @@ def bulkhead(name: str, config: Optional[BulkheadConfig] = None):
             return bh.execute(func, *args, **kwargs)
 
         return wrapper
+
     return decorator
 
 
@@ -619,6 +638,7 @@ def with_fallback(fallback_func: Callable):
     Returns:
         Decorator
     """
+
     def decorator(func: Callable) -> Callable:
         fallback_instance = Fallback()
 
@@ -627,4 +647,5 @@ def with_fallback(fallback_func: Callable):
             return fallback_instance.execute(func, fallback_func, *args, **kwargs)
 
         return wrapper
+
     return decorator

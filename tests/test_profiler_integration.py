@@ -18,14 +18,14 @@ import pytest
 # Skip if DB tests not enabled
 pytestmark = pytest.mark.skipif(
     os.getenv("RUN_DB_TESTS") != "1",
-    reason="Skipping DB-dependent tests (set RUN_DB_TESTS=1 to run)"
+    reason="Skipping DB-dependent tests (set RUN_DB_TESTS=1 to run)",
 )
 
 
 @pytest.fixture
 def temp_profiler_db():
     """Create a temporary SQLite database for testing."""
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.db', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".db", delete=False) as f:
         db_path = f.name
 
     yield db_path
@@ -41,6 +41,7 @@ def temp_profiler_db():
 def profiler(temp_profiler_db):
     """Create a profiler instance with temporary database."""
     from app.core.profiler import QueryProfiler
+
     return QueryProfiler(db_path=temp_profiler_db)
 
 
@@ -48,11 +49,13 @@ def test_profiler_initialization(profiler):
     """Test profiler database initialization."""
     # Check that tables are created
     with profiler._get_connection() as conn:
-        tables = conn.execute("""
+        tables = conn.execute(
+            """
             SELECT name FROM sqlite_master
             WHERE type='table'
             ORDER BY name
-        """).fetchall()
+        """
+        ).fetchall()
 
         table_names = [t["name"] for t in tables]
 
@@ -73,7 +76,7 @@ def test_record_execution(profiler):
         execution_rows=1,
         buffer_hits=100,
         buffer_misses=10,
-        metadata={"test": True}
+        metadata={"test": True},
     )
 
     assert query_hash is not None
@@ -81,10 +84,13 @@ def test_record_execution(profiler):
 
     # Verify data was stored
     with profiler._get_connection() as conn:
-        row = conn.execute("""
+        row = conn.execute(
+            """
             SELECT * FROM query_executions
             WHERE query_hash = ?
-        """, (query_hash,)).fetchone()
+        """,
+            (query_hash,),
+        ).fetchone()
 
     assert row is not None
     assert row["execution_time_ms"] == 123.456
@@ -100,9 +106,7 @@ def test_query_statistics(profiler):
     times = [100.0, 120.0, 110.0, 130.0, 105.0]
     for time_ms in times:
         profiler.record_execution(
-            query=query,
-            execution_time_ms=time_ms,
-            total_cost=50.0
+            query=query, execution_time_ms=time_ms, total_cost=50.0
         )
 
     # Get statistics
@@ -123,10 +127,7 @@ def test_trend_analysis(profiler):
     # Record executions with increasing times (degrading performance)
     for i in range(10):
         time_ms = 100 + (i * 20)  # 100, 120, 140, ..., 280
-        profiler.record_execution(
-            query=query,
-            execution_time_ms=time_ms
-        )
+        profiler.record_execution(query=query, execution_time_ms=time_ms)
 
     stats = profiler.get_query_statistics(query=query, hours=1)
 
@@ -174,15 +175,13 @@ def test_profile_query_execution(profiler):
             "planning_time_ms": 5.0,
             "execution_rows": 100,
             "buffer_hits": 90,
-            "buffer_misses": 10
+            "buffer_misses": 10,
         }
 
     query = "SELECT * FROM users LIMIT 10"
 
     report = profiler.profile_query_execution(
-        query=query,
-        iterations=5,
-        execution_func=mock_execution
+        query=query, iterations=5, execution_func=mock_execution
     )
 
     assert report["status"] == "success"
@@ -199,7 +198,7 @@ def test_query_summaries(profiler):
     queries = [
         "SELECT * FROM users WHERE id = 1",
         "SELECT * FROM orders WHERE status = 'pending'",
-        "SELECT COUNT(*) FROM products"
+        "SELECT COUNT(*) FROM products",
     ]
 
     for query in queries:
@@ -255,10 +254,7 @@ def test_cache_hit_rate_calculation(profiler):
 
     # Record execution with high cache hits
     profiler.record_execution(
-        query=query,
-        execution_time_ms=50.0,
-        buffer_hits=90,
-        buffer_misses=10
+        query=query, execution_time_ms=50.0, buffer_hits=90, buffer_misses=10
     )
 
     # Get statistics
@@ -320,7 +316,7 @@ async def test_manual_analysis(profiler):
             query=query,
             execution_time_ms=1500.0,  # High execution time
             buffer_hits=50,
-            buffer_misses=50  # Low cache hit rate
+            buffer_misses=50,  # Low cache hit rate
         )
 
     # Run manual analysis
@@ -352,10 +348,7 @@ def test_concurrent_recording(profiler):
 
     def record_executions():
         for _ in range(records_per_thread):
-            profiler.record_execution(
-                query=query,
-                execution_time_ms=100.0
-            )
+            profiler.record_execution(query=query, execution_time_ms=100.0)
 
     threads = []
     for _ in range(num_threads):
@@ -399,23 +392,12 @@ def test_recommendation_priority_sorting(profiler):
 
     tasks = ProfilerBackgroundTasks()
 
-    summary = {
-        "avg_time_ms": 1500,  # High time
-        "execution_count": 150  # High count
-    }
+    summary = {"avg_time_ms": 1500, "execution_count": 150}  # High time  # High count
 
     stats = {
-        "execution_time": {
-            "mean": 1500,
-            "std_dev": 750
-        },
-        "cache_hit_rate": {
-            "mean": 60  # Low cache rate
-        },
-        "trend": {
-            "direction": "degrading",
-            "change_pct": 50
-        }
+        "execution_time": {"mean": 1500, "std_dev": 750},
+        "cache_hit_rate": {"mean": 60},  # Low cache rate
+        "trend": {"direction": "degrading", "change_pct": 50},
     }
 
     recommendations = tasks._generate_recommendations(summary, stats)
@@ -431,10 +413,7 @@ def test_large_result_set_handling(profiler):
 
     # Record a large number of executions
     for i in range(1000):
-        profiler.record_execution(
-            query=query,
-            execution_time_ms=100.0 + (i % 50)
-        )
+        profiler.record_execution(query=query, execution_time_ms=100.0 + (i % 50))
 
     # Get statistics
     stats = profiler.get_query_statistics(query=query, hours=1)
@@ -468,7 +447,7 @@ def test_profiler_with_missing_metrics(profiler):
     # Record execution with only required fields
     query_hash = profiler.record_execution(
         query=query,
-        execution_time_ms=123.0
+        execution_time_ms=123.0,
         # No cost, buffer stats, etc.
     )
 

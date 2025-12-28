@@ -29,10 +29,18 @@ class CorrectResponse(BaseModel):
     ok: bool = Field(True, description="Whether the request was successful")
     original: str = Field(..., description="Original SQL query")
     corrected: Optional[str] = Field(None, description="Corrected SQL query")
-    is_valid: bool = Field(..., description="Whether the original query is syntactically valid")
-    errors: List[Dict[str, Any]] = Field(default_factory=list, description="List of errors found")
-    suggestions: List[CorrectionSuggestion] = Field(default_factory=list, description="Correction suggestions")
-    can_auto_correct: bool = Field(False, description="Whether auto-correction is possible")
+    is_valid: bool = Field(
+        ..., description="Whether the original query is syntactically valid"
+    )
+    errors: List[Dict[str, Any]] = Field(
+        default_factory=list, description="List of errors found"
+    )
+    suggestions: List[CorrectionSuggestion] = Field(
+        default_factory=list, description="Correction suggestions"
+    )
+    can_auto_correct: bool = Field(
+        False, description="Whether auto-correction is possible"
+    )
 
 
 @router.post("/correct", response_model=CorrectResponse)
@@ -63,13 +71,9 @@ async def correct_sql(request: CorrectRequest):
             suggestions=[
                 CorrectionSuggestion(**s) for s in result.get("suggestions", [])
             ],
-            can_auto_correct=result.get("can_auto_correct", False)
+            can_auto_correct=result.get("can_auto_correct", False),
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error during correction: {str(e)}") from e
-
-
-
-
-
-
+        raise HTTPException(
+            status_code=500, detail=f"Error during correction: {str(e)}"
+        ) from e

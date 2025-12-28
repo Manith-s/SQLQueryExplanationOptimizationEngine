@@ -30,6 +30,7 @@ from app.core.config import settings
 
 class CacheTier(Enum):
     """Cache tier levels."""
+
     MEMORY = "memory"
     REDIS = "redis"
     DISK = "disk"
@@ -37,6 +38,7 @@ class CacheTier(Enum):
 
 class CachePolicy(Enum):
     """Cache eviction policies."""
+
     LRU = "lru"
     LFU = "lfu"
     TTL = "ttl"
@@ -45,6 +47,7 @@ class CachePolicy(Enum):
 @dataclass
 class CacheEntry:
     """Single cache entry with metadata."""
+
     key: str
     value: Any
     tier: CacheTier
@@ -63,6 +66,7 @@ class CacheEntry:
 @dataclass
 class CacheStatistics:
     """Cache statistics and metrics."""
+
     total_requests: int = 0
     hits: int = 0
     misses: int = 0
@@ -120,16 +124,16 @@ class QueryFingerprinter:
             canonical = normalized.sql(dialect="postgres", pretty=False)
 
             # Additional normalization
-            canonical = re.sub(r'\s+', ' ', canonical).strip()
+            canonical = re.sub(r"\s+", " ", canonical).strip()
             canonical = canonical.lower()
 
             return canonical
 
         except Exception:
             # Fallback to simple normalization
-            normalized = re.sub(r'--.*?\n', ' ', sql)  # Remove comments
-            normalized = re.sub(r'/\*.*?\*/', ' ', normalized, flags=re.DOTALL)
-            normalized = re.sub(r'\s+', ' ', normalized).strip()
+            normalized = re.sub(r"--.*?\n", " ", sql)  # Remove comments
+            normalized = re.sub(r"/\*.*?\*/", " ", normalized, flags=re.DOTALL)
+            normalized = re.sub(r"\s+", " ", normalized).strip()
             normalized = normalized.lower()
             return normalized
 
@@ -151,10 +155,14 @@ class QueryFingerprinter:
             if child is not None:
                 if isinstance(child, list):
                     node.args[child_key] = [
-                        QueryFingerprinter._replace_literals(c) if hasattr(c, 'arg_types') else c
+                        (
+                            QueryFingerprinter._replace_literals(c)
+                            if hasattr(c, "arg_types")
+                            else c
+                        )
                         for c in child
                     ]
-                elif hasattr(child, 'arg_types'):
+                elif hasattr(child, "arg_types"):
                     node.args[child_key] = QueryFingerprinter._replace_literals(child)
 
         return node
@@ -206,7 +214,7 @@ class QueryFingerprinter:
 
         except Exception:
             # Fallback to regex extraction
-            pattern = r'\b(?:FROM|JOIN|INTO|UPDATE|TABLE)\s+([a-zA-Z_][a-zA-Z0-9_]*)'
+            pattern = r"\b(?:FROM|JOIN|INTO|UPDATE|TABLE)\s+([a-zA-Z_][a-zA-Z0-9_]*)"
             matches = re.findall(pattern, sql, re.IGNORECASE)
             tables.update(m.lower() for m in matches)
 
@@ -266,8 +274,10 @@ class LRUCache:
                 self.current_size_bytes -= old_entry.size_bytes
 
             # Evict until we have space
-            while (self.current_size_bytes + entry.size_bytes > self.max_size_bytes
-                   and len(self.cache) > 0):
+            while (
+                self.current_size_bytes + entry.size_bytes > self.max_size_bytes
+                and len(self.cache) > 0
+            ):
                 # Remove least recently used (first item)
                 lru_key, lru_entry = self.cache.popitem(last=False)
                 self.current_size_bytes -= lru_entry.size_bytes
@@ -309,7 +319,11 @@ class LRUCache:
                 "entries": len(self.cache),
                 "size_bytes": self.current_size_bytes,
                 "max_size_bytes": self.max_size_bytes,
-                "utilization": self.current_size_bytes / self.max_size_bytes if self.max_size_bytes > 0 else 0.0
+                "utilization": (
+                    self.current_size_bytes / self.max_size_bytes
+                    if self.max_size_bytes > 0
+                    else 0.0
+                ),
             }
 
 
@@ -327,7 +341,7 @@ class CacheManager:
         disk_cache_dir: Optional[Path] = None,
         enable_compression: bool = True,
         enable_encryption: bool = False,
-        default_ttl_seconds: int = 3600
+        default_ttl_seconds: int = 3600,
     ):
         """
         Initialize cache manager.
@@ -360,7 +374,7 @@ class CacheManager:
         self,
         sql: str,
         params: Optional[Dict[str, Any]] = None,
-        database_state: Optional[str] = None
+        database_state: Optional[str] = None,
     ) -> Optional[Any]:
         """
         Get cached query result.
@@ -419,7 +433,7 @@ class CacheManager:
         database_state: Optional[str] = None,
         ttl_seconds: Optional[int] = None,
         compress: bool = True,
-        encrypt: bool = False
+        encrypt: bool = False,
     ) -> bool:
         """
         Cache query result.
@@ -456,7 +470,11 @@ class CacheManager:
             value=serialized,
             tier=CacheTier.MEMORY,
             created_at=datetime.utcnow(),
-            expires_at=datetime.utcnow() + timedelta(seconds=ttl_seconds) if ttl_seconds > 0 else None,
+            expires_at=(
+                datetime.utcnow() + timedelta(seconds=ttl_seconds)
+                if ttl_seconds > 0
+                else None
+            ),
             last_accessed=datetime.utcnow(),
             access_count=0,
             size_bytes=len(serialized),
@@ -464,7 +482,7 @@ class CacheManager:
             encrypted=encrypt and self.enable_encryption,
             table_dependencies=table_deps,
             query_fingerprint=fingerprint,
-            volatility_score=self._get_table_volatility(table_deps)
+            volatility_score=self._get_table_volatility(table_deps),
         )
 
         # Try to cache in memory
@@ -483,7 +501,7 @@ class CacheManager:
         self,
         sql: Optional[str] = None,
         table: Optional[str] = None,
-        pattern: Optional[str] = None
+        pattern: Optional[str] = None,
     ) -> int:
         """
         Invalidate cache entries.
@@ -524,7 +542,7 @@ class CacheManager:
             if self.disk_cache_dir:
                 for cache_file in self.disk_cache_dir.glob("*.cache"):
                     try:
-                        with open(cache_file, 'rb') as f:
+                        with open(cache_file, "rb") as f:
                             entry = pickle.load(f)
                             if table_lower in entry.table_dependencies:
                                 cache_file.unlink()
@@ -581,7 +599,7 @@ class CacheManager:
         self,
         sql: str,
         params: Optional[Dict[str, Any]] = None,
-        database_state: Optional[str] = None
+        database_state: Optional[str] = None,
     ) -> str:
         """Generate unique cache key."""
         fingerprint = QueryFingerprinter.generate_fingerprint(sql, params)
@@ -654,7 +672,7 @@ class CacheManager:
             return None
 
         try:
-            with open(cache_file, 'rb') as f:
+            with open(cache_file, "rb") as f:
                 entry = pickle.load(f)
 
             # Check expiration
@@ -675,7 +693,7 @@ class CacheManager:
         cache_file = self.disk_cache_dir / f"{entry.key}.cache"
 
         try:
-            with open(cache_file, 'wb') as f:
+            with open(cache_file, "wb") as f:
                 pickle.dump(entry, f)
             return True
         except Exception:
@@ -708,8 +726,7 @@ class CacheManager:
                 # Exponential moving average
                 alpha = 0.1
                 self.stats.avg_access_time_ms = (
-                    alpha * access_time_ms +
-                    (1 - alpha) * self.stats.avg_access_time_ms
+                    alpha * access_time_ms + (1 - alpha) * self.stats.avg_access_time_ms
                 )
 
 
@@ -723,18 +740,18 @@ def get_cache_manager() -> CacheManager:
 
     if _cache_manager is None:
         disk_dir = None
-        if hasattr(settings, 'CACHE_DISK_DIR') and settings.CACHE_DISK_DIR:
+        if hasattr(settings, "CACHE_DISK_DIR") and settings.CACHE_DISK_DIR:
             disk_dir = Path(settings.CACHE_DISK_DIR)
 
-        memory_size = getattr(settings, 'CACHE_MEMORY_SIZE_MB', 100)
-        default_ttl = getattr(settings, 'CACHE_DEFAULT_TTL_SECONDS', 3600)
+        memory_size = getattr(settings, "CACHE_MEMORY_SIZE_MB", 100)
+        default_ttl = getattr(settings, "CACHE_DEFAULT_TTL_SECONDS", 3600)
 
         _cache_manager = CacheManager(
             memory_size_mb=memory_size,
             disk_cache_dir=disk_dir,
             enable_compression=True,
             enable_encryption=False,
-            default_ttl_seconds=default_ttl
+            default_ttl_seconds=default_ttl,
         )
 
     return _cache_manager

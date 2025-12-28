@@ -38,15 +38,3 @@ def test_nl_fallback_on_bad_provider():
     assert data["ok"] is True
     assert data.get("explanation") is None
     assert "failed" in (data.get("message") or "").lower()
-
-
-
-
-
-
-
-
-
-
-
-

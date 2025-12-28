@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 # Skip all tests in this module if RUN_DB_TESTS is not set
 pytestmark = pytest.mark.skipif(
     os.getenv("RUN_DB_TESTS") != "1",
-    reason="Integration tests require RUN_DB_TESTS=1 and database"
+    reason="Integration tests require RUN_DB_TESTS=1 and database",
 )
 
 
@@ -22,6 +22,7 @@ pytestmark = pytest.mark.skipif(
 def client():
     """Create a test client."""
     from app.main import app
+
     return TestClient(app)
 
 
@@ -41,8 +42,7 @@ def test_database_connection_pool_works(client):
     # Make multiple requests that hit the database
     for i in range(10):
         response = client.post(
-            "/api/v1/explain",
-            json={"sql": f"SELECT {i} FROM orders LIMIT 1"}
+            "/api/v1/explain", json={"sql": f"SELECT {i} FROM orders LIMIT 1"}
         )
         assert response.status_code == 200
         data = response.json()
@@ -55,8 +55,8 @@ def test_explain_with_analyze_works(client):
         "/api/v1/explain",
         json={
             "sql": "SELECT * FROM orders WHERE user_id = 1 LIMIT 10",
-            "analyze": True
-        }
+            "analyze": True,
+        },
     )
     assert response.status_code == 200
     data = response.json()
@@ -71,8 +71,8 @@ def test_optimize_with_whatif_works(client):
         "/api/v1/optimize",
         json={
             "sql": "SELECT * FROM orders WHERE user_id = 42 ORDER BY created_at DESC LIMIT 50",
-            "what_if": True
-        }
+            "what_if": True,
+        },
     )
     assert response.status_code == 200
     data = response.json()
@@ -92,7 +92,7 @@ def test_workload_analysis_with_caching(client):
     sqls = [
         "SELECT * FROM orders WHERE user_id = 1",
         "SELECT COUNT(*) FROM orders",
-        "SELECT * FROM orders ORDER BY created_at DESC LIMIT 100"
+        "SELECT * FROM orders ORDER BY created_at DESC LIMIT 100",
     ]
 
     # First request (cache miss)
@@ -130,7 +130,9 @@ def test_schema_endpoint_returns_complete_info(client):
     assert public_schema is not None
 
     # Check for orders table
-    orders_table = next((t for t in public_schema.get("tables", []) if t["table"] == "orders"), None)
+    orders_table = next(
+        (t for t in public_schema.get("tables", []) if t["table"] == "orders"), None
+    )
     assert orders_table is not None
 
     # Check table has columns
@@ -142,10 +144,7 @@ def test_schema_endpoint_returns_complete_info(client):
 
 def test_error_handling_invalid_sql(client):
     """API should gracefully handle invalid SQL."""
-    response = client.post(
-        "/api/v1/lint",
-        json={"sql": "SELCT * FORM invalid_syntax"}
-    )
+    response = client.post("/api/v1/lint", json={"sql": "SELCT * FORM invalid_syntax"})
     assert response.status_code == 200
     data = response.json()
     assert data["ok"] is True
@@ -156,8 +155,7 @@ def test_error_handling_invalid_sql(client):
 def test_error_handling_missing_table(client):
     """API should gracefully handle queries on non-existent tables."""
     response = client.post(
-        "/api/v1/explain",
-        json={"sql": "SELECT * FROM nonexistent_table_xyz"}
+        "/api/v1/explain", json={"sql": "SELECT * FROM nonexistent_table_xyz"}
     )
     # Should return error status or graceful degradation
     assert response.status_code in [200, 400, 500]
@@ -168,10 +166,7 @@ def test_timeout_handling(client):
     # Use a timeout parameter to test timeout handling
     response = client.post(
         "/api/v1/explain",
-        json={
-            "sql": "SELECT * FROM orders",
-            "timeout_ms": 1  # Very short timeout
-        }
+        json={"sql": "SELECT * FROM orders", "timeout_ms": 1},  # Very short timeout
     )
     # Should either succeed or gracefully handle timeout
     assert response.status_code in [200, 408, 500]
@@ -182,10 +177,7 @@ def test_concurrent_requests_stability(client):
     import concurrent.futures
 
     def make_request(i):
-        return client.post(
-            "/api/v1/lint",
-            json={"sql": f"SELECT {i} FROM orders"}
-        )
+        return client.post("/api/v1/lint", json={"sql": f"SELECT {i} FROM orders"})
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         futures = [executor.submit(make_request, i) for i in range(10)]
@@ -200,10 +192,7 @@ def test_large_workload_performance(client):
     # Create 50 different queries
     sqls = [f"SELECT * FROM orders WHERE user_id = {i} LIMIT 10" for i in range(50)]
 
-    response = client.post(
-        "/api/v1/workload",
-        json={"sqls": sqls, "top_k": 20}
-    )
+    response = client.post("/api/v1/workload", json={"sqls": sqls, "top_k": 20})
     assert response.status_code == 200
     data = response.json()
     assert data["ok"] is True

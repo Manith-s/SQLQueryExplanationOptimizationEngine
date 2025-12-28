@@ -28,14 +28,22 @@ router = APIRouter(prefix="/api/v1/profile", tags=["profiler"])
 # Request/Response Models
 class ProfileRequest(BaseModel):
     """Request model for query profiling."""
+
     sql: str = Field(..., min_length=1, description="SQL query to profile")
-    iterations: int = Field(default=10, ge=1, le=100, description="Number of iterations")
-    analyze: bool = Field(default=False, description="Run EXPLAIN ANALYZE (executes query)")
-    timeout_ms: Optional[int] = Field(default=5000, ge=100, le=60000, description="Timeout per execution in ms")
+    iterations: int = Field(
+        default=10, ge=1, le=100, description="Number of iterations"
+    )
+    analyze: bool = Field(
+        default=False, description="Run EXPLAIN ANALYZE (executes query)"
+    )
+    timeout_ms: Optional[int] = Field(
+        default=5000, ge=100, le=60000, description="Timeout per execution in ms"
+    )
 
 
 class ProfileResponse(BaseModel):
     """Response model for query profiling."""
+
     query_hash: str
     query: str
     status: str
@@ -51,6 +59,7 @@ class ProfileResponse(BaseModel):
 
 class QueryStatisticsRequest(BaseModel):
     """Request model for query statistics."""
+
     sql: Optional[str] = None
     query_hash: Optional[str] = None
     hours: int = Field(default=24, ge=1, le=168, description="Time window in hours")
@@ -58,6 +67,7 @@ class QueryStatisticsRequest(BaseModel):
 
 class QuerySummaryResponse(BaseModel):
     """Response model for query summaries."""
+
     summaries: List[Dict[str, Any]]
     total_queries: int
     time_window_hours: int
@@ -98,10 +108,7 @@ ws_manager = WebSocketConnectionManager()
 
 
 @router.post("", response_model=ProfileResponse)
-async def profile_query(
-    request: ProfileRequest,
-    background_tasks: BackgroundTasks
-):
+async def profile_query(request: ProfileRequest, background_tasks: BackgroundTasks):
     """
     Profile a query by executing it multiple times and collecting performance metrics.
 
@@ -127,7 +134,7 @@ async def profile_query(
                 run_explain,
                 query,
                 analyze=request.analyze,
-                timeout_ms=request.timeout_ms
+                timeout_ms=request.timeout_ms,
             )
 
             plan_json = plan_result.get("plan", {})
@@ -138,7 +145,7 @@ async def profile_query(
                 "planning_time_ms": plan_result.get("Planning Time"),
                 "execution_rows": plan_json.get("Plan Rows"),
                 "buffer_hits": plan_json.get("Shared Hit Blocks"),
-                "buffer_misses": plan_json.get("Shared Read Blocks")
+                "buffer_misses": plan_json.get("Shared Read Blocks"),
             }
 
             return metrics
@@ -165,37 +172,37 @@ async def profile_query(
                     execution_rows=metrics.get("execution_rows"),
                     buffer_hits=metrics.get("buffer_hits"),
                     buffer_misses=metrics.get("buffer_misses"),
-                    metadata={"iteration": i + 1, "api_profile": True}
+                    metadata={"iteration": i + 1, "api_profile": True},
                 )
 
-                results.append({
-                    "iteration": i + 1,
-                    "execution_time_ms": float(f"{exec_time_ms:.3f}"),
-                    "metrics": metrics
-                })
+                results.append(
+                    {
+                        "iteration": i + 1,
+                        "execution_time_ms": float(f"{exec_time_ms:.3f}"),
+                        "metrics": metrics,
+                    }
+                )
 
                 # Broadcast to WebSocket clients
-                await ws_manager.broadcast({
-                    "type": "profile_iteration",
-                    "iteration": i + 1,
-                    "total_iterations": request.iterations,
-                    "execution_time_ms": float(f"{exec_time_ms:.3f}"),
-                    "metrics": metrics
-                })
+                await ws_manager.broadcast(
+                    {
+                        "type": "profile_iteration",
+                        "iteration": i + 1,
+                        "total_iterations": request.iterations,
+                        "execution_time_ms": float(f"{exec_time_ms:.3f}"),
+                        "metrics": metrics,
+                    }
+                )
 
             except Exception as e:
-                results.append({
-                    "iteration": i + 1,
-                    "error": str(e)
-                })
+                results.append({"iteration": i + 1, "error": str(e)})
 
         # Generate analysis
         successful_runs = [r for r in results if "error" not in r]
 
         if not successful_runs:
             raise HTTPException(
-                status_code=500,
-                detail="All profiling iterations failed"
+                status_code=500, detail="All profiling iterations failed"
             )
 
         exec_times = [r["execution_time_ms"] for r in successful_runs]
@@ -227,8 +234,7 @@ async def profile_query(
 
         # Get historical comparison
         historical_stats = profiler.get_query_statistics(
-            query_hash=query_hash,
-            hours=168  # 1 week
+            query_hash=query_hash, hours=168  # 1 week
         )
 
         # Detect anomalies
@@ -246,16 +252,18 @@ async def profile_query(
                     )
 
         # Broadcast completion
-        await ws_manager.broadcast({
-            "type": "profile_complete",
-            "query_hash": query_hash,
-            "status": "success",
-            "summary": {
-                "iterations": len(successful_runs),
-                "avg_time_ms": exec_stats.get("mean"),
-                "anomalies": anomalies
+        await ws_manager.broadcast(
+            {
+                "type": "profile_complete",
+                "query_hash": query_hash,
+                "status": "success",
+                "summary": {
+                    "iterations": len(successful_runs),
+                    "avg_time_ms": exec_stats.get("mean"),
+                    "anomalies": anomalies,
+                },
             }
-        })
+        )
 
         return ProfileResponse(
             query_hash=query_hash,
@@ -266,15 +274,21 @@ async def profile_query(
             execution_time_distribution=exec_stats,
             cost_analysis=cost_analysis,
             cache_analysis=cache_analysis,
-            historical_comparison=historical_stats if historical_stats.get("sample_count", 0) > 0 else None,
+            historical_comparison=(
+                historical_stats
+                if historical_stats.get("sample_count", 0) > 0
+                else None
+            ),
             anomalies_detected=anomalies,
-            results=results
+            results=results,
         )
 
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Profiling failed: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Profiling failed: {str(e)}"
+        ) from e
 
 
 @router.post("/statistics", response_model=Dict[str, Any])
@@ -294,31 +308,24 @@ async def get_query_statistics(request: QueryStatisticsRequest):
 
     if not request.sql and not request.query_hash:
         raise HTTPException(
-            status_code=400,
-            detail="Either 'sql' or 'query_hash' must be provided"
+            status_code=400, detail="Either 'sql' or 'query_hash' must be provided"
         )
 
     try:
         profiler = get_profiler()
         stats = profiler.get_query_statistics(
-            query=request.sql,
-            query_hash=request.query_hash,
-            hours=request.hours
+            query=request.sql, query_hash=request.query_hash, hours=request.hours
         )
         return stats
 
     except Exception as e:
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to retrieve statistics: {str(e)}"
+            status_code=500, detail=f"Failed to retrieve statistics: {str(e)}"
         ) from e
 
 
 @router.get("/summaries", response_model=QuerySummaryResponse)
-async def get_query_summaries(
-    hours: int = 24,
-    limit: int = 100
-):
+async def get_query_summaries(hours: int = 24, limit: int = 100):
     """
     Get summaries for all tracked queries.
 
@@ -333,15 +340,12 @@ async def get_query_summaries(
         summaries = profiler.get_all_query_summaries(hours=hours, limit=limit)
 
         return QuerySummaryResponse(
-            summaries=summaries,
-            total_queries=len(summaries),
-            time_window_hours=hours
+            summaries=summaries, total_queries=len(summaries), time_window_hours=hours
         )
 
     except Exception as e:
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to retrieve summaries: {str(e)}"
+            status_code=500, detail=f"Failed to retrieve summaries: {str(e)}"
         ) from e
 
 
@@ -363,14 +367,11 @@ async def cleanup_old_data(days: int = 30):
         return {
             "status": "success",
             "deleted_records": deleted_count,
-            "retention_days": days
+            "retention_days": days,
         }
 
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Cleanup failed: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Cleanup failed: {str(e)}") from e
 
 
 @router.get("/analysis/recent")
@@ -390,16 +391,11 @@ async def get_recent_analysis(limit: int = 10):
         tasks = get_background_tasks()
         results = tasks.get_recent_analysis(limit=limit)
 
-        return {
-            "status": "success",
-            "count": len(results),
-            "results": results
-        }
+        return {"status": "success", "count": len(results), "results": results}
 
     except Exception as e:
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to retrieve analysis: {str(e)}"
+            status_code=500, detail=f"Failed to retrieve analysis: {str(e)}"
         ) from e
 
 
@@ -428,10 +424,7 @@ async def run_manual_analysis(query_hash: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Analysis failed: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}") from e
 
 
 @router.websocket("/ws")
@@ -451,20 +444,19 @@ async def websocket_endpoint(websocket: WebSocket):
 
     try:
         # Send welcome message
-        await websocket.send_json({
-            "type": "connected",
-            "message": "Connected to QEO Profiler real-time monitoring",
-            "profiler_enabled": settings.PROFILER_ENABLED
-        })
+        await websocket.send_json(
+            {
+                "type": "connected",
+                "message": "Connected to QEO Profiler real-time monitoring",
+                "profiler_enabled": settings.PROFILER_ENABLED,
+            }
+        )
 
         # Keep connection alive and handle incoming messages
         while True:
             try:
                 # Wait for client messages (e.g., ping/pong)
-                data = await asyncio.wait_for(
-                    websocket.receive_json(),
-                    timeout=30.0
-                )
+                data = await asyncio.wait_for(websocket.receive_json(), timeout=30.0)
 
                 # Handle ping
                 if data.get("type") == "ping":

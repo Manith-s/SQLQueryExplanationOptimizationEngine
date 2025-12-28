@@ -42,26 +42,38 @@ class Settings:
     # Optimizer configuration
     OPT_MIN_ROWS_FOR_INDEX: int = int(os.getenv("OPT_MIN_ROWS_FOR_INDEX", "10000"))
     OPT_MAX_INDEX_COLS: int = int(os.getenv("OPT_MAX_INDEX_COLS", "3"))
-    OPT_ALLOW_COVERING: bool = os.getenv("OPT_ALLOW_COVERING", "false").lower() == "true"
+    OPT_ALLOW_COVERING: bool = (
+        os.getenv("OPT_ALLOW_COVERING", "false").lower() == "true"
+    )
     OPT_ALLOW_PARTIAL: bool = os.getenv("OPT_ALLOW_PARTIAL", "false").lower() == "true"
     OPT_TOP_K: int = int(os.getenv("OPT_TOP_K", "10"))
-    OPT_ANALYZE_DEFAULT: bool = os.getenv("OPT_ANALYZE_DEFAULT", "false").lower() == "true"
+    OPT_ANALYZE_DEFAULT: bool = (
+        os.getenv("OPT_ANALYZE_DEFAULT", "false").lower() == "true"
+    )
     OPT_TIMEOUT_MS_DEFAULT: int = int(os.getenv("OPT_TIMEOUT_MS_DEFAULT", "10000"))
 
     # Advanced index advisor (EPIC A)
-    OPT_SUPPRESS_LOW_GAIN_PCT: float = float(os.getenv("OPT_SUPPRESS_LOW_GAIN_PCT", "5"))
+    OPT_SUPPRESS_LOW_GAIN_PCT: float = float(
+        os.getenv("OPT_SUPPRESS_LOW_GAIN_PCT", "5")
+    )
     OPT_INDEX_MAX_WIDTH_BYTES: int = int(os.getenv("OPT_INDEX_MAX_WIDTH_BYTES", "8192"))
-    OPT_JOIN_COL_PRIOR_BOOST: float = float(os.getenv("OPT_JOIN_COL_PRIOR_BOOST", "1.2"))
+    OPT_JOIN_COL_PRIOR_BOOST: float = float(
+        os.getenv("OPT_JOIN_COL_PRIOR_BOOST", "1.2")
+    )
 
     # Metrics configuration
     METRICS_ENABLED: bool = os.getenv("METRICS_ENABLED", "false").lower() == "true"
     METRICS_NAMESPACE: str = os.getenv("METRICS_NAMESPACE", "qeo")
-    METRICS_BUCKETS: str = os.getenv("METRICS_BUCKETS", "0.005,0.01,0.025,0.05,0.1,0.25,0.5,1,2,5")
+    METRICS_BUCKETS: str = os.getenv(
+        "METRICS_BUCKETS", "0.005,0.01,0.025,0.05,0.1,0.25,0.5,1,2,5"
+    )
 
     # What-if (HypoPG) evaluator configuration
     WHATIF_ENABLED: bool = os.getenv("WHATIF_ENABLED", "false").lower() == "true"
     WHATIF_MAX_TRIALS: int = int(os.getenv("WHATIF_MAX_TRIALS", "10"))
-    WHATIF_MIN_COST_REDUCTION_PCT: float = float(os.getenv("WHATIF_MIN_COST_REDUCTION_PCT", "5"))
+    WHATIF_MIN_COST_REDUCTION_PCT: float = float(
+        os.getenv("WHATIF_MIN_COST_REDUCTION_PCT", "5")
+    )
     WHATIF_PARALLELISM: int = int(os.getenv("WHATIF_PARALLELISM", "2"))
     WHATIF_TRIAL_TIMEOUT_MS: int = int(os.getenv("WHATIF_TRIAL_TIMEOUT_MS", "4000"))
     WHATIF_GLOBAL_TIMEOUT_MS: int = int(os.getenv("WHATIF_GLOBAL_TIMEOUT_MS", "12000"))
@@ -76,17 +88,21 @@ class Settings:
 
     # SQL Linting configuration
     LARGE_TABLE_PATTERNS: List[str] = [
-        s.strip() for s in os.getenv(
+        s.strip()
+        for s in os.getenv(
             "LARGE_TABLE_PATTERNS",
             "events,logs,transactions,fact_*,audit_*,metrics,analytics",
-        ).split(",") if s.strip()
+        ).split(",")
+        if s.strip()
     ]
 
     NUMERIC_COLUMN_PATTERNS: List[str] = [
-        s.strip() for s in os.getenv(
+        s.strip()
+        for s in os.getenv(
             "NUMERIC_COLUMN_PATTERNS",
             "_id,count,amount,price,quantity,score,rating",
-        ).split(",") if s.strip()
+        ).split(",")
+        if s.strip()
     ]
 
     # Query Profiler configuration
@@ -94,9 +110,13 @@ class Settings:
     PROFILER_DB_PATH: str = os.getenv("PROFILER_DB_PATH", "profiler.db")
     PROFILER_WINDOW_SIZE: int = int(os.getenv("PROFILER_WINDOW_SIZE", "100"))
     PROFILER_MIN_SAMPLES: int = int(os.getenv("PROFILER_MIN_SAMPLES", "10"))
-    PROFILER_DEGRADATION_THRESHOLD_PCT: float = float(os.getenv("PROFILER_DEGRADATION_THRESHOLD_PCT", "20"))
+    PROFILER_DEGRADATION_THRESHOLD_PCT: float = float(
+        os.getenv("PROFILER_DEGRADATION_THRESHOLD_PCT", "20")
+    )
     PROFILER_CLEANUP_DAYS: int = int(os.getenv("PROFILER_CLEANUP_DAYS", "30"))
-    PROFILER_BACKGROUND_ANALYSIS_INTERVAL_S: int = int(os.getenv("PROFILER_BACKGROUND_ANALYSIS_INTERVAL_S", "3600"))
+    PROFILER_BACKGROUND_ANALYSIS_INTERVAL_S: int = int(
+        os.getenv("PROFILER_BACKGROUND_ANALYSIS_INTERVAL_S", "3600")
+    )
 
     # ---- Convenience helpers ----
     @property

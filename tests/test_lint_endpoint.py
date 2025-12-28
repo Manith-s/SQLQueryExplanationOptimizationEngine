@@ -126,7 +126,11 @@ def test_lint_missing_sql_field():
 
 def test_lint_invalid_json():
     """Test POST /lint with invalid JSON."""
-    response = client.post("/api/v1/lint", data="invalid json", headers={"Content-Type": "application/json"})
+    response = client.post(
+        "/api/v1/lint",
+        data="invalid json",
+        headers={"Content-Type": "application/json"},
+    )
 
     assert response.status_code == 422  # Validation error
 

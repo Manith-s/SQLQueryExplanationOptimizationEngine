@@ -10,6 +10,7 @@ import pytest
 def test_config_import():
     """Test that config module can be imported."""
     from app.core.config import Settings, settings
+
     assert Settings is not None
     assert settings is not None
 
@@ -17,6 +18,7 @@ def test_config_import():
 def test_llm_adapter_import():
     """Test that LLM adapter module can be imported."""
     from app.core.llm_adapter import LLMProvider, get_llm
+
     assert LLMProvider is not None
     assert get_llm is not None
 
@@ -24,6 +26,7 @@ def test_llm_adapter_import():
 def test_sql_analyzer_import():
     """Test that SQL analyzer module can be imported."""
     from app.core.sql_analyzer import extract_columns, extract_tables, parse_sql
+
     assert parse_sql is not None
     assert extract_tables is not None
     assert extract_columns is not None
@@ -32,6 +35,7 @@ def test_sql_analyzer_import():
 def test_plan_heuristics_import():
     """Test that plan heuristics module can be imported."""
     from app.core.plan_heuristics import analyze_plan, suggest_from_plan
+
     assert analyze_plan is not None
     assert suggest_from_plan is not None
 
@@ -58,6 +62,7 @@ def test_routers_import():
 def test_main_app_import():
     """Test that main app can be imported."""
     from app.main import app
+
     assert app is not None
 
 

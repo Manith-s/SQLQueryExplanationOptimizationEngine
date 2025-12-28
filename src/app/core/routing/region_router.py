@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 class QueryType(str, Enum):
     """Type of query operation."""
+
     READ = "read"
     WRITE = "write"
     ANALYZE = "analyze"
@@ -29,6 +30,7 @@ class QueryType(str, Enum):
 
 class RegionRole(str, Enum):
     """Role of a region in the cluster."""
+
     PRIMARY = "primary"
     SECONDARY = "secondary"
 
@@ -36,6 +38,7 @@ class RegionRole(str, Enum):
 @dataclass
 class Region:
     """Region configuration."""
+
     name: str
     role: RegionRole
     api_url: str
@@ -54,6 +57,7 @@ class Region:
 @dataclass
 class RoutingDecision:
     """Result of routing decision."""
+
     target_region: str
     reason: str
     latency_estimate_ms: float
@@ -117,7 +121,9 @@ class RegionRouter:
     def __init__(self):
         self._health_check_task = None
         self._start_health_monitoring()
-        logger.info("RegionRouter initialized with {} regions".format(len(self.REGIONS)))
+        logger.info(
+            "RegionRouter initialized with {} regions".format(len(self.REGIONS))
+        )
 
     def _start_health_monitoring(self):
         """Start background health monitoring."""
@@ -147,9 +153,7 @@ class RegionRouter:
 
         a = (
             math.sin(delta_lat / 2) ** 2
-            + math.cos(lat1_rad)
-            * math.cos(lat2_rad)
-            * math.sin(delta_lon / 2) ** 2
+            + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(delta_lon / 2) ** 2
         )
         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
@@ -215,7 +219,9 @@ class RegionRouter:
         if not eligible_regions:
             # Fall back to primary if no eligible regions
             logger.warning("No eligible regions found, falling back to primary")
-            eligible_regions = [r for r in self.REGIONS.values() if r.role == RegionRole.PRIMARY]
+            eligible_regions = [
+                r for r in self.REGIONS.values() if r.role == RegionRole.PRIMARY
+            ]
 
         # Route based on query type
         if query_type == QueryType.WRITE:
@@ -264,7 +270,9 @@ class RegionRouter:
         if not region_scores:
             # No healthy regions, return error or use unhealthy primary
             logger.error("No healthy regions available!")
-            primary = [r for r in self.REGIONS.values() if r.role == RegionRole.PRIMARY][0]
+            primary = [
+                r for r in self.REGIONS.values() if r.role == RegionRole.PRIMARY
+            ][0]
             return RoutingDecision(
                 target_region=primary.name,
                 reason="no_healthy_regions_fallback_to_primary",

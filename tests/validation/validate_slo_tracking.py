@@ -26,16 +26,17 @@ WINDOW_DAYS = 28
 
 # Burn rate thresholds
 BURN_RATE_THRESHOLDS = {
-    1: 14.4,   # 1h window
-    6: 6.0,    # 6h window
-    24: 3.0,   # 24h window
-    72: 1.5,   # 72h window
+    1: 14.4,  # 1h window
+    6: 6.0,  # 6h window
+    24: 3.0,  # 24h window
+    72: 1.5,  # 72h window
 }
 
 
 @dataclass
 class ValidationResult:
     """Result of a validation test."""
+
     test_name: str
     passed: bool
     message: str
@@ -106,31 +107,37 @@ class SLOTrackingValidator:
                 if response.status_code == 200:
                     data = response.json()
 
-                    self.results.append(ValidationResult(
-                        test_name=f"SLO API - {endpoint}",
-                        passed=True,
-                        message="Endpoint accessible",
-                        duration_ms=duration_ms,
-                        details=data
-                    ))
+                    self.results.append(
+                        ValidationResult(
+                            test_name=f"SLO API - {endpoint}",
+                            passed=True,
+                            message="Endpoint accessible",
+                            duration_ms=duration_ms,
+                            details=data,
+                        )
+                    )
                     print(f"  ✓ {endpoint}: OK")
                 else:
-                    self.results.append(ValidationResult(
-                        test_name=f"SLO API - {endpoint}",
-                        passed=False,
-                        message=f"HTTP {response.status_code}",
-                        duration_ms=duration_ms,
-                    ))
+                    self.results.append(
+                        ValidationResult(
+                            test_name=f"SLO API - {endpoint}",
+                            passed=False,
+                            message=f"HTTP {response.status_code}",
+                            duration_ms=duration_ms,
+                        )
+                    )
                     print(f"  ✗ {endpoint}: HTTP {response.status_code}")
 
             except Exception as e:
                 duration_ms = (time.time() - start) * 1000
-                self.results.append(ValidationResult(
-                    test_name=f"SLO API - {endpoint}",
-                    passed=False,
-                    message=str(e),
-                    duration_ms=duration_ms,
-                ))
+                self.results.append(
+                    ValidationResult(
+                        test_name=f"SLO API - {endpoint}",
+                        passed=False,
+                        message=str(e),
+                        duration_ms=duration_ms,
+                    )
+                )
                 print(f"  ✗ {endpoint}: {e}")
 
     async def test_error_budget_calculation(self):
@@ -153,12 +160,14 @@ class SLOTrackingValidator:
                 has_all_fields = all(field in data for field in required_fields)
 
                 if not has_all_fields:
-                    self.results.append(ValidationResult(
-                        test_name="Error Budget Calculation",
-                        passed=False,
-                        message="Missing required SLI fields",
-                        duration_ms=duration_ms,
-                    ))
+                    self.results.append(
+                        ValidationResult(
+                            test_name="Error Budget Calculation",
+                            passed=False,
+                            message="Missing required SLI fields",
+                            duration_ms=duration_ms,
+                        )
+                    )
                     print("  ✗ Missing fields in error budget response")
                     return
 
@@ -168,16 +177,24 @@ class SLOTrackingValidator:
                         continue
 
                     # Check required fields
-                    required_sli_fields = ["remaining_pct", "consumed_pct", "budget_minutes"]
-                    has_sli_fields = all(field in sli_data for field in required_sli_fields)
+                    required_sli_fields = [
+                        "remaining_pct",
+                        "consumed_pct",
+                        "budget_minutes",
+                    ]
+                    has_sli_fields = all(
+                        field in sli_data for field in required_sli_fields
+                    )
 
                     if not has_sli_fields:
-                        self.results.append(ValidationResult(
-                            test_name=f"Error Budget - {sli_name}",
-                            passed=False,
-                            message=f"Missing fields in {sli_name}",
-                            duration_ms=duration_ms,
-                        ))
+                        self.results.append(
+                            ValidationResult(
+                                test_name=f"Error Budget - {sli_name}",
+                                passed=False,
+                                message=f"Missing fields in {sli_name}",
+                                duration_ms=duration_ms,
+                            )
+                        )
                         print(f"  ✗ {sli_name}: Missing required fields")
                         continue
 
@@ -193,17 +210,19 @@ class SLOTrackingValidator:
 
                     passed = budget_valid and range_valid
 
-                    self.results.append(ValidationResult(
-                        test_name=f"Error Budget - {sli_name}",
-                        passed=passed,
-                        message=f"Remaining: {remaining:.1f}%, Consumed: {consumed:.1f}%",
-                        duration_ms=duration_ms,
-                        details={
-                            "remaining_pct": remaining,
-                            "consumed_pct": consumed,
-                            "budget_minutes": sli_data.get("budget_minutes", 0)
-                        }
-                    ))
+                    self.results.append(
+                        ValidationResult(
+                            test_name=f"Error Budget - {sli_name}",
+                            passed=passed,
+                            message=f"Remaining: {remaining:.1f}%, Consumed: {consumed:.1f}%",
+                            duration_ms=duration_ms,
+                            details={
+                                "remaining_pct": remaining,
+                                "consumed_pct": consumed,
+                                "budget_minutes": sli_data.get("budget_minutes", 0),
+                            },
+                        )
+                    )
 
                     if passed:
                         print(f"  ✓ {sli_name}: {remaining:.1f}% remaining")
@@ -211,22 +230,26 @@ class SLOTrackingValidator:
                         print(f"  ✗ {sli_name}: Budget math error (total={total:.1f}%)")
 
             else:
-                self.results.append(ValidationResult(
-                    test_name="Error Budget Calculation",
-                    passed=False,
-                    message=f"HTTP {response.status_code}",
-                    duration_ms=duration_ms,
-                ))
+                self.results.append(
+                    ValidationResult(
+                        test_name="Error Budget Calculation",
+                        passed=False,
+                        message=f"HTTP {response.status_code}",
+                        duration_ms=duration_ms,
+                    )
+                )
                 print(f"  ✗ Budget API returned HTTP {response.status_code}")
 
         except Exception as e:
             duration_ms = (time.time() - start) * 1000
-            self.results.append(ValidationResult(
-                test_name="Error Budget Calculation",
-                passed=False,
-                message=str(e),
-                duration_ms=duration_ms,
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name="Error Budget Calculation",
+                    passed=False,
+                    message=str(e),
+                    duration_ms=duration_ms,
+                )
+            )
             print(f"  ✗ Budget calculation test failed: {e}")
 
     async def test_burn_rate_calculation(self):
@@ -258,12 +281,14 @@ class SLOTrackingValidator:
                         window_key = f"{window_hours}h"
 
                         if window_key not in burn_rates:
-                            self.results.append(ValidationResult(
-                                test_name=f"Burn Rate - {sli_name} ({window_key})",
-                                passed=False,
-                                message=f"Missing {window_key} window",
-                                duration_ms=duration_ms,
-                            ))
+                            self.results.append(
+                                ValidationResult(
+                                    test_name=f"Burn Rate - {sli_name} ({window_key})",
+                                    passed=False,
+                                    message=f"Missing {window_key} window",
+                                    duration_ms=duration_ms,
+                                )
+                            )
                             print(f"  ✗ {sli_name} {window_key}: Missing")
                             continue
 
@@ -279,41 +304,49 @@ class SLOTrackingValidator:
 
                         passed = valid_rate and critical_correct
 
-                        self.results.append(ValidationResult(
-                            test_name=f"Burn Rate - {sli_name} ({window_key})",
-                            passed=passed,
-                            message=f"Rate: {burn_rate:.2f} (threshold: {threshold}, critical: {is_critical})",
-                            duration_ms=duration_ms,
-                            details={
-                                "rate": burn_rate,
-                                "threshold": threshold,
-                                "is_critical": is_critical,
-                            }
-                        ))
+                        self.results.append(
+                            ValidationResult(
+                                test_name=f"Burn Rate - {sli_name} ({window_key})",
+                                passed=passed,
+                                message=f"Rate: {burn_rate:.2f} (threshold: {threshold}, critical: {is_critical})",
+                                duration_ms=duration_ms,
+                                details={
+                                    "rate": burn_rate,
+                                    "threshold": threshold,
+                                    "is_critical": is_critical,
+                                },
+                            )
+                        )
 
                         if passed:
                             status = "CRITICAL" if is_critical else "OK"
-                            print(f"  ✓ {sli_name} {window_key}: {burn_rate:.2f} ({status})")
+                            print(
+                                f"  ✓ {sli_name} {window_key}: {burn_rate:.2f} ({status})"
+                            )
                         else:
                             print(f"  ✗ {sli_name} {window_key}: Calculation error")
 
             else:
-                self.results.append(ValidationResult(
-                    test_name="Burn Rate Calculation",
-                    passed=False,
-                    message=f"HTTP {response.status_code}",
-                    duration_ms=duration_ms,
-                ))
+                self.results.append(
+                    ValidationResult(
+                        test_name="Burn Rate Calculation",
+                        passed=False,
+                        message=f"HTTP {response.status_code}",
+                        duration_ms=duration_ms,
+                    )
+                )
                 print(f"  ✗ Status API returned HTTP {response.status_code}")
 
         except Exception as e:
             duration_ms = (time.time() - start) * 1000
-            self.results.append(ValidationResult(
-                test_name="Burn Rate Calculation",
-                passed=False,
-                message=str(e),
-                duration_ms=duration_ms,
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name="Burn Rate Calculation",
+                    passed=False,
+                    message=str(e),
+                    duration_ms=duration_ms,
+                )
+            )
             print(f"  ✗ Burn rate test failed: {e}")
 
     async def test_sli_recording(self):
@@ -345,12 +378,14 @@ class SLOTrackingValidator:
                 # Verify each SLI has current value
                 for sli_name in ["availability", "latency", "quality"]:
                     if sli_name not in data:
-                        self.results.append(ValidationResult(
-                            test_name=f"SLI Recording - {sli_name}",
-                            passed=False,
-                            message=f"SLI {sli_name} not found",
-                            duration_ms=duration_ms,
-                        ))
+                        self.results.append(
+                            ValidationResult(
+                                test_name=f"SLI Recording - {sli_name}",
+                                passed=False,
+                                message=f"SLI {sli_name} not found",
+                                duration_ms=duration_ms,
+                            )
+                        )
                         print(f"  ✗ {sli_name}: Not found")
                         continue
 
@@ -358,12 +393,14 @@ class SLOTrackingValidator:
 
                     # Check for current value
                     if "current" not in sli_data:
-                        self.results.append(ValidationResult(
-                            test_name=f"SLI Recording - {sli_name}",
-                            passed=False,
-                            message="Missing current value",
-                            duration_ms=duration_ms,
-                        ))
+                        self.results.append(
+                            ValidationResult(
+                                test_name=f"SLI Recording - {sli_name}",
+                                passed=False,
+                                message="Missing current value",
+                                duration_ms=duration_ms,
+                            )
+                        )
                         print(f"  ✗ {sli_name}: Missing current value")
                         continue
 
@@ -375,37 +412,45 @@ class SLOTrackingValidator:
 
                     passed = valid_range
 
-                    self.results.append(ValidationResult(
-                        test_name=f"SLI Recording - {sli_name}",
-                        passed=passed,
-                        message=f"Current: {current:.3f} (target: {target:.3f})",
-                        duration_ms=duration_ms,
-                        details={"current": current, "target": target}
-                    ))
+                    self.results.append(
+                        ValidationResult(
+                            test_name=f"SLI Recording - {sli_name}",
+                            passed=passed,
+                            message=f"Current: {current:.3f} (target: {target:.3f})",
+                            duration_ms=duration_ms,
+                            details={"current": current, "target": target},
+                        )
+                    )
 
                     if passed:
                         status = "✓" if current >= target else "⚠"
-                        print(f"  {status} {sli_name}: {current:.3f} (target: {target:.3f})")
+                        print(
+                            f"  {status} {sli_name}: {current:.3f} (target: {target:.3f})"
+                        )
                     else:
                         print(f"  ✗ {sli_name}: Invalid value {current}")
 
             else:
-                self.results.append(ValidationResult(
-                    test_name="SLI Recording",
-                    passed=False,
-                    message=f"HTTP {response.status_code}",
-                    duration_ms=duration_ms,
-                ))
+                self.results.append(
+                    ValidationResult(
+                        test_name="SLI Recording",
+                        passed=False,
+                        message=f"HTTP {response.status_code}",
+                        duration_ms=duration_ms,
+                    )
+                )
                 print(f"  ✗ Status API returned HTTP {response.status_code}")
 
         except Exception as e:
             duration_ms = (time.time() - start) * 1000
-            self.results.append(ValidationResult(
-                test_name="SLI Recording",
-                passed=False,
-                message=str(e),
-                duration_ms=duration_ms,
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name="SLI Recording",
+                    passed=False,
+                    message=str(e),
+                    duration_ms=duration_ms,
+                )
+            )
             print(f"  ✗ SLI recording test failed: {e}")
 
     async def test_deployment_gating(self):
@@ -428,12 +473,14 @@ class SLOTrackingValidator:
                 has_all_fields = all(field in data for field in required_fields)
 
                 if not has_all_fields:
-                    self.results.append(ValidationResult(
-                        test_name="Deployment Gating",
-                        passed=False,
-                        message="Missing required fields",
-                        duration_ms=duration_ms,
-                    ))
+                    self.results.append(
+                        ValidationResult(
+                            test_name="Deployment Gating",
+                            passed=False,
+                            message="Missing required fields",
+                            duration_ms=duration_ms,
+                        )
+                    )
                     print("  ✗ Missing fields in can-deploy response")
                     return
 
@@ -444,17 +491,19 @@ class SLOTrackingValidator:
                 # Verify boolean type
                 passed = isinstance(can_deploy, bool)
 
-                self.results.append(ValidationResult(
-                    test_name="Deployment Gating",
-                    passed=passed,
-                    message=f"Can deploy: {can_deploy} - {reason}",
-                    duration_ms=duration_ms,
-                    details={
-                        "can_deploy": can_deploy,
-                        "reason": reason,
-                        "budget_status": budget_status,
-                    }
-                ))
+                self.results.append(
+                    ValidationResult(
+                        test_name="Deployment Gating",
+                        passed=passed,
+                        message=f"Can deploy: {can_deploy} - {reason}",
+                        duration_ms=duration_ms,
+                        details={
+                            "can_deploy": can_deploy,
+                            "reason": reason,
+                            "budget_status": budget_status,
+                        },
+                    )
+                )
 
                 if passed:
                     status = "✓ Yes" if can_deploy else "⚠ No"
@@ -463,22 +512,26 @@ class SLOTrackingValidator:
                     print("  ✗ Invalid can_deploy value")
 
             else:
-                self.results.append(ValidationResult(
-                    test_name="Deployment Gating",
-                    passed=False,
-                    message=f"HTTP {response.status_code}",
-                    duration_ms=duration_ms,
-                ))
+                self.results.append(
+                    ValidationResult(
+                        test_name="Deployment Gating",
+                        passed=False,
+                        message=f"HTTP {response.status_code}",
+                        duration_ms=duration_ms,
+                    )
+                )
                 print(f"  ✗ Can-deploy API returned HTTP {response.status_code}")
 
         except Exception as e:
             duration_ms = (time.time() - start) * 1000
-            self.results.append(ValidationResult(
-                test_name="Deployment Gating",
-                passed=False,
-                message=str(e),
-                duration_ms=duration_ms,
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name="Deployment Gating",
+                    passed=False,
+                    message=str(e),
+                    duration_ms=duration_ms,
+                )
+            )
             print(f"  ✗ Deployment gating test failed: {e}")
 
     async def test_slo_report_generation(self):
@@ -503,36 +556,46 @@ class SLOTrackingValidator:
                 has_all_sections = all(section in data for section in required_sections)
 
                 if not has_all_sections:
-                    self.results.append(ValidationResult(
-                        test_name="SLO Report Generation",
-                        passed=False,
-                        message="Missing required sections",
-                        duration_ms=duration_ms,
-                    ))
+                    self.results.append(
+                        ValidationResult(
+                            test_name="SLO Report Generation",
+                            passed=False,
+                            message="Missing required sections",
+                            duration_ms=duration_ms,
+                        )
+                    )
                     print("  ✗ Incomplete report structure")
                     return
 
                 # Verify summary has key metrics
                 summary = data["summary"]
-                summary_fields = ["period_days", "overall_health", "critical_burn_rates"]
+                summary_fields = [
+                    "period_days",
+                    "overall_health",
+                    "critical_burn_rates",
+                ]
                 has_summary_fields = all(field in summary for field in summary_fields)
 
                 # Verify SLIs section has data for each SLI
                 slis = data["slis"]
-                has_sli_data = all(sli in slis for sli in ["availability", "latency", "quality"])
+                has_sli_data = all(
+                    sli in slis for sli in ["availability", "latency", "quality"]
+                )
 
                 passed = has_all_sections and has_summary_fields and has_sli_data
 
-                self.results.append(ValidationResult(
-                    test_name="SLO Report Generation",
-                    passed=passed,
-                    message=f"Report generated for {summary.get('period_days', 0)} days",
-                    duration_ms=duration_ms,
-                    details={
-                        "sections": list(data.keys()),
-                        "overall_health": summary.get("overall_health", "unknown"),
-                    }
-                ))
+                self.results.append(
+                    ValidationResult(
+                        test_name="SLO Report Generation",
+                        passed=passed,
+                        message=f"Report generated for {summary.get('period_days', 0)} days",
+                        duration_ms=duration_ms,
+                        details={
+                            "sections": list(data.keys()),
+                            "overall_health": summary.get("overall_health", "unknown"),
+                        },
+                    )
+                )
 
                 if passed:
                     health = summary.get("overall_health", "unknown")
@@ -541,22 +604,26 @@ class SLOTrackingValidator:
                     print("  ✗ Incomplete report structure")
 
             else:
-                self.results.append(ValidationResult(
-                    test_name="SLO Report Generation",
-                    passed=False,
-                    message=f"HTTP {response.status_code}",
-                    duration_ms=duration_ms,
-                ))
+                self.results.append(
+                    ValidationResult(
+                        test_name="SLO Report Generation",
+                        passed=False,
+                        message=f"HTTP {response.status_code}",
+                        duration_ms=duration_ms,
+                    )
+                )
                 print(f"  ✗ Report API returned HTTP {response.status_code}")
 
         except Exception as e:
             duration_ms = (time.time() - start) * 1000
-            self.results.append(ValidationResult(
-                test_name="SLO Report Generation",
-                passed=False,
-                message=str(e),
-                duration_ms=duration_ms,
-            ))
+            self.results.append(
+                ValidationResult(
+                    test_name="SLO Report Generation",
+                    passed=False,
+                    message=str(e),
+                    duration_ms=duration_ms,
+                )
+            )
             print(f"  ✗ Report generation test failed: {e}")
 
 
@@ -567,6 +634,7 @@ async def main():
 
     # Save results
     import json
+
     with open("validation_results_slo.json", "w") as f:
         json.dump(
             {
@@ -581,7 +649,7 @@ async def main():
                         "details": r.details,
                     }
                     for r in results
-                ]
+                ],
             },
             f,
             indent=2,
@@ -594,4 +662,5 @@ async def main():
 
 if __name__ == "__main__":
     import sys
+
     sys.exit(asyncio.run(main()))

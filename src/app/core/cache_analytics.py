@@ -22,6 +22,7 @@ from app.core.prefetch_engine import get_prefetch_engine
 
 class QueryCacheability(Enum):
     """Query cacheability classifications."""
+
     HIGHLY_CACHEABLE = "highly_cacheable"
     MODERATELY_CACHEABLE = "moderately_cacheable"
     POORLY_CACHEABLE = "poorly_cacheable"
@@ -30,6 +31,7 @@ class QueryCacheability(Enum):
 
 class CacheTuningPriority(Enum):
     """Priority levels for tuning recommendations."""
+
     CRITICAL = "critical"
     HIGH = "high"
     MEDIUM = "medium"
@@ -39,13 +41,14 @@ class CacheTuningPriority(Enum):
 @dataclass
 class QueryPerformanceMetrics:
     """Performance metrics for a specific query."""
+
     fingerprint: str
     sql: str
     total_executions: int = 0
     cache_hits: int = 0
     cache_misses: int = 0
     avg_execution_time_ms: float = 0.0
-    min_execution_time_ms: float = float('inf')
+    min_execution_time_ms: float = float("inf")
     max_execution_time_ms: float = 0.0
     total_execution_time_ms: float = 0.0
     avg_result_size_bytes: int = 0
@@ -60,8 +63,12 @@ class QueryPerformanceMetrics:
         """Update calculated fields."""
         if self.total_executions > 0:
             self.cache_hit_rate = self.cache_hits / self.total_executions
-            self.avg_execution_time_ms = self.total_execution_time_ms / self.total_executions
-            self.avg_result_size_bytes = int(self.total_result_size_bytes / self.total_executions)
+            self.avg_execution_time_ms = (
+                self.total_execution_time_ms / self.total_executions
+            )
+            self.avg_result_size_bytes = int(
+                self.total_result_size_bytes / self.total_executions
+            )
 
         # Calculate time saved by cache (hits * avg execution time)
         self.time_saved_by_cache_ms = self.cache_hits * self.avg_execution_time_ms
@@ -135,6 +142,7 @@ class QueryPerformanceMetrics:
 @dataclass
 class CacheTuningRecommendation:
     """Recommendation for cache tuning."""
+
     priority: CacheTuningPriority
     category: str
     title: str
@@ -147,6 +155,7 @@ class CacheTuningRecommendation:
 @dataclass
 class CacheEffectivenessReport:
     """Comprehensive cache effectiveness report."""
+
     report_time: datetime
     time_period_hours: float
     total_queries: int
@@ -176,7 +185,7 @@ class CacheAnalytics:
         cache_manager=None,
         prefetch_engine=None,
         cache_invalidator=None,
-        max_metrics_history: int = 10000
+        max_metrics_history: int = 10000,
     ):
         """
         Initialize cache analytics.
@@ -206,7 +215,7 @@ class CacheAnalytics:
         sql: str,
         execution_time_ms: float,
         cache_hit: bool,
-        result_size_bytes: int = 0
+        result_size_bytes: int = 0,
     ):
         """
         Record a query execution for analytics.
@@ -222,8 +231,7 @@ class CacheAnalytics:
         # Get or create metrics
         if fingerprint not in self.query_metrics:
             self.query_metrics[fingerprint] = QueryPerformanceMetrics(
-                fingerprint=fingerprint,
-                sql=sql
+                fingerprint=fingerprint, sql=sql
             )
 
         metrics = self.query_metrics[fingerprint]
@@ -237,25 +245,29 @@ class CacheAnalytics:
 
         metrics.total_execution_time_ms += execution_time_ms
         metrics.total_result_size_bytes += result_size_bytes
-        metrics.min_execution_time_ms = min(metrics.min_execution_time_ms, execution_time_ms)
-        metrics.max_execution_time_ms = max(metrics.max_execution_time_ms, execution_time_ms)
+        metrics.min_execution_time_ms = min(
+            metrics.min_execution_time_ms, execution_time_ms
+        )
+        metrics.max_execution_time_ms = max(
+            metrics.max_execution_time_ms, execution_time_ms
+        )
         metrics.last_executed = datetime.utcnow()
 
         # Update calculated fields
         metrics.update()
 
         # Add to recent queries
-        self.recent_queries.append({
-            'fingerprint': fingerprint,
-            'timestamp': datetime.utcnow(),
-            'execution_time_ms': execution_time_ms,
-            'cache_hit': cache_hit
-        })
+        self.recent_queries.append(
+            {
+                "fingerprint": fingerprint,
+                "timestamp": datetime.utcnow(),
+                "execution_time_ms": execution_time_ms,
+                "cache_hit": cache_hit,
+            }
+        )
 
     def generate_effectiveness_report(
-        self,
-        time_period_hours: float = 24.0,
-        top_k: int = 10
+        self, time_period_hours: float = 24.0, top_k: int = 10
     ) -> CacheEffectivenessReport:
         """
         Generate comprehensive cache effectiveness report.
@@ -271,7 +283,8 @@ class CacheAnalytics:
         cutoff_time = datetime.utcnow() - timedelta(hours=time_period_hours)
 
         recent_metrics = [
-            m for m in self.query_metrics.values()
+            m
+            for m in self.query_metrics.values()
             if m.last_executed and m.last_executed >= cutoff_time
         ]
 
@@ -282,7 +295,11 @@ class CacheAnalytics:
         total_hits = sum(m.cache_hits for m in recent_metrics)
         total_misses = sum(m.cache_misses for m in recent_metrics)
 
-        overall_hit_rate = total_hits / (total_hits + total_misses) if (total_hits + total_misses) > 0 else 0.0
+        overall_hit_rate = (
+            total_hits / (total_hits + total_misses)
+            if (total_hits + total_misses) > 0
+            else 0.0
+        )
         overall_miss_rate = 1.0 - overall_hit_rate
 
         total_time_saved = sum(m.time_saved_by_cache_ms for m in recent_metrics)
@@ -294,26 +311,22 @@ class CacheAnalytics:
 
         # Get memory utilization
         memory_stats = self.cache_manager.memory_cache.get_stats()
-        memory_utilization = memory_stats.get('utilization', 0.0)
+        memory_utilization = memory_stats.get("utilization", 0.0)
 
         # Identify top cached queries (highest time savings)
         top_cached = sorted(
-            recent_metrics,
-            key=lambda m: m.time_saved_by_cache_ms,
-            reverse=True
+            recent_metrics, key=lambda m: m.time_saved_by_cache_ms, reverse=True
         )[:top_k]
 
         # Identify cache-hostile queries (low hit rate, high frequency)
         cache_hostile = sorted(
             [m for m in recent_metrics if m.total_executions >= 5],
-            key=lambda m: (m.cache_hit_rate, -m.total_executions)
+            key=lambda m: (m.cache_hit_rate, -m.total_executions),
         )[:top_k]
 
         # Generate recommendations
         recommendations = self._generate_recommendations(
-            recent_metrics,
-            cache_stats,
-            memory_utilization
+            recent_metrics, cache_stats, memory_utilization
         )
 
         return CacheEffectivenessReport(
@@ -330,14 +343,14 @@ class CacheAnalytics:
             recommendations=recommendations,
             cache_statistics=cache_stats.__dict__,
             prefetch_statistics=prefetch_stats,
-            invalidation_statistics=invalidation_stats
+            invalidation_statistics=invalidation_stats,
         )
 
     def get_query_metrics(
         self,
         sql: Optional[str] = None,
         min_executions: int = 1,
-        cacheability: Optional[QueryCacheability] = None
+        cacheability: Optional[QueryCacheability] = None,
     ) -> List[QueryPerformanceMetrics]:
         """
         Get query performance metrics with optional filtering.
@@ -364,7 +377,9 @@ class CacheAnalytics:
 
         return metrics
 
-    def get_cache_friendly_queries(self, top_k: int = 10) -> List[QueryPerformanceMetrics]:
+    def get_cache_friendly_queries(
+        self, top_k: int = 10
+    ) -> List[QueryPerformanceMetrics]:
         """
         Get most cache-friendly queries.
 
@@ -377,10 +392,12 @@ class CacheAnalytics:
         return sorted(
             self.query_metrics.values(),
             key=lambda m: m.cacheability_score,
-            reverse=True
+            reverse=True,
         )[:top_k]
 
-    def get_cache_hostile_queries(self, top_k: int = 10) -> List[QueryPerformanceMetrics]:
+    def get_cache_hostile_queries(
+        self, top_k: int = 10
+    ) -> List[QueryPerformanceMetrics]:
         """
         Get least cache-friendly queries.
 
@@ -391,100 +408,116 @@ class CacheAnalytics:
             List of query metrics sorted by cacheability (ascending)
         """
         # Only consider queries that have been executed multiple times
-        frequent_queries = [m for m in self.query_metrics.values() if m.total_executions >= 5]
+        frequent_queries = [
+            m for m in self.query_metrics.values() if m.total_executions >= 5
+        ]
 
-        return sorted(
-            frequent_queries,
-            key=lambda m: m.cacheability_score
-        )[:top_k]
+        return sorted(frequent_queries, key=lambda m: m.cacheability_score)[:top_k]
 
     def _generate_recommendations(
         self,
         metrics: List[QueryPerformanceMetrics],
         cache_stats: Any,
-        memory_utilization: float
+        memory_utilization: float,
     ) -> List[CacheTuningRecommendation]:
         """Generate cache tuning recommendations."""
         recommendations = []
 
         # Recommendation 1: Low overall hit rate
         if cache_stats.hit_rate < 0.5:
-            recommendations.append(CacheTuningRecommendation(
-                priority=CacheTuningPriority.HIGH,
-                category="Performance",
-                title="Low Cache Hit Rate",
-                description=f"Current cache hit rate is {cache_stats.hit_rate:.1%}, which is below optimal.",
-                impact="High - Many queries are not benefiting from caching",
-                action="Increase cache memory size or adjust TTL settings to retain entries longer",
-                estimated_improvement=f"Could improve hit rate by {(0.7 - cache_stats.hit_rate) * 100:.0f}%"
-            ))
+            recommendations.append(
+                CacheTuningRecommendation(
+                    priority=CacheTuningPriority.HIGH,
+                    category="Performance",
+                    title="Low Cache Hit Rate",
+                    description=f"Current cache hit rate is {cache_stats.hit_rate:.1%}, which is below optimal.",
+                    impact="High - Many queries are not benefiting from caching",
+                    action="Increase cache memory size or adjust TTL settings to retain entries longer",
+                    estimated_improvement=f"Could improve hit rate by {(0.7 - cache_stats.hit_rate) * 100:.0f}%",
+                )
+            )
 
         # Recommendation 2: High memory pressure
         if memory_utilization > 0.9:
-            recommendations.append(CacheTuningRecommendation(
-                priority=CacheTuningPriority.CRITICAL,
-                category="Capacity",
-                title="High Memory Utilization",
-                description=f"Cache memory utilization is {memory_utilization:.1%}",
-                impact="Critical - Frequent evictions may be hurting performance",
-                action="Increase CACHE_MEMORY_SIZE_MB setting or enable disk cache",
-                estimated_improvement="Reduce eviction rate by 50%+"
-            ))
+            recommendations.append(
+                CacheTuningRecommendation(
+                    priority=CacheTuningPriority.CRITICAL,
+                    category="Capacity",
+                    title="High Memory Utilization",
+                    description=f"Cache memory utilization is {memory_utilization:.1%}",
+                    impact="Critical - Frequent evictions may be hurting performance",
+                    action="Increase CACHE_MEMORY_SIZE_MB setting or enable disk cache",
+                    estimated_improvement="Reduce eviction rate by 50%+",
+                )
+            )
 
         # Recommendation 3: Cache-hostile queries
-        hostile = [m for m in metrics if m.cacheability == QueryCacheability.POORLY_CACHEABLE and m.total_executions >= 10]
+        hostile = [
+            m
+            for m in metrics
+            if m.cacheability == QueryCacheability.POORLY_CACHEABLE
+            and m.total_executions >= 10
+        ]
         if len(hostile) > 5:
-            recommendations.append(CacheTuningRecommendation(
-                priority=CacheTuningPriority.MEDIUM,
-                category="Query Optimization",
-                title="Multiple Cache-Hostile Queries",
-                description=f"Found {len(hostile)} frequently-executed queries with poor cache performance",
-                impact="Medium - These queries are wasting cache resources",
-                action="Review and optimize cache-hostile queries, or exclude them from caching",
-                estimated_improvement="Free up 20-30% of cache memory"
-            ))
+            recommendations.append(
+                CacheTuningRecommendation(
+                    priority=CacheTuningPriority.MEDIUM,
+                    category="Query Optimization",
+                    title="Multiple Cache-Hostile Queries",
+                    description=f"Found {len(hostile)} frequently-executed queries with poor cache performance",
+                    impact="Medium - These queries are wasting cache resources",
+                    action="Review and optimize cache-hostile queries, or exclude them from caching",
+                    estimated_improvement="Free up 20-30% of cache memory",
+                )
+            )
 
         # Recommendation 4: Low prefetch success rate
         prefetch_stats = self.prefetch_engine.get_statistics()
-        if prefetch_stats['prefetch_attempts'] > 100 and prefetch_stats['success_rate'] < 0.3:
-            recommendations.append(CacheTuningRecommendation(
-                priority=CacheTuningPriority.MEDIUM,
-                category="Prefetching",
-                title="Low Prefetch Success Rate",
-                description=f"Prefetch success rate is {prefetch_stats['success_rate']:.1%}",
-                impact="Medium - Wasted resources on unnecessary prefetching",
-                action="Increase prefetch_threshold setting or disable speculative execution",
-                estimated_improvement="Reduce wasted prefetch cycles by 50%"
-            ))
+        if (
+            prefetch_stats["prefetch_attempts"] > 100
+            and prefetch_stats["success_rate"] < 0.3
+        ):
+            recommendations.append(
+                CacheTuningRecommendation(
+                    priority=CacheTuningPriority.MEDIUM,
+                    category="Prefetching",
+                    title="Low Prefetch Success Rate",
+                    description=f"Prefetch success rate is {prefetch_stats['success_rate']:.1%}",
+                    impact="Medium - Wasted resources on unnecessary prefetching",
+                    action="Increase prefetch_threshold setting or disable speculative execution",
+                    estimated_improvement="Reduce wasted prefetch cycles by 50%",
+                )
+            )
 
         # Recommendation 5: Enable compression for large results
-        large_results = [m for m in metrics if m.avg_result_size_bytes > 100 * 1024]  # > 100KB
+        large_results = [
+            m for m in metrics if m.avg_result_size_bytes > 100 * 1024
+        ]  # > 100KB
         if len(large_results) > 5:
-            recommendations.append(CacheTuningRecommendation(
-                priority=CacheTuningPriority.LOW,
-                category="Optimization",
-                title="Large Result Sets",
-                description=f"Found {len(large_results)} queries with result sets > 100KB",
-                impact="Low - Could save cache memory through compression",
-                action="Ensure compression is enabled for large cache entries",
-                estimated_improvement="Save 30-50% cache memory for large results"
-            ))
+            recommendations.append(
+                CacheTuningRecommendation(
+                    priority=CacheTuningPriority.LOW,
+                    category="Optimization",
+                    title="Large Result Sets",
+                    description=f"Found {len(large_results)} queries with result sets > 100KB",
+                    impact="Low - Could save cache memory through compression",
+                    action="Ensure compression is enabled for large cache entries",
+                    estimated_improvement="Save 30-50% cache memory for large results",
+                )
+            )
 
         # Sort by priority
         priority_order = {
             CacheTuningPriority.CRITICAL: 0,
             CacheTuningPriority.HIGH: 1,
             CacheTuningPriority.MEDIUM: 2,
-            CacheTuningPriority.LOW: 3
+            CacheTuningPriority.LOW: 3,
         }
         recommendations.sort(key=lambda r: priority_order[r.priority])
 
         return recommendations
 
-    def get_time_series_stats(
-        self,
-        hours: int = 24
-    ) -> List[Dict[str, Any]]:
+    def get_time_series_stats(self, hours: int = 24) -> List[Dict[str, Any]]:
         """
         Get time series statistics.
 

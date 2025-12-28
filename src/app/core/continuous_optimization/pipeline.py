@@ -162,27 +162,31 @@ class ContinuousOptimizationPipeline:
             # Analyze what optimizations apply
             if "ORDER BY" in pattern.sql_template and "WHERE" in pattern.sql_template:
                 # Candidate for composite index
-                proposals.append(OptimizationProposal(
-                    proposal_id=f"opt_{pattern.pattern_id}_idx",
-                    pattern=pattern,
-                    optimization_type="index",
-                    description="Add composite index on filter + order columns",
-                    predicted_improvement_pct=45.0,  # From HypoPG
-                    risk_level="low",
-                    proposed_at=datetime.utcnow(),
-                ))
+                proposals.append(
+                    OptimizationProposal(
+                        proposal_id=f"opt_{pattern.pattern_id}_idx",
+                        pattern=pattern,
+                        optimization_type="index",
+                        description="Add composite index on filter + order columns",
+                        predicted_improvement_pct=45.0,  # From HypoPG
+                        risk_level="low",
+                        proposed_at=datetime.utcnow(),
+                    )
+                )
 
             if "SELECT *" in pattern.sql_template:
                 # Candidate for rewrite
-                proposals.append(OptimizationProposal(
-                    proposal_id=f"opt_{pattern.pattern_id}_rewrite",
-                    pattern=pattern,
-                    optimization_type="rewrite",
-                    description="Replace SELECT * with explicit columns",
-                    predicted_improvement_pct=15.0,
-                    risk_level="medium",
-                    proposed_at=datetime.utcnow(),
-                ))
+                proposals.append(
+                    OptimizationProposal(
+                        proposal_id=f"opt_{pattern.pattern_id}_rewrite",
+                        pattern=pattern,
+                        optimization_type="rewrite",
+                        description="Replace SELECT * with explicit columns",
+                        predicted_improvement_pct=15.0,
+                        risk_level="medium",
+                        proposed_at=datetime.utcnow(),
+                    )
+                )
 
         self._proposals.extend(proposals)
         logger.info(f"Generated {len(proposals)} optimization proposals")
@@ -204,7 +208,9 @@ class ContinuousOptimizationPipeline:
         # For now, simulate based on predicted improvement
 
         if proposal.predicted_improvement_pct < 5:
-            logger.warning(f"Predicted improvement too small: {proposal.predicted_improvement_pct}%")
+            logger.warning(
+                f"Predicted improvement too small: {proposal.predicted_improvement_pct}%"
+            )
             return False
 
         if proposal.risk_level == "high":
@@ -223,7 +229,9 @@ class ContinuousOptimizationPipeline:
 
         Monitors for regressions during canary period.
         """
-        logger.info(f"Deploying canary for {proposal.proposal_id} ({self.CANARY_PERCENTAGE}%)")
+        logger.info(
+            f"Deploying canary for {proposal.proposal_id} ({self.CANARY_PERCENTAGE}%)"
+        )
 
         # Simulate canary deployment
         result = OptimizationResult(
@@ -238,9 +246,13 @@ class ContinuousOptimizationPipeline:
 
         # Monitor canary for 30 minutes (in production)
         # Check for regressions
-        canary_duration_ms = proposal.pattern.avg_duration_ms * 0.9  # Simulated 10% improvement
+        canary_duration_ms = (
+            proposal.pattern.avg_duration_ms * 0.9
+        )  # Simulated 10% improvement
 
-        if canary_duration_ms > proposal.pattern.avg_duration_ms * (1 + self.REGRESSION_THRESHOLD_PCT / 100):
+        if canary_duration_ms > proposal.pattern.avg_duration_ms * (
+            1 + self.REGRESSION_THRESHOLD_PCT / 100
+        ):
             # Regression detected
             logger.error(f"Canary regression detected for {proposal.proposal_id}")
             result.status = OptimizationStatus.ROLLED_BACK
@@ -250,8 +262,9 @@ class ContinuousOptimizationPipeline:
             logger.info(f"Canary successful for {proposal.proposal_id}")
             result.status = OptimizationStatus.ROLLING_OUT
             result.actual_improvement_pct = (
-                (proposal.pattern.avg_duration_ms - canary_duration_ms) /
-                proposal.pattern.avg_duration_ms * 100
+                (proposal.pattern.avg_duration_ms - canary_duration_ms)
+                / proposal.pattern.avg_duration_ms
+                * 100
             )
 
         return result
@@ -268,7 +281,9 @@ class ContinuousOptimizationPipeline:
         Monitors each stage for regressions.
         """
         if result.status != OptimizationStatus.ROLLING_OUT:
-            logger.warning(f"Cannot rollout {proposal.proposal_id}: invalid status {result.status}")
+            logger.warning(
+                f"Cannot rollout {proposal.proposal_id}: invalid status {result.status}"
+            )
             return result
 
         logger.info(f"Starting gradual rollout for {proposal.proposal_id}")
@@ -306,23 +321,26 @@ class ContinuousOptimizationPipeline:
         if result.status == OptimizationStatus.DEPLOYED:
             # Calculate impact score
             impact_score = (
-                result.actual_improvement_pct *
-                proposal.pattern.execution_count / 1000
+                result.actual_improvement_pct * proposal.pattern.execution_count / 1000
             )
 
-            self._leaderboard.append({
-                "proposal_id": proposal.proposal_id,
-                "optimization_type": proposal.optimization_type,
-                "improvement_pct": result.actual_improvement_pct,
-                "queries_affected": result.queries_affected,
-                "impact_score": float(f"{impact_score:.2f}"),
-                "deployed_at": result.deployed_at.isoformat(),
-            })
+            self._leaderboard.append(
+                {
+                    "proposal_id": proposal.proposal_id,
+                    "optimization_type": proposal.optimization_type,
+                    "improvement_pct": result.actual_improvement_pct,
+                    "queries_affected": result.queries_affected,
+                    "impact_score": float(f"{impact_score:.2f}"),
+                    "deployed_at": result.deployed_at.isoformat(),
+                }
+            )
 
             # Sort by impact score
             self._leaderboard.sort(key=lambda x: x["impact_score"], reverse=True)
 
-            logger.info(f"Leaderboard updated: {proposal.proposal_id} scored {impact_score:.2f}")
+            logger.info(
+                f"Leaderboard updated: {proposal.proposal_id} scored {impact_score:.2f}"
+            )
 
     def get_leaderboard(self, limit: int = 10) -> List[Dict]:
         """Get top optimizations by impact."""
@@ -408,5 +426,7 @@ class ContinuousOptimizationPipeline:
         logger.info("Pipeline Complete")
         logger.info(f"Patterns analyzed: {len(patterns)}")
         logger.info(f"Proposals generated: {len(proposals)}")
-        logger.info(f"Successful deployments: {len([r for r in self._results if r.status == OptimizationStatus.DEPLOYED])}")
+        logger.info(
+            f"Successful deployments: {len([r for r in self._results if r.status == OptimizationStatus.DEPLOYED])}"
+        )
         logger.info("=" * 60)

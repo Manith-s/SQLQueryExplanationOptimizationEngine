@@ -48,7 +48,8 @@ class QueryProfiler:
     def _init_db(self):
         """Initialize SQLite database schema."""
         with self._get_connection() as conn:
-            conn.execute("""
+            conn.execute(
+                """
                 CREATE TABLE IF NOT EXISTS query_executions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     query_hash TEXT NOT NULL,
@@ -63,19 +64,25 @@ class QueryProfiler:
                     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                     metadata TEXT
                 )
-            """)
+            """
+            )
 
-            conn.execute("""
+            conn.execute(
+                """
                 CREATE INDEX IF NOT EXISTS idx_query_hash
                 ON query_executions(query_hash)
-            """)
+            """
+            )
 
-            conn.execute("""
+            conn.execute(
+                """
                 CREATE INDEX IF NOT EXISTS idx_timestamp
                 ON query_executions(timestamp)
-            """)
+            """
+            )
 
-            conn.execute("""
+            conn.execute(
+                """
                 CREATE TABLE IF NOT EXISTS performance_alerts (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     query_hash TEXT NOT NULL,
@@ -85,9 +92,11 @@ class QueryProfiler:
                     metrics TEXT,
                     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
+            """
+            )
 
-            conn.execute("""
+            conn.execute(
+                """
                 CREATE TABLE IF NOT EXISTS optimization_recommendations (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     query_hash TEXT NOT NULL,
@@ -97,18 +106,15 @@ class QueryProfiler:
                     metrics TEXT,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
+            """
+            )
 
             conn.commit()
 
     @contextmanager
     def _get_connection(self):
         """Context manager for SQLite connections."""
-        conn = sqlite3.connect(
-            self.db_path,
-            timeout=30.0,
-            check_same_thread=False
-        )
+        conn = sqlite3.connect(self.db_path, timeout=30.0, check_same_thread=False)
         conn.row_factory = sqlite3.Row
         try:
             yield conn
@@ -138,20 +144,23 @@ class QueryProfiler:
         cutoff = datetime.now() - timedelta(hours=hours)
 
         with self._get_connection() as conn:
-            rows = conn.execute("""
+            rows = conn.execute(
+                """
                 SELECT query_hash, execution_time_ms, total_cost,
                        cache_hit_rate, timestamp
                 FROM query_executions
                 WHERE timestamp > ?
                 ORDER BY timestamp ASC
-            """, (cutoff.isoformat(),)).fetchall()
+            """,
+                (cutoff.isoformat(),),
+            ).fetchall()
 
             for row in rows:
                 entry = {
                     "execution_time_ms": row["execution_time_ms"],
                     "total_cost": row["total_cost"],
                     "cache_hit_rate": row["cache_hit_rate"],
-                    "timestamp": row["timestamp"]
+                    "timestamp": row["timestamp"],
                 }
                 self._windows[row["query_hash"]].append(entry)
 
@@ -164,7 +173,7 @@ class QueryProfiler:
         execution_rows: Optional[int] = None,
         buffer_hits: Optional[int] = None,
         buffer_misses: Optional[int] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> str:
         """
         Record a query execution with performance metrics.
@@ -193,24 +202,27 @@ class QueryProfiler:
 
         # Store in database
         with self._get_connection() as conn:
-            conn.execute("""
+            conn.execute(
+                """
                 INSERT INTO query_executions (
                     query_hash, query_text, execution_time_ms, total_cost,
                     planning_time_ms, execution_rows, buffer_hits, buffer_misses,
                     cache_hit_rate, metadata
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                query_hash,
-                query,
-                execution_time_ms,
-                total_cost,
-                planning_time_ms,
-                execution_rows,
-                buffer_hits,
-                buffer_misses,
-                cache_hit_rate,
-                json.dumps(metadata) if metadata else None
-            ))
+            """,
+                (
+                    query_hash,
+                    query,
+                    execution_time_ms,
+                    total_cost,
+                    planning_time_ms,
+                    execution_rows,
+                    buffer_hits,
+                    buffer_misses,
+                    cache_hit_rate,
+                    json.dumps(metadata) if metadata else None,
+                ),
+            )
             conn.commit()
 
         # Add to sliding window
@@ -218,7 +230,7 @@ class QueryProfiler:
             "execution_time_ms": execution_time_ms,
             "total_cost": total_cost,
             "cache_hit_rate": cache_hit_rate,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
         self._windows[query_hash].append(entry)
 
@@ -264,8 +276,8 @@ class QueryProfiler:
                 metrics={
                     "historical_mean_ms": float(f"{hist_mean:.3f}"),
                     "recent_mean_ms": float(f"{recent_mean:.3f}"),
-                    "degradation_pct": float(f"{degradation_pct:.3f}")
-                }
+                    "degradation_pct": float(f"{degradation_pct:.3f}"),
+                },
             )
 
     def _create_alert(
@@ -274,7 +286,7 @@ class QueryProfiler:
         alert_type: str,
         severity: str,
         message: str,
-        metrics: Optional[Dict[str, Any]] = None
+        metrics: Optional[Dict[str, Any]] = None,
     ):
         """
         Create a performance alert.
@@ -287,24 +299,27 @@ class QueryProfiler:
             metrics: Associated metrics
         """
         with self._get_connection() as conn:
-            conn.execute("""
+            conn.execute(
+                """
                 INSERT INTO performance_alerts (
                     query_hash, alert_type, severity, message, metrics
                 ) VALUES (?, ?, ?, ?, ?)
-            """, (
-                query_hash,
-                alert_type,
-                severity,
-                message,
-                json.dumps(metrics) if metrics else None
-            ))
+            """,
+                (
+                    query_hash,
+                    alert_type,
+                    severity,
+                    message,
+                    json.dumps(metrics) if metrics else None,
+                ),
+            )
             conn.commit()
 
     def get_query_statistics(
         self,
         query: Optional[str] = None,
         query_hash: Optional[str] = None,
-        hours: int = 24
+        hours: int = 24,
     ) -> Dict[str, Any]:
         """
         Get statistical analysis for a query.
@@ -326,25 +341,30 @@ class QueryProfiler:
         cutoff = datetime.now() - timedelta(hours=hours)
 
         with self._get_connection() as conn:
-            rows = conn.execute("""
+            rows = conn.execute(
+                """
                 SELECT execution_time_ms, total_cost, cache_hit_rate,
                        buffer_hits, buffer_misses, execution_rows, timestamp
                 FROM query_executions
                 WHERE query_hash = ? AND timestamp > ?
                 ORDER BY timestamp ASC
-            """, (query_hash, cutoff.isoformat())).fetchall()
+            """,
+                (query_hash, cutoff.isoformat()),
+            ).fetchall()
 
         if not rows:
             return {
                 "query_hash": query_hash,
                 "sample_count": 0,
-                "message": "No execution history found"
+                "message": "No execution history found",
             }
 
         # Extract metrics
         exec_times = [r["execution_time_ms"] for r in rows]
         costs = [r["total_cost"] for r in rows if r["total_cost"] is not None]
-        cache_rates = [r["cache_hit_rate"] for r in rows if r["cache_hit_rate"] is not None]
+        cache_rates = [
+            r["cache_hit_rate"] for r in rows if r["cache_hit_rate"] is not None
+        ]
 
         # Calculate statistics
         stats = {
@@ -353,7 +373,7 @@ class QueryProfiler:
             "time_window_hours": hours,
             "execution_time": self._calculate_stats(exec_times),
             "first_seen": rows[0]["timestamp"],
-            "last_seen": rows[-1]["timestamp"]
+            "last_seen": rows[-1]["timestamp"],
         }
 
         if costs:
@@ -392,7 +412,7 @@ class QueryProfiler:
             "max": float(f"{max(values):.3f}"),
             "p50": float(f"{sorted_values[len(sorted_values) // 2]:.3f}"),
             "p95": float(f"{sorted_values[int(len(sorted_values) * 0.95)]:.3f}"),
-            "p99": float(f"{sorted_values[int(len(sorted_values) * 0.99)]:.3f}")
+            "p99": float(f"{sorted_values[int(len(sorted_values) * 0.99)]:.3f}"),
         }
 
         if len(values) > 1:
@@ -434,10 +454,12 @@ class QueryProfiler:
             "direction": direction,
             "change_pct": float(f"{change_pct:.3f}"),
             "first_half_mean": float(f"{first_mean:.3f}"),
-            "second_half_mean": float(f"{second_mean:.3f}")
+            "second_half_mean": float(f"{second_mean:.3f}"),
         }
 
-    def _get_recent_alerts(self, query_hash: str, hours: int = 24) -> List[Dict[str, Any]]:
+    def _get_recent_alerts(
+        self, query_hash: str, hours: int = 24
+    ) -> List[Dict[str, Any]]:
         """
         Get recent alerts for a query.
 
@@ -451,13 +473,16 @@ class QueryProfiler:
         cutoff = datetime.now() - timedelta(hours=hours)
 
         with self._get_connection() as conn:
-            rows = conn.execute("""
+            rows = conn.execute(
+                """
                 SELECT alert_type, severity, message, metrics, timestamp
                 FROM performance_alerts
                 WHERE query_hash = ? AND timestamp > ?
                 ORDER BY timestamp DESC
                 LIMIT 10
-            """, (query_hash, cutoff.isoformat())).fetchall()
+            """,
+                (query_hash, cutoff.isoformat()),
+            ).fetchall()
 
         return [
             {
@@ -465,16 +490,13 @@ class QueryProfiler:
                 "severity": r["severity"],
                 "message": r["message"],
                 "metrics": json.loads(r["metrics"]) if r["metrics"] else None,
-                "timestamp": r["timestamp"]
+                "timestamp": r["timestamp"],
             }
             for r in rows
         ]
 
     def profile_query_execution(
-        self,
-        query: str,
-        iterations: int = 10,
-        execution_func: callable = None
+        self, query: str, iterations: int = 10, execution_func: callable = None
     ) -> Dict[str, Any]:
         """
         Profile a query by running it multiple times and collecting metrics.
@@ -510,20 +532,19 @@ class QueryProfiler:
                     execution_rows=metrics.get("execution_rows"),
                     buffer_hits=metrics.get("buffer_hits"),
                     buffer_misses=metrics.get("buffer_misses"),
-                    metadata={"iteration": i + 1, "profiling_session": True}
+                    metadata={"iteration": i + 1, "profiling_session": True},
                 )
 
-                results.append({
-                    "iteration": i + 1,
-                    "execution_time_ms": float(f"{exec_time_ms:.3f}"),
-                    "metrics": metrics
-                })
+                results.append(
+                    {
+                        "iteration": i + 1,
+                        "execution_time_ms": float(f"{exec_time_ms:.3f}"),
+                        "metrics": metrics,
+                    }
+                )
 
             except Exception as e:
-                results.append({
-                    "iteration": i + 1,
-                    "error": str(e)
-                })
+                results.append({"iteration": i + 1, "error": str(e)})
 
         # Generate profile report
         successful_runs = [r for r in results if "error" not in r]
@@ -533,7 +554,7 @@ class QueryProfiler:
                 "query_hash": query_hash,
                 "status": "failed",
                 "error": "All iterations failed",
-                "results": results
+                "results": results,
             }
 
         exec_times = [r["execution_time_ms"] for r in successful_runs]
@@ -545,22 +566,30 @@ class QueryProfiler:
             "iterations_requested": iterations,
             "iterations_successful": len(successful_runs),
             "execution_time_distribution": self._calculate_stats(exec_times),
-            "results": results
+            "results": results,
         }
 
         # Add cost analysis if available
-        costs = [r["metrics"].get("total_cost") for r in successful_runs if r["metrics"].get("total_cost")]
+        costs = [
+            r["metrics"].get("total_cost")
+            for r in successful_runs
+            if r["metrics"].get("total_cost")
+        ]
         if costs:
             report["cost_analysis"] = self._calculate_stats(costs)
 
         # Add historical comparison
-        historical_stats = self.get_query_statistics(query_hash=query_hash, hours=168)  # 1 week
+        historical_stats = self.get_query_statistics(
+            query_hash=query_hash, hours=168
+        )  # 1 week
         if historical_stats.get("sample_count", 0) > 0:
             report["historical_comparison"] = historical_stats
 
         return report
 
-    def get_all_query_summaries(self, hours: int = 24, limit: int = 100) -> List[Dict[str, Any]]:
+    def get_all_query_summaries(
+        self, hours: int = 24, limit: int = 100
+    ) -> List[Dict[str, Any]]:
         """
         Get summaries for all tracked queries.
 
@@ -574,7 +603,8 @@ class QueryProfiler:
         cutoff = datetime.now() - timedelta(hours=hours)
 
         with self._get_connection() as conn:
-            rows = conn.execute("""
+            rows = conn.execute(
+                """
                 SELECT query_hash, query_text,
                        COUNT(*) as execution_count,
                        AVG(execution_time_ms) as avg_time,
@@ -585,18 +615,26 @@ class QueryProfiler:
                 GROUP BY query_hash
                 ORDER BY execution_count DESC
                 LIMIT ?
-            """, (cutoff.isoformat(), limit)).fetchall()
+            """,
+                (cutoff.isoformat(), limit),
+            ).fetchall()
 
         summaries = []
         for row in rows:
-            summaries.append({
-                "query_hash": row["query_hash"],
-                "query_text": row["query_text"][:200] + "..." if len(row["query_text"]) > 200 else row["query_text"],
-                "execution_count": row["execution_count"],
-                "avg_time_ms": float(f"{row['avg_time']:.3f}"),
-                "max_time_ms": float(f"{row['max_time']:.3f}"),
-                "min_time_ms": float(f"{row['min_time']:.3f}")
-            })
+            summaries.append(
+                {
+                    "query_hash": row["query_hash"],
+                    "query_text": (
+                        row["query_text"][:200] + "..."
+                        if len(row["query_text"]) > 200
+                        else row["query_text"]
+                    ),
+                    "execution_count": row["execution_count"],
+                    "avg_time_ms": float(f"{row['avg_time']:.3f}"),
+                    "max_time_ms": float(f"{row['max_time']:.3f}"),
+                    "min_time_ms": float(f"{row['min_time']:.3f}"),
+                }
+            )
 
         return summaries
 
@@ -613,17 +651,23 @@ class QueryProfiler:
         cutoff = datetime.now() - timedelta(days=days)
 
         with self._get_connection() as conn:
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 DELETE FROM query_executions
                 WHERE timestamp < ?
-            """, (cutoff.isoformat(),))
+            """,
+                (cutoff.isoformat(),),
+            )
 
             deleted = cursor.rowcount
 
-            conn.execute("""
+            conn.execute(
+                """
                 DELETE FROM performance_alerts
                 WHERE timestamp < ?
-            """, (cutoff.isoformat(),))
+            """,
+                (cutoff.isoformat(),),
+            )
 
             conn.commit()
 

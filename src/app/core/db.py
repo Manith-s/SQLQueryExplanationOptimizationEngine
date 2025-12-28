@@ -25,6 +25,7 @@ _SCHEMA_CACHE_TS: Dict[str, float] = {}
 # Optional global connection reuse to support TEMP objects across requests in tests
 _global_conn: Optional[pg_connection] = None
 
+
 @contextmanager
 def get_conn() -> pg_connection:
     """
@@ -61,7 +62,9 @@ def get_conn() -> pg_connection:
         raise e
 
 
-def run_sql(sql: str, params: Optional[Tuple] = None, timeout_ms: int = 10000) -> List[Tuple]:
+def run_sql(
+    sql: str, params: Optional[Tuple] = None, timeout_ms: int = 10000
+) -> List[Tuple]:
     """
     Execute SQL with proper connection handling and timeout.
 
@@ -96,6 +99,7 @@ def run_sql(sql: str, params: Optional[Tuple] = None, timeout_ms: int = 10000) -
                 except Exception:
                     pass
                 raise e
+
 
 def run_explain(sql: str, analyze: bool = False, timeout_ms: int = 10000) -> Dict:
     """
@@ -136,7 +140,11 @@ def run_explain(sql: str, analyze: bool = False, timeout_ms: int = 10000) -> Dic
                 else:
                     plan_json = result[0]
                 # Normalize plan shape: EXPLAIN returns a list with one item
-                plan_obj = plan_json[0] if isinstance(plan_json, list) and plan_json else plan_json
+                plan_obj = (
+                    plan_json[0]
+                    if isinstance(plan_json, list) and plan_json
+                    else plan_json
+                )
                 # Ensure plan_obj is a dict with top-level Plan
                 if isinstance(plan_obj, dict) and "Plan" in plan_obj:
                     return plan_obj
@@ -150,6 +158,7 @@ def run_explain(sql: str, analyze: bool = False, timeout_ms: int = 10000) -> Dic
                 except Exception:
                     pass
                 raise Exception(f"EXPLAIN failed: {str(e)}") from e
+
 
 def run_explain_costs(sql: str, timeout_ms: int = 10000) -> Dict:
     """
@@ -178,12 +187,15 @@ def run_explain_costs(sql: str, timeout_ms: int = 10000) -> Dict:
                 plan_json = json.loads(result[0])
             else:
                 plan_json = result[0]
-            plan_obj = plan_json[0] if isinstance(plan_json, list) and plan_json else plan_json
+            plan_obj = (
+                plan_json[0] if isinstance(plan_json, list) and plan_json else plan_json
+            )
             if isinstance(plan_obj, dict) and "Plan" in plan_obj:
                 return plan_obj
             if isinstance(plan_obj, dict):
                 return {"Plan": plan_obj}
             return {"Plan": {}}
+
 
 def fetch_schema(schema: str = "public", table: Optional[str] = None) -> Dict:
     """
@@ -201,6 +213,7 @@ def fetch_schema(schema: str = "public", table: Optional[str] = None) -> Dict:
     if _CACHE_SCHEMA_TTL_S > 0:
         ts = _SCHEMA_CACHE_TS.get(cache_key, 0)
         import time
+
         if time.time() - ts < _CACHE_SCHEMA_TTL_S:
             cached = _SCHEMA_CACHE.get(cache_key)
             if cached is not None:
@@ -212,25 +225,30 @@ def fetch_schema(schema: str = "public", table: Optional[str] = None) -> Dict:
             table_params = (schema, table) if table else (schema,)
 
             # Get tables
-            cur.execute(f"""
+            cur.execute(
+                f"""
                 SELECT table_name
                 FROM information_schema.tables
                 WHERE table_schema = %s
                 {table_where}
                 AND table_type = 'BASE TABLE'
                 ORDER BY table_name
-            """, table_params)
+            """,
+                table_params,
+            )
             tables = cur.fetchall()
 
-            result = {
-                "schema": schema,
-                "tables": []
-            }
+            result = {"schema": schema, "tables": []}
 
             for tbl in tables:
-                table_name = tbl['table_name']
-                table_info = {"name": table_name, "columns": [], "indexes": [],
-                              "primary_key": [], "foreign_keys": []}
+                table_name = tbl["table_name"]
+                table_info = {
+                    "name": table_name,
+                    "columns": [],
+                    "indexes": [],
+                    "primary_key": [],
+                    "foreign_keys": [],
+                }
 
                 # Get columns
                 cur.execute(
@@ -250,7 +268,9 @@ def fetch_schema(schema: str = "public", table: Optional[str] = None) -> Dict:
                 for c in cols:
                     norm_cols.append(
                         {
-                            "name": c.get("column_name") or c.get("name") or c.get("column"),
+                            "name": c.get("column_name")
+                            or c.get("name")
+                            or c.get("column"),
                             "data_type": c.get("data_type"),
                             "nullable": bool(c.get("nullable")),
                             "default": c.get("default"),
@@ -259,19 +279,23 @@ def fetch_schema(schema: str = "public", table: Optional[str] = None) -> Dict:
                 table_info["columns"] = norm_cols
 
                 # Get primary key
-                cur.execute("""
+                cur.execute(
+                    """
                     SELECT a.attname as column_name
                     FROM pg_index i
                     JOIN pg_attribute a ON a.attrelid = i.indrelid
                         AND a.attnum = ANY(i.indkey)
                     WHERE i.indrelid = %s::regclass
                     AND i.indisprimary
-                """, (f"{schema}.{table_name}",))
+                """,
+                    (f"{schema}.{table_name}",),
+                )
                 pk_columns = cur.fetchall()
-                table_info["primary_key"] = [col['column_name'] for col in pk_columns]
+                table_info["primary_key"] = [col["column_name"] for col in pk_columns]
 
                 # Get indexes
-                cur.execute("""
+                cur.execute(
+                    """
                     SELECT
                         i.relname as name,
                         ix.indisunique as unique,
@@ -294,11 +318,14 @@ def fetch_schema(schema: str = "public", table: Optional[str] = None) -> Dict:
                         ix.indisunique
                     ORDER BY
                         i.relname;
-                """, (f"{schema}.{table_name}",))
+                """,
+                    (f"{schema}.{table_name}",),
+                )
                 table_info["indexes"] = cur.fetchall()
 
                 # Get foreign keys
-                cur.execute("""
+                cur.execute(
+                    """
                     SELECT
                         kcu.column_name,
                         ccu.table_schema AS foreign_schema,
@@ -315,7 +342,9 @@ def fetch_schema(schema: str = "public", table: Optional[str] = None) -> Dict:
                     WHERE tc.constraint_type = 'FOREIGN KEY'
                         AND tc.table_schema = %s
                         AND tc.table_name = %s
-                """, (schema, table_name))
+                """,
+                    (schema, table_name),
+                )
                 table_info["foreign_keys"] = cur.fetchall()
 
                 result["tables"].append(table_info)
@@ -326,7 +355,9 @@ def fetch_schema(schema: str = "public", table: Optional[str] = None) -> Dict:
             return result
 
 
-def fetch_schema_metadata(schema_name: str = "public", include_system: bool = False) -> Dict[str, Any]:
+def fetch_schema_metadata(
+    schema_name: str = "public", include_system: bool = False
+) -> Dict[str, Any]:
     """
     Fetch comprehensive schema metadata including tables, columns, relationships, and statistics.
 
@@ -348,14 +379,16 @@ def fetch_schema_metadata(schema_name: str = "public", include_system: bool = Fa
     for table in schema_data.get("tables", []):
         table_name = table["name"]
         for fk in table.get("foreign_keys", []):
-            relationships.append({
-                "from_table": table_name,
-                "from_column": fk.get("column_name", ""),
-                "to_table": fk.get("foreign_table", ""),
-                "to_column": fk.get("foreign_column", ""),
-                "constraint_name": f"fk_{table_name}_{fk.get('foreign_table', '')}",
-                "type": "foreign_key"
-            })
+            relationships.append(
+                {
+                    "from_table": table_name,
+                    "from_column": fk.get("column_name", ""),
+                    "to_table": fk.get("foreign_table", ""),
+                    "to_column": fk.get("foreign_column", ""),
+                    "constraint_name": f"fk_{table_name}_{fk.get('foreign_table', '')}",
+                    "type": "foreign_key",
+                }
+            )
 
     # Get table statistics
     table_names = [t["name"] for t in schema_data.get("tables", [])]
@@ -364,7 +397,8 @@ def fetch_schema_metadata(schema_name: str = "public", include_system: bool = Fa
         try:
             with get_conn() as conn:
                 with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                    cur.execute("""
+                    cur.execute(
+                        """
                         SELECT
                             c.relname as table_name,
                             c.reltuples::bigint AS row_count,
@@ -375,12 +409,14 @@ def fetch_schema_metadata(schema_name: str = "public", include_system: bool = Fa
                           AND c.relkind = 'r'
                           AND c.relname = ANY(%s)
                         ORDER BY c.relname
-                    """, (schema_name, table_names))
+                    """,
+                        (schema_name, table_names),
+                    )
 
                     for row in cur.fetchall():
                         stats_data[row["table_name"]] = {
                             "row_count": int(row.get("row_count") or 0),
-                            "total_size": row.get("total_size", "0 bytes")
+                            "total_size": row.get("total_size", "0 bytes"),
                         }
         except Exception:
             # Soft fail on stats errors
@@ -398,12 +434,14 @@ def fetch_schema_metadata(schema_name: str = "public", include_system: bool = Fa
         "statistics": {
             "total_tables": len(schema_data.get("tables", [])),
             "total_relationships": len(relationships),
-            "schema": schema_name
-        }
+            "schema": schema_name,
+        },
     }
 
 
-def fetch_table_stats(tables: List[str], schema: str = "public", timeout_ms: int = 5000) -> Dict[str, Any]:
+def fetch_table_stats(
+    tables: List[str], schema: str = "public", timeout_ms: int = 5000
+) -> Dict[str, Any]:
     """
     Fetch per-table stats for given tables: approximate row counts and existing indexes.
 
@@ -436,7 +474,10 @@ def fetch_table_stats(tables: List[str], schema: str = "public", timeout_ms: int
                 (schema, norm_tables),
             )
             for r in cur.fetchall():
-                out[r["table_name"]] = {"rows": float(r.get("rows") or 0), "indexes": []}
+                out[r["table_name"]] = {
+                    "rows": float(r.get("rows") or 0),
+                    "indexes": [],
+                }
 
             # Existing indexes (non-PK)
             cur.execute(
@@ -497,7 +538,9 @@ def get_table_stats(schema: str, table: str, timeout_ms: int = 5000) -> Dict[str
             return {"rows": float(r.get("rows") or 0.0)}
 
 
-def get_column_stats(schema: str, table: str, timeout_ms: int = 5000) -> Dict[str, Dict[str, Any]]:
+def get_column_stats(
+    schema: str, table: str, timeout_ms: int = 5000
+) -> Dict[str, Dict[str, Any]]:
     """Return pg_stats per column: { col: { n_distinct, null_frac, avg_width } }.
     Safe defaults when missing.
     """
@@ -520,4 +563,3 @@ def get_column_stats(schema: str, table: str, timeout_ms: int = 5000) -> Dict[st
                     "avg_width": int(r.get("avg_width") or 0),
                 }
     return out
-

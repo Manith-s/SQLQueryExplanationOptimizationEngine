@@ -69,7 +69,9 @@ class SLI:
             "good_events": self.good_events,
             "total_events": self.total_events,
             "is_meeting_target": self.is_meeting_target(),
-            "last_updated": self.last_updated.isoformat() if self.last_updated else None,
+            "last_updated": (
+                self.last_updated.isoformat() if self.last_updated else None
+            ),
         }
 
 

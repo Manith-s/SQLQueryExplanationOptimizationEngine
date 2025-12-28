@@ -230,8 +230,12 @@ class ProductionDaySimulation:
             self.log("Step 1: Get baseline AI stats...")
             ai_stats_before = await self._get_ai_stats()
             scenario_results["details"]["ai_stats_before"] = ai_stats_before
-            self.log(f"  Autonomy level: {ai_stats_before.get('autonomy_level', 0) * 100:.0f}%")
-            self.log(f"  Success rate: {ai_stats_before.get('success_rate', 0) * 100:.0f}%")
+            self.log(
+                f"  Autonomy level: {ai_stats_before.get('autonomy_level', 0) * 100:.0f}%"
+            )
+            self.log(
+                f"  Success rate: {ai_stats_before.get('success_rate', 0) * 100:.0f}%"
+            )
 
             self.log("")
             self.log("Step 2: Inject latency spike (simulate high load)...")
@@ -253,7 +257,9 @@ class ProductionDaySimulation:
                     self.log(f"    Request {i} failed: {str(e)}")
 
             avg_latency = sum(latencies) / len(latencies) if latencies else 0
-            p99_latency = sorted(latencies)[int(len(latencies) * 0.99)] if latencies else 0
+            p99_latency = (
+                sorted(latencies)[int(len(latencies) * 0.99)] if latencies else 0
+            )
 
             scenario_results["details"]["load_test"] = {
                 "requests": 100,
@@ -282,7 +288,9 @@ class ProductionDaySimulation:
                     ai_responded = True
                     self.log(f"  ✅ AI responded after {(attempt + 1) * 5}s")
                     self.log(f"    Actions taken: {actions_after - actions_before}")
-                    scenario_results["details"]["ai_response_time_seconds"] = (attempt + 1) * 5
+                    scenario_results["details"]["ai_response_time_seconds"] = (
+                        attempt + 1
+                    ) * 5
                     scenario_results["details"]["ai_actions_taken"] = (
                         actions_after - actions_before
                     )
@@ -293,7 +301,9 @@ class ProductionDaySimulation:
 
             if not ai_responded:
                 self.log("  ⚠️  AI did not respond within 5 minutes")
-                self.log("    (May indicate low-severity incident or AI threshold not met)")
+                self.log(
+                    "    (May indicate low-severity incident or AI threshold not met)"
+                )
                 scenario_results["details"]["ai_response"] = "No action taken"
                 scenario_results["passed"] = False
                 self.results["summary"]["warnings"] += 1
@@ -366,7 +376,9 @@ class ProductionDaySimulation:
             cache_hit_rate = cache_hits / total_requests if total_requests > 0 else 0
 
             avg_latency = sum(latencies) / len(latencies) if latencies else 0
-            p95_latency = sorted(latencies)[int(len(latencies) * 0.95)] if latencies else 0
+            p95_latency = (
+                sorted(latencies)[int(len(latencies) * 0.95)] if latencies else 0
+            )
 
             scenario_results["details"] = {
                 "total_requests": total_requests,
@@ -384,11 +396,15 @@ class ProductionDaySimulation:
             # Verify cache hit rate >= 85% (or >=50% if cache just starting)
             target_cache_hit_rate = 0.50  # Lenient for testing
             if cache_hit_rate >= target_cache_hit_rate:
-                self.log(f"  ✅ Cache hit rate meets target: {cache_hit_rate * 100:.1f}% >= {target_cache_hit_rate * 100:.0f}%")
+                self.log(
+                    f"  ✅ Cache hit rate meets target: {cache_hit_rate * 100:.1f}% >= {target_cache_hit_rate * 100:.0f}%"
+                )
                 scenario_results["passed"] = True
                 self.results["summary"]["passed"] += 1
             else:
-                self.log(f"  ⚠️  Cache hit rate below target: {cache_hit_rate * 100:.1f}% < {target_cache_hit_rate * 100:.0f}%")
+                self.log(
+                    f"  ⚠️  Cache hit rate below target: {cache_hit_rate * 100:.1f}% < {target_cache_hit_rate * 100:.0f}%"
+                )
                 self.log("    (Note: Cache may need warm-up in test environment)")
                 scenario_results["passed"] = False
                 self.results["summary"]["warnings"] += 1
@@ -508,7 +524,11 @@ class ProductionDaySimulation:
             scenario_results["details"]["dashboards_available"] = dashboards_available
 
             # Overall pass/fail
-            if prometheus_healthy and metrics_available >= 1 and dashboards_available >= 1:
+            if (
+                prometheus_healthy
+                and metrics_available >= 1
+                and dashboards_available >= 1
+            ):
                 self.log("")
                 self.log("  ✅ Monitoring system operational")
                 scenario_results["passed"] = True
@@ -647,9 +667,7 @@ class ProductionDaySimulation:
 
             # Check if at least one pod is running
             running_pods = [
-                p
-                for p in pods
-                if p.get("status", {}).get("phase") == "Running"
+                p for p in pods if p.get("status", {}).get("phase") == "Running"
             ]
 
             return len(running_pods) > 0

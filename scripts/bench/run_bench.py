@@ -38,8 +38,12 @@ def seed(schema: str) -> None:
             for s in stmts:
                 cur.execute(s)
             # Populate small synthetic data
-            cur.execute(f"INSERT INTO {schema}.users(email,status) SELECT 'u'||g, 'active' FROM generate_series(1,1000) g")
-            cur.execute(f"INSERT INTO {schema}.orders(user_id,amount,status) SELECT (random()*999)::int+1, random()*100, 'paid' FROM generate_series(1,5000)")
+            cur.execute(
+                f"INSERT INTO {schema}.users(email,status) SELECT 'u'||g, 'active' FROM generate_series(1,1000) g"
+            )
+            cur.execute(
+                f"INSERT INTO {schema}.orders(user_id,amount,status) SELECT (random()*999)::int+1, random()*100, 'paid' FROM generate_series(1,5000)"
+            )
             conn.commit()
 
 
@@ -89,7 +93,16 @@ def write_reports(data: Dict[str, Any]) -> None:
             }
         )
     with (out_dir / "report.csv").open("w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=["case", "planning_time_ms", "execution_time_ms", "node_count", "error"])
+        w = csv.DictWriter(
+            f,
+            fieldnames=[
+                "case",
+                "planning_time_ms",
+                "execution_time_ms",
+                "node_count",
+                "error",
+            ],
+        )
         w.writeheader()
         w.writerows(rows)
 
@@ -110,6 +123,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-
-

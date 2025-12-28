@@ -106,7 +106,7 @@ class TTLCache:
             "hits": self._hits,
             "misses": self._misses,
             "hit_rate": round(hit_rate, 3),
-            "ttl_seconds": self.ttl_seconds
+            "ttl_seconds": self.ttl_seconds,
         }
 
 
@@ -133,22 +133,22 @@ def get_cache_key(*args, **kwargs) -> str:
 # Global cache instances
 _EXPLAIN_CACHE = TTLCache(
     max_size=int(os.getenv("CACHE_EXPLAIN_SIZE", "500")),
-    ttl_seconds=int(os.getenv("CACHE_EXPLAIN_TTL", "300"))  # 5 minutes
+    ttl_seconds=int(os.getenv("CACHE_EXPLAIN_TTL", "300")),  # 5 minutes
 )
 
 _NL_CACHE = TTLCache(
     max_size=int(os.getenv("CACHE_NL_SIZE", "200")),
-    ttl_seconds=int(os.getenv("CACHE_NL_TTL", "600"))  # 10 minutes
+    ttl_seconds=int(os.getenv("CACHE_NL_TTL", "600")),  # 10 minutes
 )
 
 _OPTIMIZE_CACHE = TTLCache(
     max_size=int(os.getenv("CACHE_OPTIMIZE_SIZE", "300")),
-    ttl_seconds=int(os.getenv("CACHE_OPTIMIZE_TTL", "300"))  # 5 minutes
+    ttl_seconds=int(os.getenv("CACHE_OPTIMIZE_TTL", "300")),  # 5 minutes
 )
 
 _SCHEMA_CACHE = TTLCache(
     max_size=int(os.getenv("CACHE_SCHEMA_SIZE", "100")),
-    ttl_seconds=int(os.getenv("CACHE_SCHEMA_TTL", "1800"))  # 30 minutes
+    ttl_seconds=int(os.getenv("CACHE_SCHEMA_TTL", "1800")),  # 30 minutes
 )
 
 
@@ -164,13 +164,17 @@ def get_cached_explain_result(sql: str, analyze: bool) -> Optional[Dict]:
     return _EXPLAIN_CACHE.get(key)
 
 
-def cache_nl_explanation(sql: str, plan: Dict, audience: str, style: str, length: str, explanation: str) -> None:
+def cache_nl_explanation(
+    sql: str, plan: Dict, audience: str, style: str, length: str, explanation: str
+) -> None:
     """Cache natural language explanation."""
     key = get_cache_key("nl", sql, str(plan), audience, style, length)
     _NL_CACHE.set(key, explanation)
 
 
-def get_cached_nl_explanation(sql: str, plan: Dict, audience: str, style: str, length: str) -> Optional[str]:
+def get_cached_nl_explanation(
+    sql: str, plan: Dict, audience: str, style: str, length: str
+) -> Optional[str]:
     """Get cached natural language explanation."""
     key = get_cache_key("nl", sql, str(plan), audience, style, length)
     return _NL_CACHE.get(key)
@@ -206,7 +210,7 @@ def get_all_cache_stats() -> Dict[str, Dict[str, Any]]:
         "explain": _EXPLAIN_CACHE.stats(),
         "nl": _NL_CACHE.stats(),
         "optimize": _OPTIMIZE_CACHE.stats(),
-        "schema": _SCHEMA_CACHE.stats()
+        "schema": _SCHEMA_CACHE.stats(),
     }
 
 

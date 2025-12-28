@@ -43,12 +43,16 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             response.headers["X-Content-Type-Options"] = "nosniff"
             response.headers["X-Frame-Options"] = "DENY"
             response.headers["X-XSS-Protection"] = "1; mode=block"
-            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains"
+            )
             response.headers["Content-Security-Policy"] = "default-src 'self'"
 
             # Additional security headers
             response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-            response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+            response.headers["Permissions-Policy"] = (
+                "geolocation=(), microphone=(), camera=()"
+            )
 
         return response
 
@@ -142,23 +146,27 @@ def get_cors_config(allowed_origins: list = None) -> dict:
         "allow_origins": origins,
         "allow_credentials": not allow_all,  # Can't use credentials with wildcard
         "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["*"] if allow_all else [
-            "Authorization",
-            "Content-Type",
-            "Accept",
-            "Origin",
-            "User-Agent",
-            "DNT",
-            "Cache-Control",
-            "X-Requested-With"
-        ],
+        "allow_headers": (
+            ["*"]
+            if allow_all
+            else [
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "Origin",
+                "User-Agent",
+                "DNT",
+                "Cache-Control",
+                "X-Requested-With",
+            ]
+        ),
         "expose_headers": [
             "X-RateLimit-Limit",
             "X-RateLimit-Remaining",
             "X-RateLimit-Reset",
-            "X-Response-Time"
+            "X-Response-Time",
         ],
-        "max_age": 600  # 10 minutes
+        "max_age": 600,  # 10 minutes
     }
 
 

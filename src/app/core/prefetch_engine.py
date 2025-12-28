@@ -23,6 +23,7 @@ from app.core.db import get_conn
 
 class PrefetchStrategy(Enum):
     """Prefetch strategies."""
+
     MARKOV = "markov"  # Markov chain prediction
     SEQUENTIAL = "sequential"  # Sequential pattern detection
     TEMPORAL = "temporal"  # Time-based patterns
@@ -31,6 +32,7 @@ class PrefetchStrategy(Enum):
 
 class LoadLevel(Enum):
     """System load levels."""
+
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -40,6 +42,7 @@ class LoadLevel(Enum):
 @dataclass
 class QueryExecution:
     """Record of a query execution."""
+
     fingerprint: str
     sql: str
     timestamp: datetime
@@ -53,6 +56,7 @@ class QueryExecution:
 @dataclass
 class QuerySequence:
     """Sequence of queries in a session."""
+
     session_id: str
     queries: List[QueryExecution] = field(default_factory=list)
     start_time: datetime = field(default_factory=datetime.utcnow)
@@ -67,6 +71,7 @@ class QuerySequence:
 @dataclass
 class PrefetchCandidate:
     """Candidate query for prefetching."""
+
     fingerprint: str
     sql: str
     probability: float
@@ -79,6 +84,7 @@ class PrefetchCandidate:
 @dataclass
 class PrefetchDecision:
     """Decision about whether to prefetch a query."""
+
     should_prefetch: bool
     candidate: PrefetchCandidate
     reason: str
@@ -102,7 +108,9 @@ class MarkovChainModel:
         self.order = order
 
         # Transition counts: (state) -> (next_query) -> count
-        self.transitions: Dict[Tuple[str, ...], Dict[str, int]] = defaultdict(lambda: defaultdict(int))
+        self.transitions: Dict[Tuple[str, ...], Dict[str, int]] = defaultdict(
+            lambda: defaultdict(int)
+        )
 
         # Total transitions from each state
         self.state_counts: Dict[Tuple[str, ...], int] = defaultdict(int)
@@ -122,7 +130,7 @@ class MarkovChainModel:
         with self.lock:
             for i in range(len(sequence) - self.order):
                 # Get state (current n queries)
-                state = tuple(sequence[i:i + self.order])
+                state = tuple(sequence[i : i + self.order])
 
                 # Get next query
                 next_query = sequence[i + self.order]
@@ -131,7 +139,9 @@ class MarkovChainModel:
                 self.transitions[state][next_query] += 1
                 self.state_counts[state] += 1
 
-    def predict(self, recent_queries: List[str], top_k: int = 5) -> List[Tuple[str, float]]:
+    def predict(
+        self, recent_queries: List[str], top_k: int = 5
+    ) -> List[Tuple[str, float]]:
         """
         Predict next queries based on recent history.
 
@@ -146,7 +156,7 @@ class MarkovChainModel:
             return []
 
         # Get current state
-        state = tuple(recent_queries[-self.order:])
+        state = tuple(recent_queries[-self.order :])
 
         with self.lock:
             if state not in self.transitions:
@@ -172,13 +182,15 @@ class MarkovChainModel:
         with self.lock:
             total_states = len(self.state_counts)
             total_transitions = sum(self.state_counts.values())
-            avg_transitions_per_state = total_transitions / total_states if total_states > 0 else 0
+            avg_transitions_per_state = (
+                total_transitions / total_states if total_states > 0 else 0
+            )
 
             return {
                 "order": self.order,
                 "total_states": total_states,
                 "total_transitions": total_transitions,
-                "avg_transitions_per_state": avg_transitions_per_state
+                "avg_transitions_per_state": avg_transitions_per_state,
             }
 
 
@@ -199,7 +211,7 @@ class PrefetchEngine:
         max_history_size: int = 10000,
         prefetch_threshold: float = 0.3,
         max_prefetch_cost_ms: float = 1000.0,
-        enable_speculative: bool = True
+        enable_speculative: bool = True,
     ):
         """
         Initialize prefetch engine.
@@ -249,7 +261,7 @@ class PrefetchEngine:
         session_id: Optional[str] = None,
         user_id: Optional[str] = None,
         result_size_bytes: int = 0,
-        cache_hit: bool = False
+        cache_hit: bool = False,
     ):
         """
         Record a query execution for pattern analysis.
@@ -272,7 +284,7 @@ class PrefetchEngine:
             session_id=session_id,
             user_id=user_id,
             result_size_bytes=result_size_bytes,
-            cache_hit=cache_hit
+            cache_hit=cache_hit,
         )
 
         with self.history_lock:
@@ -282,7 +294,9 @@ class PrefetchEngine:
             # Update session sequence
             if session_id:
                 if session_id not in self.session_sequences:
-                    self.session_sequences[session_id] = QuerySequence(session_id=session_id)
+                    self.session_sequences[session_id] = QuerySequence(
+                        session_id=session_id
+                    )
 
                 self.session_sequences[session_id].queries.append(execution)
 
@@ -294,7 +308,7 @@ class PrefetchEngine:
         self,
         session_id: Optional[str] = None,
         user_id: Optional[str] = None,
-        top_k: int = 5
+        top_k: int = 5,
     ) -> List[PrefetchCandidate]:
         """
         Predict next likely queries.
@@ -329,7 +343,9 @@ class PrefetchEngine:
 
         # Get user-specific predictions if available
         if user_id and user_id in self.user_models:
-            user_predictions = self.user_models[user_id].predict(recent_queries, top_k=top_k)
+            user_predictions = self.user_models[user_id].predict(
+                recent_queries, top_k=top_k
+            )
             # Merge predictions (weighted average)
             pred_dict = {}
             for fp, prob in predictions:
@@ -362,15 +378,17 @@ class PrefetchEngine:
             # Priority score combines probability and benefit
             priority_score = probability * estimated_benefit / max(estimated_cost, 1.0)
 
-            candidates.append(PrefetchCandidate(
-                fingerprint=fingerprint,
-                sql=sql,
-                probability=probability,
-                estimated_cost_ms=estimated_cost,
-                estimated_benefit=estimated_benefit,
-                priority_score=priority_score,
-                reason=f"Markov prediction (p={probability:.3f})"
-            ))
+            candidates.append(
+                PrefetchCandidate(
+                    fingerprint=fingerprint,
+                    sql=sql,
+                    probability=probability,
+                    estimated_cost_ms=estimated_cost,
+                    estimated_benefit=estimated_benefit,
+                    priority_score=priority_score,
+                    reason=f"Markov prediction (p={probability:.3f})",
+                )
+            )
 
         # Sort by priority score
         candidates.sort(key=lambda c: c.priority_score, reverse=True)
@@ -394,7 +412,7 @@ class PrefetchEngine:
                 should_prefetch=False,
                 candidate=candidate,
                 reason="Already cached",
-                cost_benefit_ratio=0.0
+                cost_benefit_ratio=0.0,
             )
 
         # Check cost threshold
@@ -403,7 +421,7 @@ class PrefetchEngine:
                 should_prefetch=False,
                 candidate=candidate,
                 reason=f"Cost too high ({candidate.estimated_cost_ms:.0f}ms > {self.max_prefetch_cost_ms:.0f}ms)",
-                cost_benefit_ratio=0.0
+                cost_benefit_ratio=0.0,
             )
 
         # Check current system load
@@ -413,11 +431,13 @@ class PrefetchEngine:
                 should_prefetch=False,
                 candidate=candidate,
                 reason=f"System load too high ({load.value})",
-                cost_benefit_ratio=0.0
+                cost_benefit_ratio=0.0,
             )
 
         # Calculate cost-benefit ratio
-        cost_benefit_ratio = candidate.estimated_benefit / max(candidate.estimated_cost_ms, 1.0)
+        cost_benefit_ratio = candidate.estimated_benefit / max(
+            candidate.estimated_cost_ms, 1.0
+        )
 
         # Decide based on cost-benefit ratio
         threshold_ratio = 2.0  # Benefit should be at least 2x cost
@@ -427,14 +447,14 @@ class PrefetchEngine:
                 should_prefetch=True,
                 candidate=candidate,
                 reason=f"Good cost-benefit ratio ({cost_benefit_ratio:.2f})",
-                cost_benefit_ratio=cost_benefit_ratio
+                cost_benefit_ratio=cost_benefit_ratio,
             )
         else:
             return PrefetchDecision(
                 should_prefetch=False,
                 candidate=candidate,
                 reason=f"Cost-benefit ratio too low ({cost_benefit_ratio:.2f} < {threshold_ratio})",
-                cost_benefit_ratio=cost_benefit_ratio
+                cost_benefit_ratio=cost_benefit_ratio,
             )
 
     def execute_prefetch(self, candidate: PrefetchCandidate) -> bool:
@@ -463,7 +483,7 @@ class PrefetchEngine:
                 sql=candidate.sql,
                 result=result,
                 ttl_seconds=3600,  # 1 hour for prefetched results
-                compress=True
+                compress=True,
             )
 
             with self.stats_lock:
@@ -475,11 +495,7 @@ class PrefetchEngine:
             print(f"Prefetch failed: {e}")
             return False
 
-    def warm_cache(
-        self,
-        queries: List[str],
-        parallel: bool = True
-    ) -> Dict[str, Any]:
+    def warm_cache(self, queries: List[str], parallel: bool = True) -> Dict[str, Any]:
         """
         Warm cache with specified queries.
 
@@ -505,7 +521,7 @@ class PrefetchEngine:
                 probability=1.0,
                 estimated_cost_ms=0.0,
                 estimated_benefit=1000.0,
-                reason="Manual cache warming"
+                reason="Manual cache warming",
             )
 
             if self.execute_prefetch(candidate):
@@ -520,7 +536,7 @@ class PrefetchEngine:
             "successful": successful,
             "failed": failed,
             "total_time_ms": total_time_ms,
-            "avg_time_per_query_ms": total_time_ms / len(queries) if queries else 0
+            "avg_time_per_query_ms": total_time_ms / len(queries) if queries else 0,
         }
 
     def get_statistics(self) -> Dict[str, Any]:
@@ -540,7 +556,7 @@ class PrefetchEngine:
                 "query_history_size": len(self.query_history),
                 "active_sessions": len(self.session_sequences),
                 "markov_model": self.markov_model.get_statistics(),
-                "user_models": len(self.user_models)
+                "user_models": len(self.user_models),
             }
 
         return stats
@@ -609,11 +625,13 @@ class PrefetchEngine:
         # Boost for expensive queries
         cost = self._estimate_query_cost(fingerprint)
         if cost > 100:
-            benefit *= (cost / 100.0)
+            benefit *= cost / 100.0
 
         # Boost for frequently accessed queries
         with self.history_lock:
-            access_count = sum(1 for q in self.query_history if q.fingerprint == fingerprint)
+            access_count = sum(
+                1 for q in self.query_history if q.fingerprint == fingerprint
+            )
             if access_count > 10:
                 benefit *= 1.5
 
@@ -688,9 +706,7 @@ def get_prefetch_engine() -> PrefetchEngine:
 
     if _prefetch_engine is None:
         _prefetch_engine = PrefetchEngine(
-            prefetch_threshold=0.3,
-            max_prefetch_cost_ms=1000.0,
-            enable_speculative=True
+            prefetch_threshold=0.3, max_prefetch_cost_ms=1000.0, enable_speculative=True
         )
 
     return _prefetch_engine

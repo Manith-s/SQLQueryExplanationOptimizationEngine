@@ -56,7 +56,9 @@ def test_lint_endpoint_exists(client):
 
 def test_explain_endpoint_exists(client):
     """Test that the explain endpoint exists and returns a response."""
-    response = client.post("/api/v1/explain", json={"sql": "SELECT * FROM orders LIMIT 1"})
+    response = client.post(
+        "/api/v1/explain", json={"sql": "SELECT * FROM orders LIMIT 1"}
+    )
     assert response.status_code == 200
 
     data = response.json()

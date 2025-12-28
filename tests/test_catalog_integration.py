@@ -14,14 +14,14 @@ import pytest
 # Skip if DB tests not enabled
 pytestmark = pytest.mark.skipif(
     os.getenv("RUN_DB_TESTS") != "1",
-    reason="Skipping DB-dependent tests (set RUN_DB_TESTS=1 to run)"
+    reason="Skipping DB-dependent tests (set RUN_DB_TESTS=1 to run)",
 )
 
 
 @pytest.fixture
 def temp_history_db():
     """Create temporary query history database."""
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.db', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".db", delete=False) as f:
         db_path = f.name
 
     yield db_path
@@ -36,6 +36,7 @@ def temp_history_db():
 def query_history(temp_history_db):
     """Create query history manager instance."""
     from app.core.query_history import QueryHistoryManager
+
     return QueryHistoryManager(db_path=temp_history_db)
 
 
@@ -43,11 +44,13 @@ def test_query_history_initialization(query_history):
     """Test query history database initialization."""
     # Verify tables were created
     with query_history._get_connection() as conn:
-        tables = conn.execute("""
+        tables = conn.execute(
+            """
             SELECT name FROM sqlite_master
             WHERE type='table'
             ORDER BY name
-        """).fetchall()
+        """
+        ).fetchall()
 
         table_names = [t["name"] for t in tables]
 
@@ -65,7 +68,7 @@ def test_add_query_to_history(query_history):
         total_cost=42.5,
         rows_returned=1,
         success=True,
-        user_id="test_user"
+        user_id="test_user",
     )
 
     assert query_id > 0
@@ -83,7 +86,7 @@ def test_query_type_detection(query_history):
         ("SELECT * FROM users", "SELECT"),
         ("INSERT INTO users VALUES (1)", "INSERT"),
         ("UPDATE users SET name='test'", "UPDATE"),
-        ("DELETE FROM users WHERE id=1", "DELETE")
+        ("DELETE FROM users WHERE id=1", "DELETE"),
     ]
 
     for sql, expected_type in queries:
@@ -95,9 +98,15 @@ def test_query_type_detection(query_history):
 def test_get_recent_queries_with_filters(query_history):
     """Test filtering recent queries."""
     # Add multiple queries
-    query_history.add_query("SELECT * FROM users", execution_time_ms=100.0, user_id="user1")
-    query_history.add_query("SELECT * FROM orders", execution_time_ms=200.0, user_id="user2")
-    query_history.add_query("INSERT INTO logs VALUES (1)", execution_time_ms=50.0, user_id="user1")
+    query_history.add_query(
+        "SELECT * FROM users", execution_time_ms=100.0, user_id="user1"
+    )
+    query_history.add_query(
+        "SELECT * FROM orders", execution_time_ms=200.0, user_id="user2"
+    )
+    query_history.add_query(
+        "INSERT INTO logs VALUES (1)", execution_time_ms=50.0, user_id="user1"
+    )
 
     # Filter by user
     user1_queries = query_history.get_recent_queries(user_id="user1")
@@ -116,7 +125,7 @@ def test_create_and_get_templates(query_history):
         description="Get user by ID",
         category="users",
         parameters=["user_id"],
-        created_by="test_user"
+        created_by="test_user",
     )
 
     assert template_id > 0
@@ -131,8 +140,7 @@ def test_create_and_get_templates(query_history):
 def test_template_usage_tracking(query_history):
     """Test template usage counter."""
     template_id = query_history.create_template(
-        template_name="test_template",
-        template_sql="SELECT 1"
+        template_name="test_template", template_sql="SELECT 1"
     )
 
     # Increment usage
@@ -152,7 +160,7 @@ def test_query_versioning(query_history):
         query_id=query_id,
         query_text="SELECT * FROM users",
         change_description="Initial version",
-        created_by="test_user"
+        created_by="test_user",
     )
 
     assert v1_num == 1
@@ -162,7 +170,7 @@ def test_query_versioning(query_history):
         query_id=query_id,
         query_text="SELECT id, name FROM users WHERE active = true",
         change_description="Added WHERE clause",
-        created_by="test_user"
+        created_by="test_user",
     )
 
     assert v2_num == 2
@@ -178,7 +186,7 @@ def test_shared_query_links(query_history):
     share_token = query_history.create_shared_query(
         query_text="SELECT * FROM public_data",
         query_name="Public Data Query",
-        created_by="test_user"
+        created_by="test_user",
     )
 
     assert share_token is not None
@@ -198,9 +206,15 @@ def test_shared_query_links(query_history):
 def test_query_history_statistics(query_history):
     """Test query history statistics."""
     # Add some queries
-    query_history.add_query("SELECT * FROM users", execution_time_ms=100.0, success=True)
-    query_history.add_query("SELECT * FROM orders", execution_time_ms=200.0, success=True)
-    query_history.add_query("INSERT INTO logs VALUES (1)", execution_time_ms=50.0, success=False)
+    query_history.add_query(
+        "SELECT * FROM users", execution_time_ms=100.0, success=True
+    )
+    query_history.add_query(
+        "SELECT * FROM orders", execution_time_ms=200.0, success=True
+    )
+    query_history.add_query(
+        "INSERT INTO logs VALUES (1)", execution_time_ms=50.0, success=False
+    )
 
     stats = query_history.get_statistics()
 
@@ -243,10 +257,7 @@ async def test_validate_endpoint():
 
     client = TestClient(app)
 
-    payload = {
-        "sql": "SELECT * FROM users",
-        "partial": False
-    }
+    payload = {"sql": "SELECT * FROM users", "partial": False}
 
     response = client.post("/api/v1/validate", json=payload)
 
@@ -269,10 +280,7 @@ async def test_suggest_endpoint():
 
     client = TestClient(app)
 
-    payload = {
-        "partial_sql": "SELECT",
-        "context": {"tables": []}
-    }
+    payload = {"partial_sql": "SELECT", "context": {"tables": []}}
 
     response = client.post("/api/v1/suggest", json=payload)
 
@@ -293,7 +301,9 @@ async def test_visual_plan_endpoint():
 
     client = TestClient(app)
 
-    response = client.get("/api/v1/plan/visual?sql=SELECT%20*%20FROM%20users%20LIMIT%2010")
+    response = client.get(
+        "/api/v1/plan/visual?sql=SELECT%20*%20FROM%20users%20LIMIT%2010"
+    )
 
     assert response.status_code in [200, 401, 500]  # 500 if no DB connection
 
@@ -322,10 +332,7 @@ def test_concurrent_query_additions(query_history):
 
     def add_queries():
         for i in range(10):
-            query_history.add_query(
-                f"SELECT {i} FROM test",
-                execution_time_ms=100.0
-            )
+            query_history.add_query(f"SELECT {i} FROM test", execution_time_ms=100.0)
 
     threads = []
     for _ in range(5):
@@ -346,7 +353,7 @@ def test_failed_query_tracking(query_history):
         query_text="SELECT * FROM nonexistent_table",
         execution_time_ms=None,
         success=False,
-        error_message="Table does not exist"
+        error_message="Table does not exist",
     )
 
     queries = query_history.get_recent_queries(limit=10)
@@ -360,23 +367,24 @@ def test_query_metadata_storage(query_history):
     metadata = {
         "source": "web_ui",
         "user_agent": "Mozilla/5.0",
-        "ip_address": "127.0.0.1"
+        "ip_address": "127.0.0.1",
     }
 
     query_history.add_query(
-        query_text="SELECT * FROM users",
-        execution_time_ms=100.0,
-        metadata=metadata
+        query_text="SELECT * FROM users", execution_time_ms=100.0, metadata=metadata
     )
 
     with query_history._get_connection() as conn:
-        row = conn.execute("""
+        row = conn.execute(
+            """
             SELECT metadata FROM query_history
             ORDER BY id DESC
             LIMIT 1
-        """).fetchone()
+        """
+        ).fetchone()
 
     import json
+
     stored_metadata = json.loads(row["metadata"])
     assert stored_metadata == metadata
 

@@ -47,15 +47,16 @@ class OllamaLLMProvider(LLMProvider):
             Exception: If completion fails
         """
         import time
+
         start_time = time.time()
         last_error = None
 
         # Prepare headers and payload
-        headers = {'Content-Type': 'application/json'}
+        headers = {"Content-Type": "application/json"}
         payload = {
             "model": self.model,
             "prompt": prompt[:1000],  # Limit prompt size
-            "stream": False
+            "stream": False,
         }
 
         # Add system context if provided
@@ -76,7 +77,7 @@ class OllamaLLMProvider(LLMProvider):
                     f"{self.host}/api/generate",
                     headers=headers,
                     json=payload,
-                    timeout=timeout
+                    timeout=timeout,
                 )
 
                 # Check for errors
@@ -91,7 +92,9 @@ class OllamaLLMProvider(LLMProvider):
                 end_time = time.time()
                 duration = end_time - start_time
                 print(f"Request completed in {duration:.2f}s")
-                print(f"Model metrics: {result.get('total_duration', 0) / 1e9:.2f}s total")
+                print(
+                    f"Model metrics: {result.get('total_duration', 0) / 1e9:.2f}s total"
+                )
 
                 return result.get("response", "").strip()
 
@@ -104,11 +107,15 @@ class OllamaLLMProvider(LLMProvider):
                 break
 
         # If all attempts failed, raise the last error
-        raise Exception(f"All {len(timeouts)} attempts failed. Last error: {str(last_error)}")
+        raise Exception(
+            f"All {len(timeouts)} attempts failed. Last error: {str(last_error)}"
+        )
 
     def generate(self, prompt: str) -> str:
         """Alternate generate API is not implemented for Ollama provider."""
-        raise NotImplementedError("generate() is not implemented for Ollama; use complete().")
+        raise NotImplementedError(
+            "generate() is not implemented for Ollama; use complete()."
+        )
 
     @classmethod
     def is_available(cls) -> bool:

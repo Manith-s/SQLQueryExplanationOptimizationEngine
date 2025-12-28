@@ -16,7 +16,7 @@ def _db_enabled() -> bool:
 def _hypopg_available() -> bool:
     try:
         rows = db.run_sql("SELECT extname FROM pg_extension WHERE extname='hypopg'")
-        return any(r and r[0] == 'hypopg' for r in rows)
+        return any(r and r[0] == "hypopg" for r in rows)
     except Exception:
         return False
 
@@ -41,15 +41,3 @@ def test_optimize_with_whatif_costs():
     assert data["ok"] is True
     # When hypopg is available and enabled, some suggestions may include estCost* fields
     # We don't assert presence strictly, just ensure the call worked.
-
-
-
-
-
-
-
-
-
-
-
-

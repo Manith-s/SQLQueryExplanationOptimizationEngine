@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 # Maximum sizes
 MAX_SQL_LENGTH = 50000  # 50KB for SQL queries
-MAX_SQLS_COUNT = 100     # Maximum queries in workload analysis
+MAX_SQLS_COUNT = 100  # Maximum queries in workload analysis
 MAX_REQUEST_SIZE = 1_000_000  # 1MB total request size
 
 # Dangerous SQL patterns (basic detection - not foolproof)
@@ -32,7 +32,9 @@ DANGEROUS_PATTERNS = [
 ]
 
 # Compiled patterns for performance
-_DANGEROUS_PATTERN_COMPILED = [re.compile(pattern, re.IGNORECASE) for pattern in DANGEROUS_PATTERNS]
+_DANGEROUS_PATTERN_COMPILED = [
+    re.compile(pattern, re.IGNORECASE) for pattern in DANGEROUS_PATTERNS
+]
 
 
 def validate_sql_length(sql: str) -> None:
@@ -48,7 +50,7 @@ def validate_sql_length(sql: str) -> None:
     if len(sql) > MAX_SQL_LENGTH:
         raise HTTPException(
             status_code=400,
-            detail=f"SQL query too long. Maximum length is {MAX_SQL_LENGTH} characters."
+            detail=f"SQL query too long. Maximum length is {MAX_SQL_LENGTH} characters.",
         )
 
 
@@ -71,7 +73,7 @@ def check_dangerous_patterns(sql: str) -> None:
             raise HTTPException(
                 status_code=400,
                 detail="SQL query contains potentially dangerous operations. "
-                       "This API only supports SELECT queries for analysis."
+                "This API only supports SELECT queries for analysis.",
             )
 
 
@@ -91,10 +93,7 @@ def validate_sql_for_analysis(sql: str) -> None:
         HTTPException: If validation fails
     """
     if not sql or not sql.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="SQL query cannot be empty"
-        )
+        raise HTTPException(status_code=400, detail="SQL query cannot be empty")
 
     # Trim whitespace
     sql = sql.strip()
@@ -118,14 +117,13 @@ def validate_workload_sqls(sqls: list) -> None:
     """
     if not sqls:
         raise HTTPException(
-            status_code=400,
-            detail="At least one SQL query is required"
+            status_code=400, detail="At least one SQL query is required"
         )
 
     if len(sqls) > MAX_SQLS_COUNT:
         raise HTTPException(
             status_code=400,
-            detail=f"Too many queries. Maximum is {MAX_SQLS_COUNT} queries per workload."
+            detail=f"Too many queries. Maximum is {MAX_SQLS_COUNT} queries per workload.",
         )
 
     # Validate each query
@@ -134,8 +132,7 @@ def validate_workload_sqls(sqls: list) -> None:
             validate_sql_for_analysis(sql)
         except HTTPException as e:
             raise HTTPException(
-                status_code=400,
-                detail=f"Query #{i+1} validation failed: {e.detail}"
+                status_code=400, detail=f"Query #{i+1} validation failed: {e.detail}"
             ) from None
 
 
@@ -156,7 +153,7 @@ async def validate_request_size(request: Request) -> None:
         if content_length > MAX_REQUEST_SIZE:
             raise HTTPException(
                 status_code=413,
-                detail=f"Request too large. Maximum size is {MAX_REQUEST_SIZE} bytes."
+                detail=f"Request too large. Maximum size is {MAX_REQUEST_SIZE} bytes.",
             )
 
 
@@ -196,21 +193,25 @@ def sanitize_error_message(error: str) -> str:
         Sanitized error message
     """
     # Remove file paths
-    error = re.sub(r'[A-Za-z]:\\[^\s"]+', '[PATH]', error)
-    error = re.sub(r'/[^\s"]+/[^\s"]+', '[PATH]', error)
+    error = re.sub(r'[A-Za-z]:\\[^\s"]+', "[PATH]", error)
+    error = re.sub(r'/[^\s"]+/[^\s"]+', "[PATH]", error)
 
     # Remove IP addresses
-    error = re.sub(r'\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b', '[IP]', error)
+    error = re.sub(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b", "[IP]", error)
 
     # Remove potential passwords/keys
-    error = re.sub(r'password[=:][^\s,;]+', 'password=[REDACTED]', error, flags=re.IGNORECASE)
-    error = re.sub(r'token[=:][^\s,;]+', 'token=[REDACTED]', error, flags=re.IGNORECASE)
-    error = re.sub(r'key[=:][^\s,;]+', 'key=[REDACTED]', error, flags=re.IGNORECASE)
+    error = re.sub(
+        r"password[=:][^\s,;]+", "password=[REDACTED]", error, flags=re.IGNORECASE
+    )
+    error = re.sub(r"token[=:][^\s,;]+", "token=[REDACTED]", error, flags=re.IGNORECASE)
+    error = re.sub(r"key[=:][^\s,;]+", "key=[REDACTED]", error, flags=re.IGNORECASE)
 
     return error
 
 
-def validate_parameter_range(value: int, min_val: int, max_val: int, param_name: str) -> None:
+def validate_parameter_range(
+    value: int, min_val: int, max_val: int, param_name: str
+) -> None:
     """
     Validate parameter is within acceptable range.
 
@@ -226,5 +227,5 @@ def validate_parameter_range(value: int, min_val: int, max_val: int, param_name:
     if value < min_val or value > max_val:
         raise HTTPException(
             status_code=400,
-            detail=f"{param_name} must be between {min_val} and {max_val}"
+            detail=f"{param_name} must be between {min_val} and {max_val}",
         )

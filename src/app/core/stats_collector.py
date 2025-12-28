@@ -16,6 +16,7 @@ from app.core.db import get_conn
 @dataclass
 class TableStatistics:
     """Comprehensive statistics for a table."""
+
     schema_name: str
     table_name: str
     row_count: int
@@ -39,13 +40,16 @@ class TableStatistics:
 @dataclass
 class ColumnStatistics:
     """Statistics for a single column."""
+
     schema_name: str
     table_name: str
     column_name: str
     data_type: str
     null_frac: float  # Fraction of nulls
     avg_width: int  # Average width in bytes
-    n_distinct: float  # Number of distinct values (-1 = all unique, >0 = count, 0-1 = fraction)
+    n_distinct: (
+        float  # Number of distinct values (-1 = all unique, >0 = count, 0-1 = fraction)
+    )
     correlation: Optional[float]  # Physical order correlation (-1 to 1)
     most_common_vals: Optional[List[Any]]
     most_common_freqs: Optional[List[float]]
@@ -54,6 +58,7 @@ class ColumnStatistics:
 @dataclass
 class DataGrowthPattern:
     """Data growth pattern for a table."""
+
     table_name: str
     measurement_start: datetime
     measurement_end: datetime
@@ -77,8 +82,7 @@ class StatisticsCollector:
         self._growth_history: Dict[str, List[TableStatistics]] = defaultdict(list)
 
     def collect_table_statistics(
-        self,
-        table_name: Optional[str] = None
+        self, table_name: Optional[str] = None
     ) -> List[TableStatistics]:
         """
         Collect comprehensive statistics for tables.
@@ -145,7 +149,7 @@ class StatisticsCollector:
                             analyze_count=row[13] or 0,
                             autoanalyze_count=row[14] or 0,
                             row_count=row[5] or 0,  # n_live_tup
-                            **size_info
+                            **size_info,
                         )
 
                         stats_list.append(stats)
@@ -181,19 +185,12 @@ class StatisticsCollector:
                     return {
                         "total_size_bytes": row[0] or 0,
                         "index_size_bytes": row[2] or 0,
-                        "toast_size_bytes": row[3] or 0
+                        "toast_size_bytes": row[3] or 0,
                     }
         except Exception:
-            return {
-                "total_size_bytes": 0,
-                "index_size_bytes": 0,
-                "toast_size_bytes": 0
-            }
+            return {"total_size_bytes": 0, "index_size_bytes": 0, "toast_size_bytes": 0}
 
-    def collect_column_statistics(
-        self,
-        table_name: str
-    ) -> List[ColumnStatistics]:
+    def collect_column_statistics(self, table_name: str) -> List[ColumnStatistics]:
         """
         Collect detailed column-level statistics.
 
@@ -247,7 +244,7 @@ class StatisticsCollector:
                             n_distinct=float(row[5] or 0.0),
                             correlation=float(row[6]) if row[6] is not None else None,
                             most_common_vals=mcv,
-                            most_common_freqs=mcf
+                            most_common_freqs=mcf,
                         )
 
                         stats_list.append(stats)
@@ -293,10 +290,7 @@ class StatisticsCollector:
             return None
 
     def analyze_data_distribution(
-        self,
-        table_name: str,
-        column_name: str,
-        sample_size: int = 1000
+        self, table_name: str, column_name: str, sample_size: int = 1000
     ) -> Dict[str, Any]:
         """
         Analyze data distribution for a column.
@@ -348,10 +342,16 @@ class StatisticsCollector:
                         "cardinality": float(f"{cardinality:.3f}"),
                         "skewness": float(f"{skewness:.3f}"),
                         "top_values": [
-                            {"value": str(r[0]), "count": r[1], "pct": float(f"{r[1]/total_count*100:.2f}")}
+                            {
+                                "value": str(r[0]),
+                                "count": r[1],
+                                "pct": float(f"{r[1]/total_count*100:.2f}"),
+                            }
                             for r in rows[:5]
                         ],
-                        "distribution_type": self._classify_distribution(cardinality, skewness)
+                        "distribution_type": self._classify_distribution(
+                            cardinality, skewness
+                        ),
                     }
 
         except Exception as e:
@@ -362,16 +362,14 @@ class StatisticsCollector:
         if cardinality > 0.9:
             return "high_cardinality"  # Good for btree indexes
         elif cardinality < 0.01:
-            return "low_cardinality"   # Better for bitmap/partial indexes
+            return "low_cardinality"  # Better for bitmap/partial indexes
         elif skewness > 0.8:
-            return "highly_skewed"     # Partial indexes may help
+            return "highly_skewed"  # Partial indexes may help
         else:
             return "normal"
 
     def predict_data_growth(
-        self,
-        table_name: str,
-        days_ahead: int = 30
+        self, table_name: str, days_ahead: int = 30
     ) -> Optional[DataGrowthPattern]:
         """
         Predict future data growth based on historical patterns.
@@ -424,7 +422,7 @@ class StatisticsCollector:
             insert_rate_per_day=float(f"{insert_rate_per_day:.2f}"),
             update_rate_per_day=float(f"{update_rate_per_day:.2f}"),
             delete_rate_per_day=float(f"{delete_rate_per_day:.2f}"),
-            predicted_row_count_30d=max(0, predicted_rows)
+            predicted_row_count_30d=max(0, predicted_rows),
         )
 
     def analyze_table_bloat(self, table_name: str) -> Dict[str, Any]:
@@ -463,9 +461,11 @@ class StatisticsCollector:
                         return {"error": "Table not found"}
 
                     dead_ratio = float(row[4])
-                    bloat_severity = "critical" if dead_ratio > 0.2 else \
-                                   "warning" if dead_ratio > 0.1 else \
-                                   "ok"
+                    bloat_severity = (
+                        "critical"
+                        if dead_ratio > 0.2
+                        else "warning" if dead_ratio > 0.1 else "ok"
+                    )
 
                     return {
                         "table_name": table_name,
@@ -475,7 +475,7 @@ class StatisticsCollector:
                         "bloat_severity": bloat_severity,
                         "last_autovacuum": row[5].isoformat() if row[5] else None,
                         "autovacuum_count": row[6],
-                        "recommendation": self._get_bloat_recommendation(dead_ratio)
+                        "recommendation": self._get_bloat_recommendation(dead_ratio),
                     }
 
         except Exception as e:
@@ -490,10 +490,7 @@ class StatisticsCollector:
         else:
             return "Bloat within acceptable range"
 
-    def get_comprehensive_analysis(
-        self,
-        table_name: str
-    ) -> Dict[str, Any]:
+    def get_comprehensive_analysis(self, table_name: str) -> Dict[str, Any]:
         """
         Get comprehensive analysis combining all statistics.
 
@@ -518,10 +515,18 @@ class StatisticsCollector:
             "analyzed_at": datetime.utcnow().isoformat(),
             "table_statistics": {
                 "row_count": table_stats.row_count if table_stats else 0,
-                "size_mb": float(f"{(table_stats.total_size_bytes if table_stats else 0) / (1024*1024):.2f}"),
-                "index_size_mb": float(f"{(table_stats.index_size_bytes if table_stats else 0) / (1024*1024):.2f}"),
+                "size_mb": float(
+                    f"{(table_stats.total_size_bytes if table_stats else 0) / (1024*1024):.2f}"
+                ),
+                "index_size_mb": float(
+                    f"{(table_stats.index_size_bytes if table_stats else 0) / (1024*1024):.2f}"
+                ),
                 "dead_tuples": table_stats.n_dead_tup if table_stats else 0,
-                "last_analyze": table_stats.last_analyze.isoformat() if table_stats and table_stats.last_analyze else None
+                "last_analyze": (
+                    table_stats.last_analyze.isoformat()
+                    if table_stats and table_stats.last_analyze
+                    else None
+                ),
             },
             "column_analysis": [
                 {
@@ -530,16 +535,26 @@ class StatisticsCollector:
                     "null_fraction": float(f"{c.null_frac:.3f}"),
                     "distinct_values": c.n_distinct,
                     "correlation": c.correlation,
-                    "avg_bytes": c.avg_width
+                    "avg_bytes": c.avg_width,
                 }
                 for c in column_stats
             ],
-            "growth_pattern": {
-                "growth_rate_per_day": growth_pattern.growth_rate_per_day if growth_pattern else 0,
-                "predicted_rows_30d": growth_pattern.predicted_row_count_30d if growth_pattern else 0,
-                "insert_rate_per_day": growth_pattern.insert_rate_per_day if growth_pattern else 0
-            } if growth_pattern else None,
-            "bloat_analysis": bloat_analysis
+            "growth_pattern": (
+                {
+                    "growth_rate_per_day": (
+                        growth_pattern.growth_rate_per_day if growth_pattern else 0
+                    ),
+                    "predicted_rows_30d": (
+                        growth_pattern.predicted_row_count_30d if growth_pattern else 0
+                    ),
+                    "insert_rate_per_day": (
+                        growth_pattern.insert_rate_per_day if growth_pattern else 0
+                    ),
+                }
+                if growth_pattern
+                else None
+            ),
+            "bloat_analysis": bloat_analysis,
         }
 
         # Add recommendations
@@ -554,35 +569,49 @@ class StatisticsCollector:
         table_stats: Optional[TableStatistics],
         column_stats: List[ColumnStatistics],
         growth_pattern: Optional[DataGrowthPattern],
-        bloat_analysis: Dict[str, Any]
+        bloat_analysis: Dict[str, Any],
     ) -> List[str]:
         """Generate recommendations based on analysis."""
         recommendations = []
 
         # Check bloat
         if bloat_analysis.get("bloat_severity") == "critical":
-            recommendations.append("⚠️  Critical table bloat detected. Schedule VACUUM FULL")
+            recommendations.append(
+                "⚠️  Critical table bloat detected. Schedule VACUUM FULL"
+            )
 
         # Check for high cardinality columns
         high_card_cols = [c for c in column_stats if c.n_distinct > 1000]
         if high_card_cols:
-            recommendations.append(f"✓ High cardinality columns detected: {', '.join(c.column_name for c in high_card_cols[:3])} - Good candidates for btree indexes")
+            recommendations.append(
+                f"✓ High cardinality columns detected: {', '.join(c.column_name for c in high_card_cols[:3])} - Good candidates for btree indexes"
+            )
 
         # Check for low cardinality columns
         low_card_cols = [c for c in column_stats if 0 < c.n_distinct < 10]
         if low_card_cols:
-            recommendations.append(f"ℹ️  Low cardinality columns: {', '.join(c.column_name for c in low_card_cols[:3])} - Consider partial indexes for filtered queries")
+            recommendations.append(
+                f"ℹ️  Low cardinality columns: {', '.join(c.column_name for c in low_card_cols[:3])} - Consider partial indexes for filtered queries"
+            )
 
         # Check growth pattern
         if growth_pattern and growth_pattern.growth_rate_per_day > 1000:
-            recommendations.append(f"📈 High growth rate ({growth_pattern.growth_rate_per_day:.0f} rows/day) - Monitor index maintenance costs")
+            recommendations.append(
+                f"📈 High growth rate ({growth_pattern.growth_rate_per_day:.0f} rows/day) - Monitor index maintenance costs"
+            )
 
         # Check for skewed null distributions
         high_null_cols = [c for c in column_stats if c.null_frac > 0.5]
         if high_null_cols:
-            recommendations.append(f"ℹ️  Columns with >50% nulls: {', '.join(c.column_name for c in high_null_cols[:3])} - Consider partial indexes with IS NOT NULL")
+            recommendations.append(
+                f"ℹ️  Columns with >50% nulls: {', '.join(c.column_name for c in high_null_cols[:3])} - Consider partial indexes with IS NOT NULL"
+            )
 
-        return recommendations if recommendations else ["✓ No immediate optimization opportunities detected"]
+        return (
+            recommendations
+            if recommendations
+            else ["✓ No immediate optimization opportunities detected"]
+        )
 
 
 def get_stats_collector(schema: str = "public") -> StatisticsCollector:

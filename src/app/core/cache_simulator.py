@@ -21,6 +21,7 @@ from app.core.cache_manager import CacheManager
 @dataclass
 class WorkloadQuery:
     """Single query in a workload."""
+
     sql: str
     timestamp: datetime
     execution_time_ms: float
@@ -32,6 +33,7 @@ class WorkloadQuery:
 @dataclass
 class Workload:
     """Collection of queries for simulation."""
+
     queries: List[WorkloadQuery]
     name: str = "workload"
     description: str = ""
@@ -48,6 +50,7 @@ class Workload:
 @dataclass
 class CacheConfiguration:
     """Cache configuration for simulation."""
+
     name: str
     memory_size_mb: int
     default_ttl_seconds: int
@@ -59,6 +62,7 @@ class CacheConfiguration:
 @dataclass
 class SimulationResult:
     """Results from a cache simulation run."""
+
     config_name: str
     total_queries: int
     cache_hits: int
@@ -85,7 +89,9 @@ class SimulationResult:
         hit_rate_score = self.hit_rate * 50
 
         # Time savings component (30%)
-        time_savings_ratio = self.time_saved_by_cache_ms / max(self.total_execution_time_ms, 1)
+        time_savings_ratio = self.time_saved_by_cache_ms / max(
+            self.total_execution_time_ms, 1
+        )
         time_score = min(time_savings_ratio * 100, 30)
 
         # Memory efficiency component (20%)
@@ -97,6 +103,7 @@ class SimulationResult:
 @dataclass
 class ComparisonReport:
     """Comparison of multiple simulation results."""
+
     configurations: List[str]
     results: List[SimulationResult]
     best_overall: str
@@ -119,10 +126,7 @@ class CacheSimulator:
         self.workloads: Dict[str, Workload] = {}
 
     def load_workload_from_queries(
-        self,
-        queries: List[Dict[str, Any]],
-        name: str = "custom",
-        description: str = ""
+        self, queries: List[Dict[str, Any]], name: str = "custom", description: str = ""
     ) -> Workload:
         """
         Load workload from query list.
@@ -139,19 +143,17 @@ class CacheSimulator:
 
         for q in queries:
             wq = WorkloadQuery(
-                sql=q['sql'],
-                timestamp=q.get('timestamp', datetime.utcnow()),
-                execution_time_ms=q.get('execution_time_ms', 100.0),
-                result_size_bytes=q.get('result_size_bytes', 1024),
-                session_id=q.get('session_id'),
-                user_id=q.get('user_id')
+                sql=q["sql"],
+                timestamp=q.get("timestamp", datetime.utcnow()),
+                execution_time_ms=q.get("execution_time_ms", 100.0),
+                result_size_bytes=q.get("result_size_bytes", 1024),
+                session_id=q.get("session_id"),
+                user_id=q.get("user_id"),
             )
             workload_queries.append(wq)
 
         workload = Workload(
-            queries=workload_queries,
-            name=name,
-            description=description
+            queries=workload_queries, name=name, description=description
         )
 
         self.workloads[name] = workload
@@ -182,26 +184,32 @@ class CacheSimulator:
         Returns:
             Loaded workload
         """
-        with open(file_path, 'r') as f:
+        with open(file_path, "r") as f:
             data = json.load(f)
 
         queries = []
-        for q in data['queries']:
-            timestamp = datetime.fromisoformat(q['timestamp']) if isinstance(q['timestamp'], str) else q['timestamp']
+        for q in data["queries"]:
+            timestamp = (
+                datetime.fromisoformat(q["timestamp"])
+                if isinstance(q["timestamp"], str)
+                else q["timestamp"]
+            )
 
-            queries.append({
-                'sql': q['sql'],
-                'timestamp': timestamp,
-                'execution_time_ms': q.get('execution_time_ms', 100.0),
-                'result_size_bytes': q.get('result_size_bytes', 1024),
-                'session_id': q.get('session_id'),
-                'user_id': q.get('user_id')
-            })
+            queries.append(
+                {
+                    "sql": q["sql"],
+                    "timestamp": timestamp,
+                    "execution_time_ms": q.get("execution_time_ms", 100.0),
+                    "result_size_bytes": q.get("result_size_bytes", 1024),
+                    "session_id": q.get("session_id"),
+                    "user_id": q.get("user_id"),
+                }
+            )
 
         return self.load_workload_from_queries(
             queries=queries,
-            name=data.get('name', 'workload'),
-            description=data.get('description', '')
+            name=data.get("name", "workload"),
+            description=data.get("description", ""),
         )
 
     def generate_synthetic_workload(
@@ -209,7 +217,7 @@ class CacheSimulator:
         num_queries: int = 1000,
         num_unique_queries: int = 50,
         time_span_hours: float = 1.0,
-        zipf_alpha: float = 1.5
+        zipf_alpha: float = 1.5,
     ) -> Workload:
         """
         Generate synthetic workload for testing.
@@ -234,7 +242,7 @@ class CacheSimulator:
 
         # Generate query distribution using Zipf
         ranks = np.arange(1, num_unique_queries + 1)
-        probabilities = 1.0 / (ranks ** zipf_alpha)
+        probabilities = 1.0 / (ranks**zipf_alpha)
         probabilities /= probabilities.sum()
 
         # Generate queries
@@ -256,25 +264,24 @@ class CacheSimulator:
             # Generate result size
             result_size_bytes = max(100, int(np.random.lognormal(8.0, 2.0)))
 
-            queries.append({
-                'sql': sql,
-                'timestamp': timestamp,
-                'execution_time_ms': execution_time_ms,
-                'result_size_bytes': result_size_bytes,
-                'session_id': f"session_{i % 10}"
-            })
+            queries.append(
+                {
+                    "sql": sql,
+                    "timestamp": timestamp,
+                    "execution_time_ms": execution_time_ms,
+                    "result_size_bytes": result_size_bytes,
+                    "session_id": f"session_{i % 10}",
+                }
+            )
 
         return self.load_workload_from_queries(
             queries=queries,
             name="synthetic",
-            description=f"Synthetic workload with {num_queries} queries, {num_unique_queries} unique, Zipf α={zipf_alpha}"
+            description=f"Synthetic workload with {num_queries} queries, {num_unique_queries} unique, Zipf α={zipf_alpha}",
         )
 
     def simulate(
-        self,
-        workload: Workload,
-        config: CacheConfiguration,
-        verbose: bool = False
+        self, workload: Workload, config: CacheConfiguration, verbose: bool = False
     ) -> SimulationResult:
         """
         Simulate cache behavior for a workload.
@@ -292,7 +299,7 @@ class CacheSimulator:
             memory_size_mb=config.memory_size_mb,
             disk_cache_dir=config.disk_dir if config.enable_disk else None,
             enable_compression=config.enable_compression,
-            default_ttl_seconds=config.default_ttl_seconds
+            default_ttl_seconds=config.default_ttl_seconds,
         )
 
         # Simulation state
@@ -323,29 +330,33 @@ class CacheSimulator:
 
                 # Simulate query execution and cache result
                 # Generate dummy result based on size
-                result = b'x' * query.result_size_bytes
+                result = b"x" * query.result_size_bytes
 
                 cache.put(
-                    sql=query.sql,
-                    result=result,
-                    compress=config.enable_compression
+                    sql=query.sql, result=result, compress=config.enable_compression
                 )
 
             # Sample memory usage
             memory_stats = cache.memory_cache.get_stats()
-            memory_samples.append(memory_stats['size_bytes'])
+            memory_samples.append(memory_stats["size_bytes"])
 
         # Calculate statistics
         total_queries = len(workload.queries)
         hit_rate = hits / total_queries if total_queries > 0 else 0.0
         miss_rate = misses / total_queries if total_queries > 0 else 0.0
-        avg_query_time = total_exec_time_ms / total_queries if total_queries > 0 else 0.0
+        avg_query_time = (
+            total_exec_time_ms / total_queries if total_queries > 0 else 0.0
+        )
 
         cache_stats = cache.get_statistics()
 
         peak_memory = max(memory_samples) if memory_samples else 0
         avg_memory = sum(memory_samples) / len(memory_samples) if memory_samples else 0
-        memory_utilization = peak_memory / (config.memory_size_mb * 1024 * 1024) if config.memory_size_mb > 0 else 0.0
+        memory_utilization = (
+            peak_memory / (config.memory_size_mb * 1024 * 1024)
+            if config.memory_size_mb > 0
+            else 0.0
+        )
 
         return SimulationResult(
             config_name=config.name,
@@ -360,14 +371,14 @@ class CacheSimulator:
             evictions=cache_stats.evictions,
             peak_memory_bytes=peak_memory,
             avg_memory_bytes=int(avg_memory),
-            memory_utilization=memory_utilization
+            memory_utilization=memory_utilization,
         )
 
     def compare_configurations(
         self,
         workload: Workload,
         configurations: List[CacheConfiguration],
-        verbose: bool = False
+        verbose: bool = False,
     ) -> ComparisonReport:
         """
         Compare multiple cache configurations on the same workload.
@@ -385,7 +396,9 @@ class CacheSimulator:
         for config in configurations:
             if verbose:
                 print(f"\nSimulating configuration: {config.name}")
-                print(f"  Memory: {config.memory_size_mb}MB, TTL: {config.default_ttl_seconds}s")
+                print(
+                    f"  Memory: {config.memory_size_mb}MB, TTL: {config.default_ttl_seconds}s"
+                )
 
             result = self.simulate(workload, config, verbose=verbose)
             results.append(result)
@@ -411,7 +424,7 @@ class CacheSimulator:
             best_hit_rate=best_hit_rate.config_name,
             best_time_savings=best_time_savings.config_name,
             best_memory_efficiency=best_memory.config_name,
-            recommendations=recommendations
+            recommendations=recommendations,
         )
 
     def recommend_optimal_size(
@@ -420,7 +433,7 @@ class CacheSimulator:
         min_size_mb: int = 10,
         max_size_mb: int = 1000,
         step_mb: int = 50,
-        target_hit_rate: float = 0.8
+        target_hit_rate: float = 0.8,
     ) -> Dict[str, Any]:
         """
         Recommend optimal cache size for a workload.
@@ -438,11 +451,13 @@ class CacheSimulator:
         configurations = []
 
         for size_mb in range(min_size_mb, max_size_mb + 1, step_mb):
-            configurations.append(CacheConfiguration(
-                name=f"{size_mb}MB",
-                memory_size_mb=size_mb,
-                default_ttl_seconds=3600
-            ))
+            configurations.append(
+                CacheConfiguration(
+                    name=f"{size_mb}MB",
+                    memory_size_mb=size_mb,
+                    default_ttl_seconds=3600,
+                )
+            )
 
         # Run simulations
         results = []
@@ -475,17 +490,17 @@ class CacheSimulator:
                     "size_mb": size_mb,
                     "hit_rate": result.hit_rate,
                     "time_saved_ms": result.time_saved_by_cache_ms,
-                    "efficiency": result.efficiency_score()
+                    "efficiency": result.efficiency_score(),
                 }
                 for size_mb, result in results
-            ]
+            ],
         }
 
     def test_memory_pressure(
         self,
         workload: Workload,
         cache_size_mb: int,
-        pressure_levels: List[float] = None
+        pressure_levels: List[float] = None,
     ) -> Dict[str, Any]:
         """
         Test cache behavior under different memory pressure levels.
@@ -510,7 +525,7 @@ class CacheSimulator:
             config = CacheConfiguration(
                 name=f"pressure_{pressure}x",
                 memory_size_mb=max(10, effective_size),
-                default_ttl_seconds=3600
+                default_ttl_seconds=3600,
             )
 
             result = self.simulate(workload, config)
@@ -520,15 +535,13 @@ class CacheSimulator:
                 "hit_rate": result.hit_rate,
                 "evictions": result.evictions,
                 "avg_query_time_ms": result.avg_query_time_ms,
-                "efficiency_score": result.efficiency_score()
+                "efficiency_score": result.efficiency_score(),
             }
 
         return results
 
     def _generate_comparison_recommendations(
-        self,
-        results: List[SimulationResult],
-        workload: Workload
+        self, results: List[SimulationResult], workload: Workload
     ) -> List[str]:
         """Generate recommendations based on comparison results."""
         recommendations = []

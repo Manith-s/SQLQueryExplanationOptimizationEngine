@@ -14,7 +14,7 @@ import pytest
 # Skip if DB tests not enabled
 pytestmark = pytest.mark.skipif(
     os.getenv("RUN_DB_TESTS") != "1",
-    reason="Skipping DB-dependent tests (set RUN_DB_TESTS=1 to run)"
+    reason="Skipping DB-dependent tests (set RUN_DB_TESTS=1 to run)",
 )
 
 
@@ -30,6 +30,7 @@ def mock_connection():
 
 
 # Test Index Manager
+
 
 def test_index_metrics_creation():
     """Test creation of IndexMetrics dataclass."""
@@ -47,7 +48,7 @@ def test_index_metrics_creation():
         is_primary=False,
         columns=["email"],
         index_type="btree",
-        definition="CREATE INDEX idx_users_email ON users(email)"
+        definition="CREATE INDEX idx_users_email ON users(email)",
     )
 
     assert metrics.table_name == "users"
@@ -74,7 +75,7 @@ def test_index_effectiveness_scoring():
         is_primary=False,
         columns=["email"],
         index_type="btree",
-        definition="CREATE INDEX..."
+        definition="CREATE INDEX...",
     )
 
     score = mgr._calculate_effectiveness_score(metrics)
@@ -101,7 +102,7 @@ def test_primary_key_always_effective():
         is_primary=True,
         columns=["id"],
         index_type="btree",
-        definition="PRIMARY KEY..."
+        definition="PRIMARY KEY...",
     )
 
     score = mgr._calculate_effectiveness_score(primary_key)
@@ -118,8 +119,19 @@ def test_unused_index_identification():
 
         # Mock query results - unused index
         cursor.fetchall.return_value = [
-            ("public", "users", "idx_unused", 0, 0, 0, 1024, False, False,
-             "CREATE INDEX idx_unused ON users(old_field)", "btree")
+            (
+                "public",
+                "users",
+                "idx_unused",
+                0,
+                0,
+                0,
+                1024,
+                False,
+                False,
+                "CREATE INDEX idx_unused ON users(old_field)",
+                "btree",
+            )
         ]
 
         mgr = IndexLifecycleManager()
@@ -149,7 +161,7 @@ def test_redundant_index_detection():
         is_primary=False,
         columns=["email"],
         index_type="btree",
-        definition="CREATE INDEX idx_email ON users(email)"
+        definition="CREATE INDEX idx_email ON users(email)",
     )
 
     idx2 = IndexMetrics(
@@ -164,7 +176,7 @@ def test_redundant_index_detection():
         is_primary=False,
         columns=["email", "name"],
         index_type="btree",
-        definition="CREATE INDEX idx_email_name ON users(email, name)"
+        definition="CREATE INDEX idx_email_name ON users(email, name)",
     )
 
     reason = mgr._check_redundancy(idx1, idx2)
@@ -184,7 +196,7 @@ def test_index_recommendation_ddl_generation():
         columns=["email", "created_at"],
         rationale="High usage pattern detected",
         estimated_benefit=50.0,
-        confidence=0.85
+        confidence=0.85,
     )
 
     ddl = rec.to_ddl("public")
@@ -206,7 +218,7 @@ def test_partial_index_ddl():
         where_clause="status = 'active'",
         rationale="Filtered queries detected",
         estimated_benefit=30.0,
-        confidence=0.75
+        confidence=0.75,
     )
 
     ddl = rec.to_ddl("public")
@@ -214,6 +226,7 @@ def test_partial_index_ddl():
 
 
 # Test Self-Healing Manager
+
 
 def test_performance_threshold_classification():
     """Test performance degradation severity classification."""
@@ -239,9 +252,7 @@ def test_healing_action_creation():
     mgr = SelfHealingManager(auto_approve=False, dry_run_default=True)
 
     action = mgr.trigger_healing_action(
-        reason="Test degradation",
-        dry_run=True,
-        query_patterns=None
+        reason="Test degradation", dry_run=True, query_patterns=None
     )
 
     assert action is not None
@@ -256,10 +267,7 @@ def test_dry_run_simulation():
 
     mgr = SelfHealingManager(dry_run_default=True)
 
-    action = mgr.trigger_healing_action(
-        reason="Test",
-        dry_run=True
-    )
+    action = mgr.trigger_healing_action(reason="Test", dry_run=True)
 
     result = mgr._simulate_execution(action)
 
@@ -274,10 +282,7 @@ def test_auto_approve_behavior():
 
     mgr = SelfHealingManager(auto_approve=True, dry_run_default=True)
 
-    action = mgr.trigger_healing_action(
-        reason="Auto-approve test",
-        dry_run=True
-    )
+    action = mgr.trigger_healing_action(reason="Auto-approve test", dry_run=True)
 
     # Should be automatically approved
     assert action.status == ActionStatus.APPROVED
@@ -305,6 +310,7 @@ def test_action_approval_workflow():
 
 # Test Statistics Collector
 
+
 def test_table_statistics_collection():
     """Test collection of table statistics."""
     from app.core.stats_collector import StatisticsCollector
@@ -315,9 +321,23 @@ def test_table_statistics_collection():
 
         # Mock query results
         cursor.fetchall.return_value = [
-            ("public", "users", 100, 50, 10, 1000, 50,
-             datetime.now(), datetime.now(), datetime.now(), None,
-             5, 10, 3, 8)
+            (
+                "public",
+                "users",
+                100,
+                50,
+                10,
+                1000,
+                50,
+                datetime.now(),
+                datetime.now(),
+                datetime.now(),
+                None,
+                5,
+                10,
+                3,
+                8,
+            )
         ]
 
         collector = StatisticsCollector()
@@ -391,7 +411,7 @@ def test_growth_pattern_prediction():
         vacuum_count=0,
         autovacuum_count=0,
         analyze_count=0,
-        autoanalyze_count=0
+        autoanalyze_count=0,
     )
 
     present = TableStatistics(
@@ -412,7 +432,7 @@ def test_growth_pattern_prediction():
         vacuum_count=0,
         autovacuum_count=0,
         analyze_count=0,
-        autoanalyze_count=0
+        autoanalyze_count=0,
     )
 
     collector._growth_history["orders"] = [past, present]
@@ -425,6 +445,7 @@ def test_growth_pattern_prediction():
 
 
 # Chaos Testing Scenarios
+
 
 def test_chaos_database_connection_failure():
     """Chaos test: Handle database connection failures gracefully."""
@@ -449,9 +470,7 @@ def test_chaos_malformed_query_results():
         mock_conn.return_value = conn
 
         # Return malformed data
-        cursor.fetchall.return_value = [
-            (None, None, None)  # All nulls
-        ]
+        cursor.fetchall.return_value = [(None, None, None)]  # All nulls
 
         collector = StatisticsCollector()
         # Should not crash
@@ -471,10 +490,7 @@ def test_chaos_concurrent_healing_actions():
     # Trigger multiple actions
     actions = []
     for i in range(5):
-        action = mgr.trigger_healing_action(
-            reason=f"Test action {i}",
-            dry_run=True
-        )
+        action = mgr.trigger_healing_action(reason=f"Test action {i}", dry_run=True)
         actions.append(action)
 
     # All should have unique IDs
@@ -513,7 +529,7 @@ def test_chaos_index_with_special_characters():
         is_primary=False,
         columns=["column-with-dash"],
         index_type="btree",
-        definition="CREATE INDEX..."
+        definition="CREATE INDEX...",
     )
 
     # Should handle without crashing
@@ -540,7 +556,7 @@ def test_chaos_zero_division_scenarios():
         is_primary=False,
         columns=["id"],
         index_type="btree",
-        definition="CREATE INDEX..."
+        definition="CREATE INDEX...",
     )
 
     # Should not raise ZeroDivisionError
@@ -552,6 +568,7 @@ def test_chaos_zero_division_scenarios():
 
 
 # Integration Tests
+
 
 @pytest.mark.asyncio
 async def test_index_analyze_endpoint():
@@ -567,8 +584,8 @@ async def test_index_analyze_endpoint():
         json={
             "schema": "public",
             "include_stats": False,
-            "include_recommendations": False
-        }
+            "include_recommendations": False,
+        },
     )
 
     # Should return 200 or 401 (if auth enabled)

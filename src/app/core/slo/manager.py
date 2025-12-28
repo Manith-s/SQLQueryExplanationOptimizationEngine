@@ -365,35 +365,45 @@ class SLOManager:
         can_deploy = True
 
         # Find minimum error budget
-        min_budget = min(
-            b.error_budget_remaining_pct for b in error_budgets.values()
-        )
+        min_budget = min(b.error_budget_remaining_pct for b in error_budgets.values())
 
         # Determine mode
         if min_budget <= 0:
             mode = ConservativeMode.EMERGENCY
             can_deploy = False
-            alerts.append("EMERGENCY: Error budget exhausted! Activating cache-only mode.")
-            recommendations.append("Immediately investigate failures and rollback if needed")
-            recommendations.append("Enable cache-only mode to preserve remaining budget")
+            alerts.append(
+                "EMERGENCY: Error budget exhausted! Activating cache-only mode."
+            )
+            recommendations.append(
+                "Immediately investigate failures and rollback if needed"
+            )
+            recommendations.append(
+                "Enable cache-only mode to preserve remaining budget"
+            )
             self._trigger_emergency_mode()
         elif min_budget < 10:
             mode = ConservativeMode.RESTRICTED
             can_deploy = False
-            alerts.append(f"CRITICAL: Error budget at {min_budget:.1f}% - deployments blocked")
+            alerts.append(
+                f"CRITICAL: Error budget at {min_budget:.1f}% - deployments blocked"
+            )
             recommendations.append("Page on-call team immediately")
             recommendations.append("Defer non-critical changes until budget recovers")
             self._page_oncall("error_budget_critical", min_budget)
         elif min_budget < 25:
             mode = ConservativeMode.RESTRICTED
             can_deploy = False
-            alerts.append(f"WARNING: Error budget at {min_budget:.1f}% - blocking deployments")
+            alerts.append(
+                f"WARNING: Error budget at {min_budget:.1f}% - blocking deployments"
+            )
             recommendations.append("Review recent changes and error rates")
             recommendations.append("Consider enabling conservative mode")
             slo_deployment_blocked.inc()
         elif min_budget < 50:
             mode = ConservativeMode.CONSERVATIVE
-            recommendations.append("Error budget below 50% - enabling conservative mode")
+            recommendations.append(
+                "Error budget below 50% - enabling conservative mode"
+            )
             recommendations.append("Reduce query complexity and increase caching")
         else:
             mode = ConservativeMode.NORMAL

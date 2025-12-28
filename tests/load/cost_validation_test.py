@@ -21,6 +21,7 @@ import aiohttp
 @dataclass
 class CostMetric:
     """Cost metric for a specific category."""
+
     category: str
     baseline_monthly_cost: float
     actual_monthly_cost: float
@@ -107,8 +108,7 @@ class CostValidationTest:
             async with aiohttp.ClientSession() as session:
                 # Get AI stats
                 async with session.get(
-                    f"{self.api_url}/api/v1/ai/stats",
-                    timeout=10
+                    f"{self.api_url}/api/v1/ai/stats", timeout=10
                 ) as response:
                     if response.status != 200:
                         print(f"  ⚠️  AI stats endpoint returned {response.status}")
@@ -135,7 +135,9 @@ class CostValidationTest:
                 savings=estimated_savings,
                 savings_pct=(estimated_savings / baseline_cost * 100),
                 target_savings=self.expected_savings["ai_autoscaling"],
-                meets_target=(estimated_savings >= self.expected_savings["ai_autoscaling"])
+                meets_target=(
+                    estimated_savings >= self.expected_savings["ai_autoscaling"]
+                ),
             )
 
         except Exception as e:
@@ -162,7 +164,7 @@ class CostValidationTest:
                     savings=savings,
                     savings_pct=(savings / baseline_bandwidth_cost * 100),
                     target_savings=self.expected_savings["edge_caching"],
-                    meets_target=(savings >= self.expected_savings["edge_caching"])
+                    meets_target=(savings >= self.expected_savings["edge_caching"]),
                 )
 
         except Exception as e:
@@ -186,7 +188,7 @@ class CostValidationTest:
                 savings=savings,
                 savings_pct=(savings / baseline_transfer_cost * 100),
                 target_savings=self.expected_savings["intelligent_routing"],
-                meets_target=(savings >= self.expected_savings["intelligent_routing"])
+                meets_target=(savings >= self.expected_savings["intelligent_routing"]),
             )
 
         except Exception as e:
@@ -210,7 +212,7 @@ class CostValidationTest:
                     async with session.post(
                         f"{self.api_url}/api/v1/optimize",
                         json={"sql": query, "what_if": True},
-                        timeout=30
+                        timeout=30,
                     ) as response:
                         if response.status == 200:
                             data = await response.json()
@@ -219,12 +221,16 @@ class CostValidationTest:
                             suggestions = data.get("suggestions", [])
                             for suggestion in suggestions:
                                 if "estReductionPct" in suggestion:
-                                    total_cost_reduction += suggestion["estReductionPct"]
+                                    total_cost_reduction += suggestion[
+                                        "estReductionPct"
+                                    ]
 
                             queries_tested += 1
 
             # Average cost reduction per query
-            avg_reduction_pct = (total_cost_reduction / queries_tested) if queries_tested > 0 else 0
+            avg_reduction_pct = (
+                (total_cost_reduction / queries_tested) if queries_tested > 0 else 0
+            )
 
             # Estimate: 10,000 queries/day × 30 days × $0.005/query × reduction%
             baseline_query_cost = 10000 * 30 * 0.005  # $1,500
@@ -237,7 +243,9 @@ class CostValidationTest:
                 savings=savings,
                 savings_pct=avg_reduction_pct,
                 target_savings=self.expected_savings["ml_query_optimization"],
-                meets_target=(savings >= self.expected_savings["ml_query_optimization"])
+                meets_target=(
+                    savings >= self.expected_savings["ml_query_optimization"]
+                ),
             )
 
         except Exception as e:
@@ -263,7 +271,7 @@ class CostValidationTest:
                 savings=savings,
                 savings_pct=(savings / baseline_compute_cost * 100),
                 target_savings=self.expected_savings["spot_instances"],
-                meets_target=(savings >= self.expected_savings["spot_instances"])
+                meets_target=(savings >= self.expected_savings["spot_instances"]),
             )
 
         except Exception as e:
@@ -309,7 +317,9 @@ class CostValidationTest:
 
         for metric in metrics:
             status = "✅ PASS" if metric.meets_target else "❌ FAIL"
-            print(f"{metric.category:27s} | ${metric.savings:10,.0f} | ${metric.target_savings:10,.0f} | {status}")
+            print(
+                f"{metric.category:27s} | ${metric.savings:10,.0f} | ${metric.target_savings:10,.0f} | {status}"
+            )
 
         print()
 
@@ -318,17 +328,25 @@ class CostValidationTest:
 
         if passed:
             print("✅ COST VALIDATION PASSED")
-            print(f"   - Total savings: ${total_savings:,.0f}/month >= ${self.total_expected_savings:,.0f}/month")
+            print(
+                f"   - Total savings: ${total_savings:,.0f}/month >= ${self.total_expected_savings:,.0f}/month"
+            )
             print(f"   - Cost reduction: {(total_savings / total_baseline * 100):.1f}%")
         else:
             shortfall = self.total_expected_savings - total_savings
             print("❌ COST VALIDATION FAILED")
-            print(f"   - Total savings: ${total_savings:,.0f}/month < ${self.total_expected_savings:,.0f}/month")
+            print(
+                f"   - Total savings: ${total_savings:,.0f}/month < ${self.total_expected_savings:,.0f}/month"
+            )
             print(f"   - Shortfall: ${shortfall:,.0f}/month")
 
         # ROI calculation
         infrastructure_investment = 800  # Monthly investment in enhancements
-        roi = total_savings / infrastructure_investment if infrastructure_investment > 0 else 0
+        roi = (
+            total_savings / infrastructure_investment
+            if infrastructure_investment > 0
+            else 0
+        )
 
         print()
         print(f"ROI: {roi:.2f}x")
@@ -339,9 +357,11 @@ class CostValidationTest:
         print("=" * 80)
 
         # Save report
-        report_file = f"cost_validation_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        report_file = (
+            f"cost_validation_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        )
 
-        with open(report_file, 'w') as f:
+        with open(report_file, "w") as f:
             json.dump(
                 {
                     "test_info": {
@@ -359,7 +379,7 @@ class CostValidationTest:
                     "metrics": [asdict(m) for m in metrics],
                 },
                 f,
-                indent=2
+                indent=2,
             )
 
         print(f"Report saved to: {report_file}")
@@ -368,24 +388,14 @@ class CostValidationTest:
 async def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(description="QEO Cost Validation Test")
+    parser.add_argument("--api-url", default="http://localhost:8000", help="API URL")
     parser.add_argument(
-        "--api-url",
-        default="http://localhost:8000",
-        help="API URL"
-    )
-    parser.add_argument(
-        "--days",
-        type=int,
-        default=30,
-        help="Number of days to analyze (default: 30)"
+        "--days", type=int, default=30, help="Number of days to analyze (default: 30)"
     )
 
     args = parser.parse_args()
 
-    test = CostValidationTest(
-        api_url=args.api_url,
-        days=args.days
-    )
+    test = CostValidationTest(api_url=args.api_url, days=args.days)
 
     await test.run()
 

@@ -474,8 +474,8 @@ class CacheAnalytics:
         # Recommendation 4: Low prefetch success rate
         prefetch_stats = self.prefetch_engine.get_statistics()
         if (
-            prefetch_stats["prefetch_attempts"] > 100
-            and prefetch_stats["success_rate"] < 0.3
+            prefetch_stats.get("total_prefetch_attempts", 0) > 100
+            and prefetch_stats.get("success_rate", 1.0) < 0.3
         ):
             recommendations.append(
                 CacheTuningRecommendation(

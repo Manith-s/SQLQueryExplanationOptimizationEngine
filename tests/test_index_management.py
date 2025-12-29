@@ -481,21 +481,28 @@ def test_chaos_malformed_query_results():
             pytest.fail(f"Should handle malformed data gracefully: {e}")
 
 
-def test_chaos_concurrent_healing_actions():
+def test_chaos_concurrent_healing_actions(mock_connection):
     """Chaos test: Multiple healing actions triggered simultaneously."""
     from app.core.self_healing import SelfHealingManager
 
-    mgr = SelfHealingManager()
+    conn, cursor = mock_connection
+    
+    # Mock database calls
+    with patch("app.core.index_manager.get_conn", return_value=conn):
+        cursor.fetchall.return_value = []  # Empty index stats
+        cursor.fetchone.return_value = None
+        
+        mgr = SelfHealingManager()
 
-    # Trigger multiple actions
-    actions = []
-    for i in range(5):
-        action = mgr.trigger_healing_action(reason=f"Test action {i}", dry_run=True)
-        actions.append(action)
+        # Trigger multiple actions
+        actions = []
+        for i in range(5):
+            action = mgr.trigger_healing_action(reason=f"Test action {i}", dry_run=True)
+            actions.append(action)
 
-    # All should have unique IDs
-    action_ids = [a.action_id for a in actions]
-    assert len(set(action_ids)) == 5
+        # All should have unique IDs
+        action_ids = [a.action_id for a in actions]
+        assert len(set(action_ids)) == 5
 
 
 def test_chaos_rollback_of_nonexistent_action():
@@ -617,14 +624,13 @@ async def test_index_health_endpoint():
         assert "index_health" in data
 
 
-def test_recommendation_priority_sorting():
+def test_recommendation_priority_sorting(mock_connection):
     """Test that recommendations are properly sorted by priority."""
     from app.core.index_manager import IndexLifecycleManager
 
-    with patch("app.core.index_manager.get_conn") as mock_conn:
-        conn, cursor = mock_connection()
-        mock_conn.return_value = conn
-
+    conn, cursor = mock_connection
+    
+    with patch("app.core.index_manager.get_conn", return_value=conn):
         cursor.fetchall.return_value = []
 
         mgr = IndexLifecycleManager()

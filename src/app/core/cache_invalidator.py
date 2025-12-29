@@ -14,7 +14,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from threading import Lock, Thread
+from threading import Lock, RLock, Thread
 from typing import Any, Dict, List, Optional, Set
 
 import psycopg2
@@ -88,7 +88,7 @@ class DependencyGraph:
     def __init__(self):
         """Initialize dependency graph."""
         self.nodes: Dict[str, DependencyNode] = {}
-        self.lock = Lock()
+        self.lock = RLock()  # Use reentrant lock for recursive calls
 
     def add_query_dependency(self, query_fingerprint: str, tables: Set[str]):
         """

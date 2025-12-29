@@ -14,6 +14,7 @@ Tests cover:
 
 import time
 from datetime import datetime, timedelta
+from unittest.mock import patch
 
 import pytest
 
@@ -390,25 +391,29 @@ class TestPrefetchEngine:
 
     def test_cost_benefit_analysis(self):
         """Test prefetch decision making."""
+        from app.core.prefetch_engine import LoadLevel
+        
         engine = PrefetchEngine(
             prefetch_threshold=0.5,
             max_prefetch_cost_ms=1000.0,
             enable_speculative=False,
         )
 
-        # High probability, low cost candidate
-        candidate = PrefetchCandidate(
-            fingerprint="test",
-            sql="SELECT * FROM users",
-            probability=0.9,
-            estimated_cost_ms=100.0,
-            estimated_benefit=1000.0,
-            priority_score=9.0,
-        )
+        # Mock system load to be low
+        with patch.object(engine, '_get_current_load', return_value=LoadLevel.LOW):
+            # High probability, low cost candidate
+            candidate = PrefetchCandidate(
+                fingerprint="test",
+                sql="SELECT * FROM users",
+                probability=0.9,
+                estimated_cost_ms=100.0,
+                estimated_benefit=1000.0,
+                priority_score=9.0,
+            )
 
-        decision = engine.should_prefetch(candidate)
-        # Should prefetch (good cost-benefit ratio)
-        assert decision.should_prefetch is True
+            decision = engine.should_prefetch(candidate)
+            # Should prefetch (good cost-benefit ratio: 1000/100 = 10 > 2.0 threshold)
+            assert decision.should_prefetch is True
 
         # Low probability candidate
         low_prob_candidate = PrefetchCandidate(

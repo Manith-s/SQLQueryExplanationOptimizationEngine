@@ -33,7 +33,13 @@ jobs:
         ruff check .
 
     - name: Check formatting with black
-      run: black --check .
+      run: |
+        echo "Checking code formatting with black..."
+        if ! black --check .; then
+          echo "::error::Code formatting check failed!"
+          echo "::error::Run 'make format-all' or 'black .' locally to fix formatting issues"
+          exit 1
+        fi
 
     - name: Run unit tests (no DB)
       run: pytest -q --durations=10 --timeout=30

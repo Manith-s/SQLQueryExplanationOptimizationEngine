@@ -9,5 +9,7 @@ ruff check .
 Write-Host "🎨 Running black formatter..." -ForegroundColor Cyan
 black .
 
-Write-Host "✨ All linting issues fixed!" -ForegroundColor Green
+Write-Host "✅ Verifying black formatting..." -ForegroundColor Green
+black --check .
 
+Write-Host "✨ All linting issues fixed!" -ForegroundColor Green

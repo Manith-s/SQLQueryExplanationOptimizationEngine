@@ -11,23 +11,15 @@ seed:    ## Seed DB in compose
 	docker compose exec -T db psql -U postgres -d queryexpnopt -f /docker-entrypoint-initdb.d/seed/seed_orders.sql
 fmt:
 	black .
+fmt-check:
+	black --check .
 lint:
 	ruff check .
 lint-fix:
 	ruff check . --fix && ruff check .
+format-all: fmt lint-fix
+	@echo "✨ All formatting applied!"
 test:
 	pytest -q
 test-db:
 	RUN_DB_TESTS=1 pytest -q -k integration
-
-
-
-
-
-
-
-
-
-
-
-

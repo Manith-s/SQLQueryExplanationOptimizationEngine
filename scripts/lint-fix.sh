@@ -12,5 +12,7 @@ ruff check .
 echo "🎨 Running black formatter..."
 black .
 
-echo "✨ All linting issues fixed!"
+echo "✅ Verifying black formatting..."
+black --check .
 
+echo "✨ All linting issues fixed!"

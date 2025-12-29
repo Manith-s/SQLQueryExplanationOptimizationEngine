@@ -48,15 +48,21 @@ def pytest_runtest_setup(item):
     try:
         with open(LOG_PATH, "a") as f:
             import json
-            f.write(json.dumps({
-                "sessionId": "debug-session",
-                "runId": "test-setup",
-                "hypothesisId": "A",
-                "location": f"{item.nodeid}",
-                "message": "test_setup_start",
-                "data": {"test": item.nodeid, "timestamp": time.time()},
-                "timestamp": int(time.time() * 1000)
-            }) + "\n")
+
+            f.write(
+                json.dumps(
+                    {
+                        "sessionId": "debug-session",
+                        "runId": "test-setup",
+                        "hypothesisId": "A",
+                        "location": f"{item.nodeid}",
+                        "message": "test_setup_start",
+                        "data": {"test": item.nodeid, "timestamp": time.time()},
+                        "timestamp": int(time.time() * 1000),
+                    }
+                )
+                + "\n"
+            )
     except Exception:
         pass
     # #endregion
@@ -69,15 +75,21 @@ def pytest_runtest_call(item):
     try:
         with open(LOG_PATH, "a") as f:
             import json
-            f.write(json.dumps({
-                "sessionId": "debug-session",
-                "runId": "test-execution",
-                "hypothesisId": "B",
-                "location": f"{item.nodeid}",
-                "message": "test_execution_start",
-                "data": {"test": item.nodeid, "timestamp": time.time()},
-                "timestamp": int(time.time() * 1000)
-            }) + "\n")
+
+            f.write(
+                json.dumps(
+                    {
+                        "sessionId": "debug-session",
+                        "runId": "test-execution",
+                        "hypothesisId": "B",
+                        "location": f"{item.nodeid}",
+                        "message": "test_execution_start",
+                        "data": {"test": item.nodeid, "timestamp": time.time()},
+                        "timestamp": int(time.time() * 1000),
+                    }
+                )
+                + "\n"
+            )
     except Exception:
         pass
     # #endregion
@@ -90,15 +102,21 @@ def pytest_runtest_teardown(item):
     try:
         with open(LOG_PATH, "a") as f:
             import json
-            f.write(json.dumps({
-                "sessionId": "debug-session",
-                "runId": "test-teardown",
-                "hypothesisId": "C",
-                "location": f"{item.nodeid}",
-                "message": "test_teardown_complete",
-                "data": {"test": item.nodeid, "timestamp": time.time()},
-                "timestamp": int(time.time() * 1000)
-            }) + "\n")
+
+            f.write(
+                json.dumps(
+                    {
+                        "sessionId": "debug-session",
+                        "runId": "test-teardown",
+                        "hypothesisId": "C",
+                        "location": f"{item.nodeid}",
+                        "message": "test_teardown_complete",
+                        "data": {"test": item.nodeid, "timestamp": time.time()},
+                        "timestamp": int(time.time() * 1000),
+                    }
+                )
+                + "\n"
+            )
     except Exception:
         pass
     # #endregion

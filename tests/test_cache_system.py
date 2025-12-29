@@ -17,7 +17,6 @@ from datetime import datetime, timedelta
 from unittest.mock import patch
 
 import pytest
-
 from app.core.cache_analytics import (
     CacheAnalytics,
     QueryCacheability,
@@ -400,7 +399,7 @@ class TestPrefetchEngine:
         )
 
         # Mock system load to be low
-        with patch.object(engine, '_get_current_load', return_value=LoadLevel.LOW):
+        with patch.object(engine, "_get_current_load", return_value=LoadLevel.LOW):
             # High probability, low cost candidate
             candidate = PrefetchCandidate(
                 fingerprint="test",

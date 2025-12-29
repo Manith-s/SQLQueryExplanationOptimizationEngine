@@ -263,6 +263,37 @@ curl -X POST "http://localhost:8000/api/v1/optimize" \
   }'
 ```
 
+## Development
+
+### Code Quality
+
+Before committing, ensure code passes linting and formatting:
+
+```bash
+# Auto-fix all linting and formatting issues
+make format-all
+# Or use the script:
+# Linux/Mac: ./scripts/lint-fix.sh
+# Windows: .\scripts\lint-fix.ps1
+
+# Check formatting without fixing
+make fmt-check
+
+# Check linting without fixing
+make lint
+```
+
+### Pre-commit Hooks (Recommended)
+
+Install pre-commit hooks to automatically format code before commits:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+This will automatically run `black` and `ruff` on every commit, ensuring consistent code style.
+
 ## Testing
 
 QEO uses `pytest` with separate test categories:

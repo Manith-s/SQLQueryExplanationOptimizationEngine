@@ -72,6 +72,22 @@ def _relation_name_alias(rel: exp.Expression):
 def extract_tables(ast: exp.Expression):
     out = []
     if isinstance(ast, exp.Select):
+        # Handle CTEs first (WITH clauses)
+        ctes = ast.args.get("with") or getattr(ast, "with", None)
+        if ctes:
+            cte_exprs = (
+                getattr(ctes, "expressions", []) if hasattr(ctes, "expressions") else []
+            )
+            for cte in cte_exprs:
+                if isinstance(cte, exp.CTE):
+                    alias_expr = getattr(cte, "alias", None)
+                    alias = getattr(
+                        getattr(alias_expr, "this", None), "name", None
+                    ) or getattr(alias_expr, "name", None)
+                    if alias:
+                        # CTE name is the alias
+                        out.append({"name": alias, "alias": alias, "raw": alias})
+
         # FROM clause
         from_expr = ast.args.get("from")
         if from_expr:
@@ -89,8 +105,8 @@ def extract_tables(ast: exp.Expression):
                 name, alias, raw = _relation_name_alias(from_expr)
                 out.append({"name": name, "alias": alias, "raw": raw})
 
-        # JOIN clauses
-        joins = ast.args.get("joins") or []
+        # JOIN clauses - check both args.get and direct attribute access
+        joins = ast.args.get("joins") or getattr(ast, "joins", []) or []
         for join in joins:
             if isinstance(join, exp.Join):
                 rel = join.this
@@ -98,26 +114,47 @@ def extract_tables(ast: exp.Expression):
                     name, alias, raw = _relation_name_alias(rel)
                     out.append({"name": name, "alias": alias, "raw": raw})
     else:
-        # For non-SELECT queries, find the first table
+        # For non-SELECT queries, find all tables
         for t in ast.find_all(exp.Table):
             out.append({"name": t.name, "alias": None, "raw": _sql(t)})
-            break
     return out
 
 
 def extract_columns(ast: exp.Expression):
     cols = []
     if isinstance(ast, exp.Select):
-        # Select list
-        for proj in ast.expressions:
+        # Select list - check both ast.expressions and ast.args.get("expressions")
+        expressions = (
+            ast.expressions
+            if hasattr(ast, "expressions")
+            else ast.args.get("expressions", [])
+        )
+        for proj in expressions:
             if isinstance(proj, exp.Alias):
                 alias_id = getattr(proj, "alias", None)
                 alias = getattr(
                     getattr(alias_id, "this", None), "name", None
                 ) or getattr(alias_id, "name", None)
-                cols.append(
-                    {"table": None, "name": alias or _sql(proj.this), "raw": _sql(proj)}
-                )
+                # Extract the actual column/expression being aliased
+                inner = proj.this
+                if isinstance(inner, exp.Column):
+                    # Qualified column like u.id
+                    cols.append(
+                        {
+                            "table": (inner.table or None),
+                            "name": alias or inner.name,
+                            "raw": _sql(proj),
+                        }
+                    )
+                else:
+                    # Aggregate or expression
+                    cols.append(
+                        {
+                            "table": None,
+                            "name": alias or _sql(proj.this),
+                            "raw": _sql(proj),
+                        }
+                    )
             elif isinstance(proj, exp.Column):
                 cols.append(
                     {
@@ -133,6 +170,7 @@ def extract_columns(ast: exp.Expression):
                 )
                 cols.append({"table": (qual or None), "name": "*", "raw": _sql(proj)})
             else:
+                # Handle aggregates and other expressions
                 cols.append({"table": None, "name": _sql(proj), "raw": _sql(proj)})
 
     return cols
@@ -143,14 +181,17 @@ def _extract_joins(ast: exp.Expression):
     if not isinstance(ast, exp.Select):
         return out
 
-    joins = ast.args.get("joins") or []
+    # Check both args.get and direct attribute access for joins
+    joins = ast.args.get("joins") or getattr(ast, "joins", []) or []
     for join in joins:
         if isinstance(join, exp.Join):
             on = join.args.get("on")
             cond = _sql(on) if on else None
             raw = _sql(join)
             jkind = join.args.get("kind") or join.args.get("side") or "JOIN"
-            is_cross = "CROSS JOIN" in raw.upper()
+            is_cross = "CROSS JOIN" in raw.upper() or (
+                isinstance(jkind, str) and "CROSS" in jkind.upper()
+            )
             out.append(
                 {
                     "type": "CROSS JOIN" if is_cross else str(jkind).upper(),
@@ -209,7 +250,8 @@ def _has_restrictive_filter(filters: List[str]) -> bool:
 
 def parse_sql(sql: str) -> Dict[str, Any]:
     try:
-        ast = parse_one(sql)
+        # Use PostgreSQL dialect for consistent parsing (matches cache_manager)
+        ast = parse_one(sql, read="postgres")
     except Exception as e:
         return {
             "type": "UNKNOWN",

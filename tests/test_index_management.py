@@ -486,12 +486,12 @@ def test_chaos_concurrent_healing_actions(mock_connection):
     from app.core.self_healing import SelfHealingManager
 
     conn, cursor = mock_connection
-    
+
     # Mock database calls
     with patch("app.core.index_manager.get_conn", return_value=conn):
         cursor.fetchall.return_value = []  # Empty index stats
         cursor.fetchone.return_value = None
-        
+
         mgr = SelfHealingManager()
 
         # Trigger multiple actions
@@ -629,7 +629,7 @@ def test_recommendation_priority_sorting(mock_connection):
     from app.core.index_manager import IndexLifecycleManager
 
     conn, cursor = mock_connection
-    
+
     with patch("app.core.index_manager.get_conn", return_value=conn):
         cursor.fetchall.return_value = []
 

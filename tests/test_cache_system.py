@@ -392,7 +392,7 @@ class TestPrefetchEngine:
     def test_cost_benefit_analysis(self):
         """Test prefetch decision making."""
         from app.core.prefetch_engine import LoadLevel
-        
+
         engine = PrefetchEngine(
             prefetch_threshold=0.5,
             max_prefetch_cost_ms=1000.0,

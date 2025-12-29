@@ -13,6 +13,8 @@ fmt:
 	black .
 lint:
 	ruff check .
+lint-fix:
+	ruff check . --fix && ruff check .
 test:
 	pytest -q
 test-db:

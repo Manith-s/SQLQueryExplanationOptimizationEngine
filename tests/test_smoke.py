@@ -69,7 +69,7 @@ def test_explain_endpoint_exists(client):
     # Endpoint may return 200 (if DB available) or 400 (if DB unavailable)
     # Either way, the endpoint exists and responds
     assert response.status_code in [200, 400]
-    
+
     if response.status_code == 200:
         data = response.json()
         assert "ok" in data

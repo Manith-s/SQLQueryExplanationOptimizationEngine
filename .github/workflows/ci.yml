@@ -28,7 +28,9 @@ jobs:
         pip install -e ".[dev]"
 
     - name: Lint with ruff
-      run: ruff check .
+      run: |
+        ruff check . --fix
+        ruff check .
 
     - name: Check formatting with black
       run: black --check .

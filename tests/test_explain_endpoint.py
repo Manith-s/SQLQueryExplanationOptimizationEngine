@@ -99,3 +99,17 @@ def test_explain_large_result(client):
 
     # Should have SEQ_SCAN_LARGE warning
     assert any(w["code"] == "SEQ_SCAN_LARGE" for w in data["warnings"])
+
+
+def test_explain_nl_fallback_on_bad_provider(client):
+    """Test NL explanation falls back gracefully on bad provider."""
+    os.environ["LLM_PROVIDER"] = "nonexistent"
+    response = client.post(
+        "/api/v1/explain",
+        json={"sql": "SELECT 1", "analyze": False, "timeout_ms": 2000, "nl": True},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["ok"] is True
+    assert data.get("explanation") is None
+    assert "failed" in (data.get("message") or "").lower()

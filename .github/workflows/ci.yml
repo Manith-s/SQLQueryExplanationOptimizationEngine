@@ -34,7 +34,7 @@ jobs:
       run: black --check .
 
     - name: Run unit tests (no DB)
-      run: pytest -q
+      run: pytest -q --durations=10 --timeout=30
       env:
         RUN_DB_TESTS: ""
         LLM_PROVIDER: "dummy"

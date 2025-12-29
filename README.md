@@ -89,8 +89,7 @@ queryexpnopt/
 │   ├── cli.py                  # Command-line interface
 │   └── main.py                 # FastAPI application entry point
 ├── tests/                      # Test suite
-│   ├── integration/            # Integration tests (require DB)
-│   └── load/                   # Load testing scripts
+│   └── integration/            # Integration tests (require DB)
 ├── docs/                       # Documentation
 ├── infra/                      # Infrastructure setup
 │   ├── init/                   # Database initialization scripts

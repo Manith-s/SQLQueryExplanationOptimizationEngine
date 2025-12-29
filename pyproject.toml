@@ -37,13 +37,16 @@ ignore = [
 "__init__.py" = ["F401"]
 
 [tool.pytest.ini_options]
-# Exclude load tests, validation scripts, and bench scripts from pytest collection
-# These are standalone scripts, not pytest test files
-norecursedirs = ["load", "validation", "bench", "smoke"]
+# Only collect files that match test_*.py pattern
 # Only collect files that match test_*.py pattern (not *_test.py)
 python_files = ["test_*.py"]
 # Limit test discovery to tests directory
 testpaths = ["tests"]
+# Set timeout for each test (30 seconds) - prevents hanging tests
+timeout = 30
+timeout_method = "thread"
+# Show slowest 10 tests
+addopts = "--durations=10"
 
 [project]
 name = "queryexpnopt"
@@ -76,6 +79,7 @@ Repository = "https://github.com/ORG/REPO"
 dev = [
   "pytest>=7.4",
   "pytest-asyncio>=0.21",
+  "pytest-timeout>=2.1.0",
   "black>=23.10",
   "ruff>=0.1.7",
   "httpx>=0.24.0",

@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS orders (
 INSERT INTO users (email) SELECT 'user'||g||'@example.com' FROM generate_series(1,5000) g
 ON CONFLICT DO NOTHING;
 INSERT INTO orders (user_id,status,total_cents,created_at)
-SELECT (1 + (random()*4999)::int), (ARRAY['new','paid','shipped','cancelled'])[(1+random()*4)::int],
+SELECT (1 + (random()*4999)::int), (ARRAY['new','paid','shipped','cancelled'])[1 + floor(random()*4)::int],
        (100 + (random()*50000)::int), now() - ((random()*365)::int || ' days')::interval
 FROM generate_series(1,50000) g;
 

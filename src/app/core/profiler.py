@@ -12,6 +12,7 @@ import statistics
 import time
 from collections import defaultdict, deque
 from contextlib import contextmanager
+import math
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -152,7 +153,7 @@ class QueryProfiler:
                 WHERE timestamp > ?
                 ORDER BY timestamp ASC
             """,
-                (cutoff.isoformat(),),
+                (cutoff.strftime("%Y-%m-%d %H:%M:%S"),),
             ).fetchall()
 
             for row in rows:
@@ -349,7 +350,7 @@ class QueryProfiler:
                 WHERE query_hash = ? AND timestamp > ?
                 ORDER BY timestamp ASC
             """,
-                (query_hash, cutoff.isoformat()),
+                (query_hash, cutoff.strftime("%Y-%m-%d %H:%M:%S")),
             ).fetchall()
 
         if not rows:
@@ -390,6 +391,16 @@ class QueryProfiler:
 
         return stats
 
+    @staticmethod
+    def _percentile(sorted_values: List[float], p: float) -> float:
+        """Nearest-rank percentile (p in 0..100) over a pre-sorted list."""
+        if not sorted_values:
+            return 0.0
+        n = len(sorted_values)
+        rank = math.ceil(p / 100.0 * n) - 1
+        rank = max(0, min(rank, n - 1))
+        return sorted_values[rank]
+
     def _calculate_stats(self, values: List[float]) -> Dict[str, float]:
         """
         Calculate statistical metrics for a list of values.
@@ -410,9 +421,9 @@ class QueryProfiler:
             "median": float(f"{statistics.median(values):.3f}"),
             "min": float(f"{min(values):.3f}"),
             "max": float(f"{max(values):.3f}"),
-            "p50": float(f"{sorted_values[len(sorted_values) // 2]:.3f}"),
-            "p95": float(f"{sorted_values[int(len(sorted_values) * 0.95)]:.3f}"),
-            "p99": float(f"{sorted_values[int(len(sorted_values) * 0.99)]:.3f}"),
+            "p50": float(f"{self._percentile(sorted_values, 50):.3f}"),
+            "p95": float(f"{self._percentile(sorted_values, 95):.3f}"),
+            "p99": float(f"{self._percentile(sorted_values, 99):.3f}"),
         }
 
         if len(values) > 1:
@@ -481,7 +492,7 @@ class QueryProfiler:
                 ORDER BY timestamp DESC
                 LIMIT 10
             """,
-                (query_hash, cutoff.isoformat()),
+                (query_hash, cutoff.strftime("%Y-%m-%d %H:%M:%S")),
             ).fetchall()
 
         return [
@@ -616,7 +627,7 @@ class QueryProfiler:
                 ORDER BY execution_count DESC
                 LIMIT ?
             """,
-                (cutoff.isoformat(), limit),
+                (cutoff.strftime("%Y-%m-%d %H:%M:%S"), limit),
             ).fetchall()
 
         summaries = []
@@ -649,6 +660,9 @@ class QueryProfiler:
             Number of records deleted
         """
         cutoff = datetime.now() - timedelta(days=days)
+        # Microsecond precision so rows written in the same second as the
+        # cutoff (e.g. days=0 -> delete everything) are still included.
+        cutoff_str = cutoff.strftime("%Y-%m-%d %H:%M:%S.%f")
 
         with self._get_connection() as conn:
             cursor = conn.execute(
@@ -656,7 +670,7 @@ class QueryProfiler:
                 DELETE FROM query_executions
                 WHERE timestamp < ?
             """,
-                (cutoff.isoformat(),),
+                (cutoff_str,),
             )
 
             deleted = cursor.rowcount
@@ -666,7 +680,7 @@ class QueryProfiler:
                 DELETE FROM performance_alerts
                 WHERE timestamp < ?
             """,
-                (cutoff.isoformat(),),
+                (cutoff_str,),
             )
 
             conn.commit()

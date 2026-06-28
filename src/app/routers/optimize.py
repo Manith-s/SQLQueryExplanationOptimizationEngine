@@ -232,9 +232,13 @@ async def optimize_sql(request: Request, req: OptimizeRequest) -> OptimizeRespon
             except Exception:
                 resp_plan_diff = None
 
+        # Expose `trialsRun` as an alias of `trials` for consumers that expect it.
+        if isinstance(whatif_info, dict) and "trialsRun" not in whatif_info:
+            whatif_info["trialsRun"] = whatif_info.get("trials", 0)
+
         return OptimizeResponse(
             ok=True,
-            message="stub: optimize ok",
+            message="ok",
             suggestions=suggestions,
             summary=summary,
             ranking=ranking,

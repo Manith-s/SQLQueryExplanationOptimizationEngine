@@ -26,6 +26,7 @@ class TableStatistics:
     last_vacuum: Optional[datetime]
     last_autovacuum: Optional[datetime]
     last_analyze: Optional[datetime]
+    last_autoanalyze: Optional[datetime]
     n_tup_ins: int  # Inserts since last analyze
     n_tup_upd: int  # Updates since last analyze
     n_tup_del: int  # Deletes since last analyze
@@ -438,7 +439,7 @@ class StatisticsCollector:
         query = """
         SELECT
             schemaname,
-            tablename,
+            relname AS tablename,
             n_live_tup,
             n_dead_tup,
             CASE WHEN n_live_tup > 0
@@ -448,7 +449,7 @@ class StatisticsCollector:
             last_autovacuum,
             autovacuum_count
         FROM pg_stat_user_tables
-        WHERE schemaname = %s AND tablename = %s;
+        WHERE schemaname = %s AND relname = %s;
         """
 
         try:

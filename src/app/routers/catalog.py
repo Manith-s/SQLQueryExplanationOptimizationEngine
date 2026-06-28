@@ -439,12 +439,13 @@ async def get_visual_plan(
         # Get EXPLAIN plan
         plan_result = run_explain(sql, analyze=analyze)
 
-        if not plan_result or "plan" not in plan_result:
+        # run_explain returns the canonical plan JSON: {"Plan": {...}}
+        if not plan_result or "Plan" not in plan_result:
             raise HTTPException(
                 status_code=400, detail="Failed to generate execution plan"
             )
 
-        plan_json = plan_result["plan"]
+        plan_json = plan_result["Plan"]
 
         # Transform plan for visualization
         plan_tree = _transform_plan_for_viz(plan_json)

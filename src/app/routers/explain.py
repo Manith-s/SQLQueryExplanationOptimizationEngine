@@ -140,9 +140,9 @@ async def explain_query(req: ExplainRequest) -> ExplainResponse:
         except Exception:
             warnings, metrics = [], {}
         # Base response without explanation
-        base_message = "stub: explain ok"
+        base_message = "ok"
         if plan_error:
-            base_message = f"stub: explain ok (plan unavailable: {plan_error})"
+            base_message = f"ok (plan unavailable: {plan_error})"
         response = ExplainResponse(
             ok=True,
             plan=plan,

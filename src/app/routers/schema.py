@@ -18,7 +18,11 @@ class SchemaResponse(BaseModel):
     """Response model for schema endpoint."""
 
     ok: bool = True
-    schema: dict = Field(..., description="Schema information")
+    schema: dict = Field(..., description="Schema information (single schema)")
+    schemas: list = Field(
+        default_factory=list,
+        description="List of inspected schemas (each with tables/columns)",
+    )
     message: str = "ok"
 
 
@@ -41,7 +45,13 @@ async def get_schema(
     """
     try:
         schema_info = db.fetch_schema(schema=schema, table=table)
-        return SchemaResponse(ok=True, schema=schema_info)
+
+        # Provide a `table` alias alongside `name` for each table so both the
+        # single-schema (`schema`) and list (`schemas`) consumers work.
+        for tbl in schema_info.get("tables", []):
+            tbl.setdefault("table", tbl.get("name"))
+
+        return SchemaResponse(ok=True, schema=schema_info, schemas=[schema_info])
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e

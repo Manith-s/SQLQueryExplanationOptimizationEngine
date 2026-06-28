@@ -10,12 +10,11 @@ Endpoints:
 
 import logging
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from ..core.metrics import observe_request
 from ..core.slo import SLOManager
 
 logger = logging.getLogger(__name__)
@@ -55,7 +54,7 @@ class ErrorBudgetResponse(BaseModel):
     current_sli: float
     error_budget_remaining_pct: float
     burn_rates: List[BurnRateResponse]
-    time_to_exhaustion_hours: float = None
+    time_to_exhaustion_hours: Optional[float] = None
 
 
 class SLOStatusResponse(BaseModel):
@@ -82,7 +81,6 @@ class CanDeployResponse(BaseModel):
 
 
 @router.get("/status", response_model=SLOStatusResponse)
-@observe_request
 async def get_slo_status():
     """
     Get current SLO status including error budgets and operating mode.
@@ -167,7 +165,6 @@ async def get_slo_status():
 
 
 @router.get("/budget", response_model=Dict[str, ErrorBudgetResponse])
-@observe_request
 async def get_error_budgets():
     """
     Get detailed error budget information for all SLIs.
@@ -192,7 +189,6 @@ async def get_error_budgets():
 
 
 @router.get("/report")
-@observe_request
 async def get_budget_report(
     days: int = Query(
         7, ge=1, le=90, description="Number of days to include in report"
@@ -222,7 +218,6 @@ async def get_budget_report(
 
 
 @router.get("/can-deploy", response_model=CanDeployResponse)
-@observe_request
 async def can_deploy():
     """
     Check if deployments are currently allowed based on error budget.

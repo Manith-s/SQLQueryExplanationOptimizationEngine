@@ -234,7 +234,7 @@ class ProfilerBackgroundTasks:
             for rec in recommendations:
                 with self.profiler._get_connection() as conn:
                     # Check if similar recommendation already exists (within last 24 hours)
-                    cutoff = (datetime.now() - timedelta(hours=24)).isoformat()
+                    cutoff = (datetime.now() - timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
 
                     existing = conn.execute(
                         """

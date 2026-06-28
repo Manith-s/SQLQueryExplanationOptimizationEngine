@@ -120,3 +120,49 @@ def pytest_runtest_teardown(item):
     except Exception:
         pass
     # #endregion
+
+
+def _clear_limiter(limiter):
+    """Best-effort clear of a SlowAPI limiter's in-memory storage."""
+    try:
+        limiter.reset()
+    except Exception:
+        pass
+    storage = getattr(limiter, "_storage", None)
+    # MemoryStorage keeps counts in `storage`, moving-window hits in `events`,
+    # and TTLs in `expirations`. reset() alone may not clear `events`.
+    for attr in ("storage", "events", "expirations", "locks"):
+        container = getattr(storage, attr, None)
+        if hasattr(container, "clear"):
+            try:
+                container.clear()
+            except Exception:
+                pass
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limiter():
+    """Reset all rate limiters before each test.
+
+    The app uses more than one SlowAPI limiter (a global one in app.main and a
+    stricter per-endpoint one in the optimize router). Each keeps per-client
+    request counts in shared in-process storage, so without clearing them
+    requests accumulate across tests and later tests can spuriously receive
+    HTTP 429. Clearing every limiter keeps tests isolated.
+    """
+    limiters = []
+    try:
+        from app.main import limiter as main_limiter
+
+        limiters.append(main_limiter)
+    except Exception:
+        pass
+    try:
+        from app.routers.optimize import limiter as optimize_limiter
+
+        limiters.append(optimize_limiter)
+    except Exception:
+        pass
+    for lim in limiters:
+        _clear_limiter(lim)
+    yield

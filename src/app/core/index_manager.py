@@ -100,23 +100,23 @@ class IndexLifecycleManager:
         """
         query = """
         SELECT
-            schemaname,
-            tablename,
-            indexname,
-            idx_scan,
-            idx_tup_read,
-            idx_tup_fetch,
-            pg_relation_size(indexrelid) as size_bytes,
-            indisunique,
-            indisprimary,
-            pg_get_indexdef(indexrelid) as definition,
-            amname as index_type
-        FROM pg_stat_user_indexes
-        JOIN pg_index ON pg_stat_user_indexes.indexrelid = pg_index.indexrelid
-        JOIN pg_class ON pg_index.indexrelid = pg_class.oid
-        JOIN pg_am ON pg_class.relam = pg_am.oid
-        WHERE schemaname = %s
-        ORDER BY idx_scan DESC;
+            psui.schemaname,
+            psui.relname AS tablename,
+            psui.indexrelname AS indexname,
+            psui.idx_scan,
+            psui.idx_tup_read,
+            psui.idx_tup_fetch,
+            pg_relation_size(psui.indexrelid) AS size_bytes,
+            pi.indisunique,
+            pi.indisprimary,
+            pg_get_indexdef(psui.indexrelid) AS definition,
+            am.amname AS index_type
+        FROM pg_stat_user_indexes psui
+        JOIN pg_index pi ON psui.indexrelid = pi.indexrelid
+        JOIN pg_class pc ON pi.indexrelid = pc.oid
+        JOIN pg_am am ON pc.relam = am.oid
+        WHERE psui.schemaname = %s
+        ORDER BY psui.idx_scan DESC;
         """
 
         try:

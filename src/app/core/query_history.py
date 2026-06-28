@@ -248,7 +248,7 @@ class QueryHistoryManager:
                        success, error_message, created_at
                 FROM query_history
                 {where_clause}
-                ORDER BY created_at DESC
+                ORDER BY created_at DESC, id DESC
                 LIMIT ?
             """,
                 params + [limit],
@@ -263,7 +263,7 @@ class QueryHistoryManager:
                 """
                 SELECT * FROM query_history
                 WHERE query_hash = ?
-                ORDER BY created_at DESC
+                ORDER BY created_at DESC, id DESC
             """,
                 (query_hash,),
             ).fetchall()
@@ -488,7 +488,10 @@ class QueryHistoryManager:
                 )
                 conn.commit()
 
-                return dict(row)
+                result = dict(row)
+                # Reflect the increment we just persisted in the returned value
+                result["access_count"] = (result.get("access_count") or 0) + 1
+                return result
 
         return None
 

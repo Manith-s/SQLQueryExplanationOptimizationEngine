@@ -31,6 +31,9 @@ class LintResponse(BaseModel):
     issues: List[LintIssue] = Field(
         default_factory=list, description="List of linting issues"
     )
+    errors: List[LintIssue] = Field(
+        default_factory=list, description="Syntax/parse errors (empty if SQL is valid)"
+    )
     summary: LintSummary = Field(..., description="Summary of linting results")
 
 
@@ -43,6 +46,7 @@ async def lint_sql(request: LintRequest):
             error="SQL is required",
             ast=None,
             issues=[],
+            errors=[],
             summary=LintSummary(risk="high"),
         )
 
@@ -50,27 +54,54 @@ async def lint_sql(request: LintRequest):
         ast_info = parse_sql(sql)
         lint_result = lint_rules(ast_info)
         issues = [LintIssue(**issue) for issue in lint_result.get("issues", [])]
-        summary = LintSummary(**lint_result.get("summary", {"risk": "low"}))
+
+        # Detect syntax/parse errors: a valid top-level statement parses to a
+        # known statement type. Anything else (e.g. a stray Alias/Column) means
+        # the SQL could not be parsed as a real statement.
+        errors: List[LintIssue] = []
+        stmt_type = (ast_info.get("type") or "").upper()
+        valid_statements = {
+            "SELECT", "INSERT", "UPDATE", "DELETE", "CREATE", "DROP",
+            "ALTER", "TRUNCATE", "WITH", "UNION", "INTERSECT", "EXCEPT", "MERGE",
+        }
+        if stmt_type not in valid_statements:
+            errors.append(
+                LintIssue(
+                    code="SYNTAX_ERROR",
+                    message=(
+                        "Unable to parse SQL as a valid statement "
+                        f"(parsed as '{stmt_type or 'UNKNOWN'}')"
+                    ),
+                    severity="high",
+                    hint="Check the SQL syntax (keywords, clause order, typos).",
+                )
+            )
+
+        base_summary = lint_result.get("summary", {"risk": "low"})
+        if errors:
+            base_summary = {**base_summary, "risk": "high"}
+        summary = LintSummary(**base_summary)
 
         return LintResponse(
             ok=True,
-            message="stub: lint ok",
+            message="ok",
             ast=ast_info,
             issues=issues,
+            errors=errors,
             summary=summary,
         )
     except Exception as e:
+        parse_error = LintIssue(
+            code="PARSE_ERROR",
+            message=f"Error during SQL linting: {str(e)}",
+            severity="high",
+            hint="Check SQL syntax",
+        )
         return LintResponse(
-            ok=True,  # Keep ok=True for parse errors
-            message="stub: lint ok",
+            ok=True,  # Keep ok=True for parse errors (soft-fail contract)
+            message="ok",
             ast={"type": "UNKNOWN", "error": str(e)},
-            issues=[
-                {
-                    "code": "PARSE_ERROR",
-                    "message": f"Error during SQL linting: {str(e)}",
-                    "severity": "high",
-                    "hint": "Check SQL syntax",
-                }
-            ],
+            issues=[parse_error],
+            errors=[parse_error],
             summary=LintSummary(risk="high"),
         )

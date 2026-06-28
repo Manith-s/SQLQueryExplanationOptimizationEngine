@@ -33,8 +33,6 @@ class Settings:
     # API configuration
     API_HOST: str = os.getenv("API_HOST", "0.0.0.0")
     API_PORT: int = int(os.getenv("API_PORT", "8000"))
-    API_KEY: str = os.getenv("API_KEY", "dev-key-12345")
-    AUTH_ENABLED: bool = os.getenv("AUTH_ENABLED", "false").lower() == "true"
 
     # Development settings
     DEBUG: bool = os.getenv("DEBUG", "true").lower() == "true"
@@ -119,6 +117,16 @@ class Settings:
     )
 
     # ---- Convenience helpers ----
+    # Read dynamically so auth can be toggled at runtime / in tests
+    # (monkeypatching the env var takes effect immediately and stays isolated).
+    @property
+    def API_KEY(self) -> str:
+        return os.getenv("API_KEY", "dev-key-12345")
+
+    @property
+    def AUTH_ENABLED(self) -> bool:
+        return os.getenv("AUTH_ENABLED", "false").lower() == "true"
+
     @property
     def db_url_sqlalchemy(self) -> str:
         """Use this if you connect via SQLAlchemy/async engines."""

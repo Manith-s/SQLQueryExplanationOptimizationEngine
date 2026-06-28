@@ -7,7 +7,7 @@ for index manager, self-healing, and statistics collector.
 
 import os
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -18,15 +18,20 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-@pytest.fixture
-def mock_connection():
-    """Mock database connection for testing."""
-    conn = Mock()
-    cursor = Mock()
+def _make_mock_connection():
+    """Build a mock (connection, cursor) pair for testing."""
+    conn = MagicMock()
+    cursor = MagicMock()
     conn.cursor.return_value.__enter__.return_value = cursor
     conn.__enter__.return_value = conn
     conn.__exit__.return_value = None
     return conn, cursor
+
+
+@pytest.fixture
+def mock_connection():
+    """Mock database connection for testing (fixture wrapper)."""
+    return _make_mock_connection()
 
 
 # Test Index Manager
@@ -114,7 +119,7 @@ def test_unused_index_identification():
     from app.core.index_manager import IndexLifecycleManager
 
     with patch("app.core.index_manager.get_conn") as mock_conn:
-        conn, cursor = mock_connection()
+        conn, cursor = _make_mock_connection()
         mock_conn.return_value = conn
 
         # Mock query results - unused index
@@ -316,7 +321,7 @@ def test_table_statistics_collection():
     from app.core.stats_collector import StatisticsCollector
 
     with patch("app.core.stats_collector.get_conn") as mock_conn:
-        conn, cursor = mock_connection()
+        conn, cursor = _make_mock_connection()
         mock_conn.return_value = conn
 
         # Mock query results
@@ -403,6 +408,7 @@ def test_growth_pattern_prediction():
         last_vacuum=None,
         last_autovacuum=None,
         last_analyze=datetime.now() - timedelta(days=30),
+        last_autoanalyze=None,
         n_tup_ins=0,
         n_tup_upd=0,
         n_tup_del=0,
@@ -424,6 +430,7 @@ def test_growth_pattern_prediction():
         last_vacuum=None,
         last_autovacuum=None,
         last_analyze=datetime.now(),
+        last_autoanalyze=None,
         n_tup_ins=500,
         n_tup_upd=100,
         n_tup_del=0,
@@ -466,7 +473,7 @@ def test_chaos_malformed_query_results():
     from app.core.stats_collector import StatisticsCollector
 
     with patch("app.core.stats_collector.get_conn") as mock_conn:
-        conn, cursor = mock_connection()
+        conn, cursor = _make_mock_connection()
         mock_conn.return_value = conn
 
         # Return malformed data

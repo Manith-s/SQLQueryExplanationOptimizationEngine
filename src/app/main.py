@@ -30,13 +30,14 @@ from app.routers import (
     optimize,
     profile,
     schema,
+    slo,
     workload,
 )
 
 app = FastAPI(
     title="SQL Query Explanation & Optimization Engine",
     description="A local, offline-capable tool for SQL analysis, explanation, and optimization",
-    version="0.7.0",
+    version="1.0.0",
 )
 
 # Configure rate limiter
@@ -194,6 +195,11 @@ app.include_router(
     prefix="/api/v1",
     tags=["workload"],
     dependencies=[Depends(verify_token)],
+)
+
+# SLO monitoring router
+app.include_router(
+    slo.router, tags=["slo"], dependencies=[Depends(verify_token)]
 )
 
 # Profiler router (conditionally enabled)

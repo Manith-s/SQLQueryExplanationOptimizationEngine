@@ -47,17 +47,19 @@ def test_health_endpoint(client):
 
     data = response.json()
     assert "status" in data
-    assert data["status"] == "ok"
+    assert data["status"] == "healthy"
 
 
 def test_lint_endpoint_exists(client):
-    """Test that the lint endpoint exists and returns stub response."""
+    """Test that the lint endpoint exists and returns a valid response."""
     response = client.post("/api/v1/lint", json={"sql": "SELECT * FROM users"})
     assert response.status_code == 200
 
     data = response.json()
     assert "message" in data
-    assert "stub" in data["message"]
+    assert data["ok"] is True
+    assert "issues" in data
+    assert "errors" in data
 
 
 def test_explain_endpoint_exists(client):
@@ -77,13 +79,13 @@ def test_explain_endpoint_exists(client):
 
 
 def test_optimize_endpoint_exists(client):
-    """Test that the optimize endpoint exists and returns stub response."""
+    """Test that the optimize endpoint exists and returns a valid response."""
     response = client.post("/api/v1/optimize", json={"sql": "SELECT * FROM users"})
     assert response.status_code == 200
 
     data = response.json()
     assert "message" in data
-    assert "stub" in data["message"]
+    assert data["ok"] is True
 
 
 def test_docs_endpoint_exists(client):

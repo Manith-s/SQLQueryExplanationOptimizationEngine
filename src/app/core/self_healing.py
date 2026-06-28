@@ -249,8 +249,9 @@ class SelfHealingManager:
         self.action_history.append(action)
         self._save_action_to_audit_log(action)
 
-        # Auto-approve if enabled and not critical
-        if self.auto_approve and not action.dry_run:
+        # Auto-approve if enabled (dry-run actions can be auto-approved too;
+        # approval and dry-run are orthogonal concerns).
+        if self.auto_approve:
             action.status = ActionStatus.APPROVED
             action.approved_by = "system_auto_approve"
 

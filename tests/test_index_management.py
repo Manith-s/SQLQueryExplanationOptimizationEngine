@@ -7,7 +7,7 @@ for index manager, self-healing, and statistics collector.
 
 import os
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 

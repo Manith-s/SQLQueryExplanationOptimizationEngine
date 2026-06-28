@@ -17,6 +17,7 @@ from datetime import datetime, timedelta
 from unittest.mock import patch
 
 import pytest
+
 from app.core.cache_analytics import (
     CacheAnalytics,
     QueryCacheability,

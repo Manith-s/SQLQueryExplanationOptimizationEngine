@@ -61,8 +61,19 @@ async def lint_sql(request: LintRequest):
         errors: List[LintIssue] = []
         stmt_type = (ast_info.get("type") or "").upper()
         valid_statements = {
-            "SELECT", "INSERT", "UPDATE", "DELETE", "CREATE", "DROP",
-            "ALTER", "TRUNCATE", "WITH", "UNION", "INTERSECT", "EXCEPT", "MERGE",
+            "SELECT",
+            "INSERT",
+            "UPDATE",
+            "DELETE",
+            "CREATE",
+            "DROP",
+            "ALTER",
+            "TRUNCATE",
+            "WITH",
+            "UNION",
+            "INTERSECT",
+            "EXCEPT",
+            "MERGE",
         }
         if stmt_type not in valid_statements:
             errors.append(

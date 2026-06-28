@@ -49,13 +49,11 @@ def test_profiler_initialization(profiler):
     """Test profiler database initialization."""
     # Check that tables are created
     with profiler._get_connection() as conn:
-        tables = conn.execute(
-            """
+        tables = conn.execute("""
             SELECT name FROM sqlite_master
             WHERE type='table'
             ORDER BY name
-        """
-        ).fetchall()
+        """).fetchall()
 
         table_names = [t["name"] for t in tables]
 

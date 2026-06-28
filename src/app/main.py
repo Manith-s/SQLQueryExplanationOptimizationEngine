@@ -198,9 +198,7 @@ app.include_router(
 )
 
 # SLO monitoring router
-app.include_router(
-    slo.router, tags=["slo"], dependencies=[Depends(verify_token)]
-)
+app.include_router(slo.router, tags=["slo"], dependencies=[Depends(verify_token)])
 
 # Profiler router (conditionally enabled)
 if settings.PROFILER_ENABLED:

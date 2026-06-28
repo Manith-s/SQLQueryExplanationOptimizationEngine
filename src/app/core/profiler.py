@@ -7,12 +7,12 @@ and provides statistical analysis of query performance over time.
 
 import hashlib
 import json
+import math
 import sqlite3
 import statistics
 import time
 from collections import defaultdict, deque
 from contextlib import contextmanager
-import math
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -49,8 +49,7 @@ class QueryProfiler:
     def _init_db(self):
         """Initialize SQLite database schema."""
         with self._get_connection() as conn:
-            conn.execute(
-                """
+            conn.execute("""
                 CREATE TABLE IF NOT EXISTS query_executions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     query_hash TEXT NOT NULL,
@@ -65,25 +64,19 @@ class QueryProfiler:
                     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                     metadata TEXT
                 )
-            """
-            )
+            """)
 
-            conn.execute(
-                """
+            conn.execute("""
                 CREATE INDEX IF NOT EXISTS idx_query_hash
                 ON query_executions(query_hash)
-            """
-            )
+            """)
 
-            conn.execute(
-                """
+            conn.execute("""
                 CREATE INDEX IF NOT EXISTS idx_timestamp
                 ON query_executions(timestamp)
-            """
-            )
+            """)
 
-            conn.execute(
-                """
+            conn.execute("""
                 CREATE TABLE IF NOT EXISTS performance_alerts (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     query_hash TEXT NOT NULL,
@@ -93,11 +86,9 @@ class QueryProfiler:
                     metrics TEXT,
                     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
-            """
-            )
+            """)
 
-            conn.execute(
-                """
+            conn.execute("""
                 CREATE TABLE IF NOT EXISTS optimization_recommendations (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     query_hash TEXT NOT NULL,
@@ -107,8 +98,7 @@ class QueryProfiler:
                     metrics TEXT,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
-            """
-            )
+            """)
 
             conn.commit()
 

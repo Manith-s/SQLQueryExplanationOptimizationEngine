@@ -44,13 +44,11 @@ def test_query_history_initialization(query_history):
     """Test query history database initialization."""
     # Verify tables were created
     with query_history._get_connection() as conn:
-        tables = conn.execute(
-            """
+        tables = conn.execute("""
             SELECT name FROM sqlite_master
             WHERE type='table'
             ORDER BY name
-        """
-        ).fetchall()
+        """).fetchall()
 
         table_names = [t["name"] for t in tables]
 
@@ -375,13 +373,11 @@ def test_query_metadata_storage(query_history):
     )
 
     with query_history._get_connection() as conn:
-        row = conn.execute(
-            """
+        row = conn.execute("""
             SELECT metadata FROM query_history
             ORDER BY id DESC
             LIMIT 1
-        """
-        ).fetchone()
+        """).fetchone()
 
     import json
 

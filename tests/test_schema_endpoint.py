@@ -40,18 +40,15 @@ def test_table():
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             # Create parent table
-            cur.execute(
-                """
+            cur.execute("""
                 CREATE TABLE tmp_cursor_phase2_users (
                     id SERIAL PRIMARY KEY,
                     username VARCHAR(50) NOT NULL UNIQUE
                 )
-            """
-            )
+            """)
 
             # Create main test table
-            cur.execute(
-                """
+            cur.execute("""
                 CREATE TABLE tmp_cursor_phase2 (
                     id SERIAL PRIMARY KEY,
                     user_id INTEGER REFERENCES tmp_cursor_phase2_users(id),
@@ -61,16 +58,13 @@ def test_table():
                     active BOOLEAN DEFAULT true,
                     metadata JSONB
                 )
-            """
-            )
+            """)
 
             # Create index
-            cur.execute(
-                """
+            cur.execute("""
                 CREATE INDEX idx_tmp_cursor_phase2_user_id
                 ON tmp_cursor_phase2(user_id)
-            """
-            )
+            """)
 
             conn.commit()
 

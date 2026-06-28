@@ -32,8 +32,7 @@ class QueryHistoryManager:
         """Initialize database schema."""
         with self._get_connection() as conn:
             # Query history table
-            conn.execute(
-                """
+            conn.execute("""
                 CREATE TABLE IF NOT EXISTS query_history (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     query_hash TEXT NOT NULL,
@@ -48,33 +47,25 @@ class QueryHistoryManager:
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     metadata TEXT
                 )
-            """
-            )
+            """)
 
-            conn.execute(
-                """
+            conn.execute("""
                 CREATE INDEX IF NOT EXISTS idx_history_hash
                 ON query_history(query_hash)
-            """
-            )
+            """)
 
-            conn.execute(
-                """
+            conn.execute("""
                 CREATE INDEX IF NOT EXISTS idx_history_user
                 ON query_history(user_id)
-            """
-            )
+            """)
 
-            conn.execute(
-                """
+            conn.execute("""
                 CREATE INDEX IF NOT EXISTS idx_history_created
                 ON query_history(created_at DESC)
-            """
-            )
+            """)
 
             # Query templates table
-            conn.execute(
-                """
+            conn.execute("""
                 CREATE TABLE IF NOT EXISTS query_templates (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     template_name TEXT NOT NULL UNIQUE,
@@ -87,12 +78,10 @@ class QueryHistoryManager:
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
-            """
-            )
+            """)
 
             # Query versions table (for versioning)
-            conn.execute(
-                """
+            conn.execute("""
                 CREATE TABLE IF NOT EXISTS query_versions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     query_id TEXT NOT NULL,
@@ -103,12 +92,10 @@ class QueryHistoryManager:
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     UNIQUE(query_id, version_number)
                 )
-            """
-            )
+            """)
 
             # Shared queries table
-            conn.execute(
-                """
+            conn.execute("""
                 CREATE TABLE IF NOT EXISTS shared_queries (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     share_token TEXT NOT NULL UNIQUE,
@@ -119,8 +106,7 @@ class QueryHistoryManager:
                     access_count INTEGER DEFAULT 0,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
-            """
-            )
+            """)
 
             conn.commit()
 
@@ -506,22 +492,18 @@ class QueryHistoryManager:
                 "SELECT COUNT(*) as count FROM query_history WHERE success = 1"
             ).fetchone()["count"]
 
-            avg_exec_time = conn.execute(
-                """
+            avg_exec_time = conn.execute("""
                 SELECT AVG(execution_time_ms) as avg_time
                 FROM query_history
                 WHERE success = 1 AND execution_time_ms IS NOT NULL
-            """
-            ).fetchone()["avg_time"]
+            """).fetchone()["avg_time"]
 
-            query_types = conn.execute(
-                """
+            query_types = conn.execute("""
                 SELECT query_type, COUNT(*) as count
                 FROM query_history
                 GROUP BY query_type
                 ORDER BY count DESC
-            """
-            ).fetchall()
+            """).fetchall()
 
             total_templates = conn.execute(
                 "SELECT COUNT(*) as count FROM query_templates"

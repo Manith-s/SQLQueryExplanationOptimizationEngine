@@ -80,12 +80,10 @@ def test_explain_large_result(client):
     # Create a test table
     client.post(
         "/api/v1/explain",
-        json={
-            "sql": """
+        json={"sql": """
         CREATE TEMPORARY TABLE test_large AS
         SELECT * FROM generate_series(1, 200000) AS id;
-        """
-        },
+        """},
     )
 
     # Query it with a sequential scan

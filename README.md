@@ -321,27 +321,4 @@ docker compose down -v && docker compose up -d --build db
 <summary><strong>Rate limiting (HTTP 429)</strong></summary>
 
 - Default: 100 requests/min per IP; `/api/v1/optimize` is stricter at 10/min.
-- Check the `Retry-After` and `X-RateLimit-*` response headers.
-</details>
-
----
-
-## 🧱 Tech stack
-
-**Backend:** Python 3.11+ · FastAPI · sqlglot · psycopg2 · HypoPG
-**Infra:** Docker Compose · PostgreSQL 16 · Uvicorn
-**Optional:** Ollama (local LLM) · Prometheus (metrics)
-
----
-
-## 📄 License & credits
-
-Licensed under the **MIT License** — see [LICENSE](LICENSE).
-
-Built with [HypoPG](https://github.com/HypoPG/hypopg), [sqlglot](https://github.com/tobymao/sqlglot), [FastAPI](https://fastapi.tiangolo.com/), and [Ollama](https://ollama.com).
-
-<div align="center">
-
-⭐ If QEO is useful to you, consider starring the repo!
-
-</div>
+- Check the `Re
